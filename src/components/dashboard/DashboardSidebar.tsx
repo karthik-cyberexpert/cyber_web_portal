@@ -71,6 +71,7 @@ const tutorLinks: SidebarLink[] = [
   { label: 'Verify Marks', icon: ClipboardList, path: '/tutor/marks', badge: '12' },
   { label: 'Notes Status', icon: BookOpen, path: '/tutor/notes' },
   { label: 'Assignment Status', icon: FileText, path: '/tutor/assignments' },
+  { label: 'LMS Analytics', icon: BarChart3, path: '/tutor/lms' },
   { label: 'ECA Approvals', icon: Trophy, path: '/tutor/eca', badge: '2' },
   { label: 'Circulars', icon: Bell, path: '/tutor/circulars' },
   { label: 'Leave Approvals', icon: ExternalLink, path: '/tutor/leave', badge: '4' },
