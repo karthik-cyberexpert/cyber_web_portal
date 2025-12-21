@@ -131,6 +131,8 @@ export function initializeStorage() {
     ]);
   }
 
+  checkGraduationLogic();
+
   if (getData(LEAVE_REQUESTS_KEY).length === 0) {
     saveData(LEAVE_REQUESTS_KEY, [
       { 
