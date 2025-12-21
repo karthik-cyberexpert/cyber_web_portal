@@ -108,7 +108,6 @@ export const SECTIONS_KEY = 'sections';
 
 export interface BatchData {
   id: string;
-  name: string;
   startYear: number;
   endYear: number;
   label: string;
@@ -119,6 +118,7 @@ export interface ClassData {
   batchId: string;
   yearNumber: number;
   yearLabel: string;
+  isActive: boolean;
 }
 
 export interface SectionData {
