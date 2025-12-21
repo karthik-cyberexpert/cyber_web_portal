@@ -1,17 +1,21 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, 
   Clock, 
   MapPin, 
   User, 
   BookOpen, 
-  Download,
-  Info,
-  ChevronRight
+  Download, 
+  Info, 
+  ChevronRight,
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function TimetableSyllabus() {
   const timetable = [
@@ -82,19 +86,25 @@ export default function TimetableSyllabus() {
                   </div>
                 </div>
 
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{session.subject}</h3>
-                  <div className="flex flex-wrap items-center gap-4 mt-1">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {session.room}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <User className="w-3.5 h-3.5" />
-                      {session.faculty}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold group-hover:text-primary transition-colors flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${session.color}`} />
+                      {session.subject}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-4 mt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {session.room}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Avatar className="w-5 h-5">
+                          <AvatarImage src={session.avatar} />
+                          <AvatarFallback><User className="w-3 h-3" /></AvatarFallback>
+                        </Avatar>
+                        {session.faculty}
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 <div className="absolute right-5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
                   <Button variant="ghost" size="icon" className="rounded-full">
