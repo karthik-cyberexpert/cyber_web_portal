@@ -366,12 +366,12 @@ export default function AdminDashboard() {
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[
-              { icon: Users, label: 'Manage Students', color: 'primary' },
-              { icon: GraduationCap, label: 'Manage Faculty', color: 'accent' },
-              { icon: ExternalLink, label: 'Leave Approvals', color: 'success' },
-              { icon: ClipboardCheck, label: 'Approve Marks', color: 'warning' },
-              { icon: Bell, label: 'Post Circular', color: 'info' },
-              { icon: BarChart3, label: 'Analytics', color: 'primary' },
+              { icon: Users, label: 'Manage Students', color: 'primary', path: '/admin/students' },
+              { icon: GraduationCap, label: 'Manage Faculty', color: 'accent', path: '/admin/faculty' },
+              { icon: ExternalLink, label: 'Leave Approvals', color: 'success', path: '/admin/leave' },
+              { icon: ClipboardCheck, label: 'Approve Marks', color: 'warning', path: '/admin/marks' },
+              { icon: Bell, label: 'Post Circular', color: 'info', path: '/admin/circulars' },
+              { icon: BarChart3, label: 'Analytics', color: 'primary', path: '/admin/analytics' },
             ].map((action, index) => {
             const Icon = action.icon;
             return (
@@ -379,6 +379,7 @@ export default function AdminDashboard() {
                 key={index}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => navigate(action.path)}
                 className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group"
               >
                 <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 bg-${action.color}/10 text-${action.color} group-hover:scale-110 transition-transform`}>
