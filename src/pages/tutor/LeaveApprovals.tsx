@@ -64,7 +64,7 @@ export default function LeaveApprovals() {
     : requests.filter(r => r.status !== 'pending');
 
   if (loading) return <div className="p-8 text-center">Loading requests...</div>;
-v
+
   return (
     <div className="space-y-6">
       <motion.div
