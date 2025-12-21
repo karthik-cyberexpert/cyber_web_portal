@@ -47,16 +47,16 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    const students = getData<any>('college_portal_students');
-    const faculty = getData<any>('college_portal_faculty');
-    const leaves = getData<any>('college_portal_leave_requests');
-    const marks = getData<any>('college_portal_marksInternal').filter((m: any) => m.status === 'pending_admin');
+    const studentsArr = getData<unknown>('college_portal_students');
+    const facultyArr = getData<unknown>('college_portal_faculty');
+    const leavesArr = getData<{ status: string }>('college_portal_leave_requests');
+    const marksArr = getData<{ status: string }>('college_portal_marksInternal').filter((m) => m.status === 'pending_admin');
 
     setStats({
-      students: students.length,
-      faculty: faculty.length,
-      pendingLeaves: leaves.filter((l: any) => l.status === 'pending').length,
-      pendingMarks: marks.length
+      students: studentsArr.length,
+      faculty: facultyArr.length,
+      pendingLeaves: leavesArr.filter((l) => l.status === 'pending').length,
+      pendingMarks: marksArr.length
     });
   }, []);
 
