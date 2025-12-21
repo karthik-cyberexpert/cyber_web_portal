@@ -60,6 +60,7 @@ import LMSManagement from "@/pages/admin/LMSManagement";
 import ECAAnalytics from "@/pages/admin/ECAAnalytics";
 import Settings from "@/pages/admin/Settings";
 import Profile from "@/pages/admin/Profile";
+import LeaveApprovalsAdmin from "@/pages/admin/LeaveApprovals";
 import NotFound from "./pages/NotFound";
 import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
 
