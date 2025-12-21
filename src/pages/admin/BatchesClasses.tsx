@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Users, Calendar, Plus, Edit2, Trash2, 
   ChevronDown, ChevronRight, Search, Filter, BookOpen,
-  UserCheck, Clock, Building2
+  Clock, Building2, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -29,349 +30,305 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-
-interface Section {
-  id: string;
-  name: string;
-  tutorId: string;
-  tutorName: string;
-  studentCount: number;
-}
-
-interface Class {
-  id: string;
-  year: number;
-  sections: Section[];
-}
-
-interface Batch {
-  id: string;
-  name: string;
-  startYear: number;
-  endYear: number;
-  status: 'active' | 'graduated' | 'upcoming';
-  classes: Class[];
-  totalStudents: number;
-}
-
-const initialBatches: Batch[] = [
-  {
-    id: '1',
-    name: '2021-2025',
-    startYear: 2021,
-    endYear: 2025,
-    status: 'active',
-    totalStudents: 180,
-    classes: [
-      {
-        id: 'c1',
-        year: 4,
-        sections: [
-          { id: 's1', name: 'A', tutorId: 't1', tutorName: 'Dr. Rajesh Kumar', studentCount: 60 },
-          { id: 's2', name: 'B', tutorId: 't2', tutorName: 'Dr. Priya Sharma', studentCount: 60 },
-          { id: 's3', name: 'C', tutorId: 't3', tutorName: 'Prof. Anand Krishnan', studentCount: 60 },
-        ]
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: '2022-2026',
-    startYear: 2022,
-    endYear: 2026,
-    status: 'active',
-    totalStudents: 180,
-    classes: [
-      {
-        id: 'c2',
-        year: 3,
-        sections: [
-          { id: 's4', name: 'A', tutorId: 't4', tutorName: 'Dr. Meena Iyer', studentCount: 60 },
-          { id: 's5', name: 'B', tutorId: 't5', tutorName: 'Prof. Suresh Babu', studentCount: 60 },
-          { id: 's6', name: 'C', tutorId: 't6', tutorName: 'Dr. Lakshmi Narayanan', studentCount: 60 },
-        ]
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: '2023-2027',
-    startYear: 2023,
-    endYear: 2027,
-    status: 'active',
-    totalStudents: 180,
-    classes: [
-      {
-        id: 'c3',
-        year: 2,
-        sections: [
-          { id: 's7', name: 'A', tutorId: 't7', tutorName: 'Dr. Venkatesh Raman', studentCount: 60 },
-          { id: 's8', name: 'B', tutorId: 't8', tutorName: 'Prof. Kavitha Sundaram', studentCount: 60 },
-          { id: 's9', name: 'C', tutorId: 't9', tutorName: 'Dr. Arjun Menon', studentCount: 60 },
-        ]
-      }
-    ]
-  },
-  {
-    id: '4',
-    name: '2024-2028',
-    startYear: 2024,
-    endYear: 2028,
-    status: 'active',
-    totalStudents: 180,
-    classes: [
-      {
-        id: 'c4',
-        year: 1,
-        sections: [
-          { id: 's10', name: 'A', tutorId: 't10', tutorName: 'Dr. Sanjay Patel', studentCount: 60 },
-          { id: 's11', name: 'B', tutorId: 't11', tutorName: 'Prof. Deepa Krishnamurthy', studentCount: 60 },
-          { id: 's12', name: 'C', tutorId: 't12', tutorName: 'Dr. Ramesh Chandran', studentCount: 60 },
-        ]
-      }
-    ]
-  },
-  {
-    id: '5',
-    name: '2020-2024',
-    startYear: 2020,
-    endYear: 2024,
-    status: 'graduated',
-    totalStudents: 175,
-    classes: [
-      {
-        id: 'c5',
-        year: 4,
-        sections: [
-          { id: 's13', name: 'A', tutorId: 't1', tutorName: 'Dr. Rajesh Kumar', studentCount: 58 },
-          { id: 's14', name: 'B', tutorId: 't2', tutorName: 'Dr. Priya Sharma', studentCount: 59 },
-          { id: 's15', name: 'C', tutorId: 't3', tutorName: 'Prof. Anand Krishnan', studentCount: 58 },
-        ]
-      }
-    ]
-  },
-];
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'active': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-    case 'graduated': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-    case 'upcoming': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-    default: return 'bg-muted text-muted-foreground';
-  }
-};
-
-const getYearLabel = (year: number) => {
-  switch (year) {
-    case 1: return '1st Year';
-    case 2: return '2nd Year';
-    case 3: return '3rd Year';
-    case 4: return '4th Year';
-    default: return `Year ${year}`;
-  }
-};
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  getData, saveData, addItem, updateItem, deleteItem,
+  BATCHES_KEY, CLASSES_KEY, SECTIONS_KEY,
+  BatchData, ClassData, SectionData, Student
+} from '@/lib/data-store';
+import { toast } from 'sonner';
 
 export default function BatchesClasses() {
-  const [batches, setBatches] = useState<Batch[]>(initialBatches);
+  const { user } = useAuth();
+  const [batches, setBatches] = useState<BatchData[]>([]);
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [sections, setSections] = useState<SectionData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [expandedBatches, setExpandedBatches] = useState<string[]>(['1', '2']);
+  const [expandedBatches, setExpandedBatches] = useState<string[]>([]);
+  
+  // Dialog States
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false);
-  const [newBatch, setNewBatch] = useState({ startYear: 2025, endYear: 2029 });
+  const [startYear, setStartYear] = useState<string>(new Date().getFullYear().toString());
+  
+  const [isEditClassOpen, setIsEditClassOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassData | null>(null);
+  const [editClassLabel, setEditClassLabel] = useState('');
 
-  const toggleBatch = (batchId: string) => {
-    setExpandedBatches(prev => 
-      prev.includes(batchId) 
-        ? prev.filter(id => id !== batchId)
-        : [...prev, batchId]
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
+  const [targetClassId, setTargetClassId] = useState('');
+  const [newSectionName, setNewSectionName] = useState('');
+
+  const [isEditSectionOpen, setIsEditSectionOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<SectionData | null>(null);
+  const [editSectionName, setEditSectionName] = useState('');
+
+  useEffect(() => {
+    refreshData();
+    // Initialize keys if they don't exist
+    if (!localStorage.getItem(BATCHES_KEY)) saveData(BATCHES_KEY, []);
+    if (!localStorage.getItem(CLASSES_KEY)) saveData(CLASSES_KEY, []);
+    if (!localStorage.getItem(SECTIONS_KEY)) saveData(SECTIONS_KEY) || saveData(SECTIONS_KEY, []);
+  }, []);
+
+  const refreshData = () => {
+    setBatches(getData<BatchData>(BATCHES_KEY));
+    setClasses(getData<ClassData>(CLASSES_KEY));
+    setSections(getData<SectionData>(SECTIONS_KEY));
+  };
+
+  const isAdmin = () => user?.role === 'admin';
+
+  if (!isAdmin()) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
+        <div className="p-4 rounded-full bg-destructive/10">
+          <ShieldAlert className="w-12 h-12 text-destructive" />
+        </div>
+        <h2 className="text-2xl font-bold italic">Access Denied</h2>
+        <p className="text-muted-foreground italic">Only administrators can manage batches, classes, and sections.</p>
+      </div>
     );
-  };
-
-  const filteredBatches = batches.filter(batch => {
-    const matchesSearch = batch.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const stats = {
-    totalBatches: batches.length,
-    activeBatches: batches.filter(b => b.status === 'active').length,
-    totalStudents: batches.reduce((sum, b) => sum + b.totalStudents, 0),
-    totalSections: batches.reduce((sum, b) => 
-      sum + b.classes.reduce((cs, c) => cs + c.sections.length, 0), 0
-    ),
-  };
+  }
 
   const handleAddBatch = () => {
-    const newBatchData: Batch = {
-      id: Date.now().toString(),
-      name: `${newBatch.startYear}-${newBatch.endYear}`,
-      startYear: newBatch.startYear,
-      endYear: newBatch.endYear,
-      status: 'upcoming',
-      totalStudents: 0,
-      classes: [
-        {
-          id: `c-${Date.now()}`,
-          year: 1,
-          sections: [
-            { id: `s-${Date.now()}-a`, name: 'A', tutorId: '', tutorName: 'Not Assigned', studentCount: 0 },
-            { id: `s-${Date.now()}-b`, name: 'B', tutorId: '', tutorName: 'Not Assigned', studentCount: 0 },
-            { id: `s-${Date.now()}-c`, name: 'C', tutorId: '', tutorName: 'Not Assigned', studentCount: 0 },
-          ]
-        }
-      ]
-    };
-    setBatches([newBatchData, ...batches]);
+    const year = parseInt(startYear);
+    if (isNaN(year)) {
+      toast.error('Please enter a valid start year');
+      return;
+    }
+
+    const existing = batches.find(b => b.startYear === year);
+    if (existing) {
+      toast.error('A batch with this start year already exists');
+      return;
+    }
+
+    const endYear = year + 4;
+    const label = `${year}–${endYear}`;
+    
+    // 1. Create Batch
+    const batch = addItem<BatchData>(BATCHES_KEY, {
+      name: label,
+      startYear: year,
+      endYear,
+      label
+    });
+
+    // 2. Automatically generate 4 classes (1st to 4th year)
+    const yearLabels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+    yearLabels.forEach((yLabel, index) => {
+      addItem<ClassData>(CLASSES_KEY, {
+        batchId: batch.id,
+        yearNumber: index + 1,
+        yearLabel: yLabel
+      });
+    });
+
+    toast.success(`Batch ${label} created with 4 academic years`);
     setIsAddBatchOpen(false);
+    refreshData();
   };
+
+  const handleDeleteBatch = (batchId: string) => {
+    const relatedClasses = classes.filter(c => c.batchId === batchId);
+    const hasSections = relatedClasses.some(c => sections.some(s => s.classId === c.id));
+    
+    if (hasSections) {
+      toast.error('Cannot delete batch: It has classes with existing sections');
+      return;
+    }
+
+    // Delete classes first then batch
+    const allClassIds = relatedClasses.map(c => c.id);
+    const updatedClasses = classes.filter(c => !allClassIds.includes(c.id));
+    saveData(CLASSES_KEY, updatedClasses);
+    
+    deleteItem(BATCHES_KEY, batchId);
+    toast.success('Batch and its years deleted');
+    refreshData();
+  };
+
+  const handleEditClass = () => {
+    if (!editingClass) return;
+    updateItem(CLASSES_KEY, editingClass.id, { yearLabel: editClassLabel });
+    toast.success('Class label updated');
+    setIsEditClassOpen(false);
+    refreshData();
+  };
+
+  const handleDeleteClass = (classId: string) => {
+    const hasSections = sections.some(s => s.classId === classId);
+    if (hasSections) {
+      toast.error('Cannot delete class: It has existing sections');
+      return;
+    }
+
+    deleteItem(CLASSES_KEY, classId);
+    toast.success('Class deleted');
+    refreshData();
+  };
+
+  const handleAddSection = () => {
+    if (!newSectionName.trim()) return;
+    
+    const existing = sections.some(s => s.classId === targetClassId && s.sectionName.toLowerCase() === newSectionName.trim().toLowerCase());
+    if (existing) {
+      toast.error('Section name already exists in this class');
+      return;
+    }
+
+    addItem<SectionData>(SECTIONS_KEY, {
+      classId: targetClassId,
+      sectionName: newSectionName.trim().toUpperCase()
+    });
+
+    toast.success('Section created');
+    setIsAddSectionOpen(false);
+    setNewSectionName('');
+    refreshData();
+  };
+
+  const handleEditSection = () => {
+    if (!editingSection) return;
+    const existing = sections.some(s => 
+      s.classId === editingSection.classId && 
+      s.id !== editingSection.id && 
+      s.sectionName.toLowerCase() === editSectionName.trim().toLowerCase()
+    );
+
+    if (existing) {
+      toast.error('Section name already exists in this class');
+      return;
+    }
+
+    updateItem(SECTIONS_KEY, editingSection.id, { sectionName: editSectionName.trim().toUpperCase() });
+    toast.success('Section updated');
+    setIsEditSectionOpen(false);
+    refreshData();
+  };
+
+  const handleDeleteSection = (sectionId: string) => {
+    // Check for students
+    const students = getData<Student>('college_portal_students');
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const targetClass = classes.find(c => c.id === section.classId);
+    const targetBatch = batches.find(b => b.id === targetClass?.batchId);
+
+    const hasStudents = students.some(s => s.section === section.sectionName && s.batch === targetBatch?.name);
+    
+    if (hasStudents) {
+      toast.error('Cannot delete section: It has associated students');
+      return;
+    }
+
+    deleteItem(SECTIONS_KEY, sectionId);
+    toast.success('Section deleted');
+    refreshData();
+  };
+
+  const filteredBatches = batches.filter(batch => 
+    batch.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Batches & Classes
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent italic">
+            Academic Structure
           </h1>
-          <p className="text-muted-foreground mt-1">Manage academic batches, years, and sections</p>
+          <p className="text-muted-foreground mt-1 italic">Manage batches, years, and sections</p>
         </div>
         <Dialog open={isAddBatchOpen} onOpenChange={setIsAddBatchOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90">
+            <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 italic">
               <Plus className="w-4 h-4" />
-              Add New Batch
+              Create New Batch
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-card border-white/10">
             <DialogHeader>
-              <DialogTitle>Create New Batch</DialogTitle>
+              <DialogTitle className="italic">Create Academic Batch</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Year</Label>
-                  <Input 
-                    type="number" 
-                    value={newBatch.startYear}
-                    onChange={(e) => setNewBatch({ 
-                      ...newBatch, 
-                      startYear: parseInt(e.target.value),
-                      endYear: parseInt(e.target.value) + 4
-                    })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>End Year</Label>
-                  <Input 
-                    type="number" 
-                    value={newBatch.endYear}
-                    onChange={(e) => setNewBatch({ ...newBatch, endYear: parseInt(e.target.value) })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label className="italic">Start Year (e.g., 2024)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="2024"
+                  value={startYear}
+                  onChange={(e) => setStartYear(e.target.value)}
+                  className="italic"
+                />
+                <p className="text-xs text-muted-foreground italic">
+                  End year will be automatically set to {parseInt(startYear || '0') + 4}
+                </p>
               </div>
-              <Button onClick={handleAddBatch} className="w-full">Create Batch</Button>
+              <Button onClick={handleAddBatch} className="w-full italic">Generate Batch & 4 Years</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Batches', value: stats.totalBatches, icon: Building2, color: 'from-blue-500 to-cyan-500' },
-          { label: 'Active Batches', value: stats.activeBatches, icon: Calendar, color: 'from-emerald-500 to-teal-500' },
-          { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'from-purple-500 to-pink-500' },
-          { label: 'Total Sections', value: stats.totalSections, icon: BookOpen, color: 'from-orange-500 to-amber-500' },
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="glass-card border-white/10 hover:border-white/20 transition-all">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}>
-                    <stat.icon className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search batches..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="graduated">Graduated</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search batches..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 italic"
+        />
       </div>
 
       {/* Batches List */}
       <div className="space-y-4">
         <AnimatePresence>
-          {filteredBatches.map((batch, index) => (
+          {filteredBatches.map((batch) => (
             <motion.div
               key={batch.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.05 }}
+              exit={{ opacity: 0, scale: 0.95 }}
             >
-              <Collapsible open={expandedBatches.includes(batch.id)}>
-                <Card className="glass-card border-white/10 overflow-hidden">
+              <Collapsible 
+                open={expandedBatches.includes(batch.id)}
+                onOpenChange={(isOpen) => {
+                  setExpandedBatches(prev => 
+                    isOpen ? [...prev, batch.id] : prev.filter(id => id !== batch.id)
+                  );
+                }}
+              >
+                <Card className="glass-card border-white/10 overflow-hidden hover:border-primary/20 transition-all">
                   <CollapsibleTrigger asChild>
-                    <CardHeader 
-                      className="cursor-pointer hover:bg-white/5 transition-colors"
-                      onClick={() => toggleBatch(batch.id)}
-                    >
+                    <CardHeader className="cursor-pointer hover:bg-white/5 transition-colors py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-                            <GraduationCap className="w-6 h-6 text-primary" />
+                          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                            <GraduationCap className="w-5 h-5 text-primary" />
                           </div>
                           <div>
-                            <CardTitle className="text-xl flex items-center gap-3">
-                              Batch {batch.name}
-                              <Badge className={getStatusColor(batch.status)}>
-                                {batch.status.charAt(0).toUpperCase() + batch.status.slice(1)}
-                              </Badge>
+                            <CardTitle className="text-lg italic flex items-center gap-3">
+                              Batch {batch.label}
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {batch.totalStudents} students • {batch.classes[0]?.sections.length || 0} sections
+                            <p className="text-xs text-muted-foreground italic">
+                              {classes.filter(c => c.batchId === batch.id).length} Academic Years
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/20">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="hover:bg-destructive/20 text-destructive">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="hover:bg-destructive/20 text-destructive h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteBatch(batch.id);
+                            }}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                           {expandedBatches.includes(batch.id) 
@@ -383,37 +340,84 @@ export default function BatchesClasses() {
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      {batch.classes.map((cls) => (
-                        <div key={cls.id} className="mb-4">
-                          <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            {getYearLabel(cls.year)} - Semester {cls.year * 2 - 1} & {cls.year * 2}
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {cls.sections.map((section) => (
-                              <motion.div
-                                key={section.id}
-                                whileHover={{ scale: 1.02 }}
-                                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all"
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <Badge variant="outline" className="text-lg px-3 py-1">
-                                    Section {section.name}
-                                  </Badge>
-                                  <span className="text-sm text-muted-foreground">
-                                    {section.studentCount} students
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-3">
-                                  <UserCheck className="w-4 h-4 text-primary" />
-                                  <span className="text-sm">{section.tutorName}</span>
-                                </div>
-                              </motion.div>
-                            ))}
+                    <CardContent className="pt-0 pb-4 space-y-4">
+                      {classes
+                        .filter(c => c.batchId === batch.id)
+                        .sort((a, b) => a.yearNumber - b.yearNumber)
+                        .map((cls) => (
+                          <div key={cls.id} className="pl-4 border-l border-white/10 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold flex items-center gap-2 italic text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5" />
+                                {cls.yearLabel}
+                              </h4>
+                              <div className="flex items-center gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setEditingClass(cls);
+                                    setEditClassLabel(cls.yearLabel);
+                                    setIsEditClassOpen(true);
+                                  }}
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7 hover:text-destructive"
+                                  onClick={() => handleDeleteClass(cls.id)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 gap-1 text-xs italic"
+                                  onClick={() => {
+                                    setTargetClassId(cls.id);
+                                    setIsAddSectionOpen(true);
+                                  }}
+                                >
+                                  <Plus className="w-3 h-3" /> Add Section
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+                              {sections
+                                .filter(s => s.classId === cls.id)
+                                .map((section) => (
+                                  <div 
+                                    key={section.id}
+                                    className="group relative p-3 rounded-lg bg-white/5 border border-white/5 hover:border-primary/20 transition-all text-center"
+                                  >
+                                    <span className="text-sm font-bold italic">{section.sectionName}</span>
+                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                                      <button 
+                                        className="p-1 hover:text-primary transition-colors"
+                                        onClick={() => {
+                                          setEditingSection(section);
+                                          setEditSectionName(section.sectionName);
+                                          setIsEditSectionOpen(true);
+                                        }}
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                      <button 
+                                        className="p-1 hover:text-destructive transition-colors"
+                                        onClick={() => handleDeleteSection(section.id)}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
@@ -422,6 +426,63 @@ export default function BatchesClasses() {
           ))}
         </AnimatePresence>
       </div>
+
+      {/* Edit Class Dialog */}
+      <Dialog open={isEditClassOpen} onOpenChange={setIsEditClassOpen}>
+        <DialogContent className="glass-card border-white/10">
+          <DialogHeader><DialogTitle className="italic">Edit Class Label</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="italic">Year Label</Label>
+              <Input 
+                value={editClassLabel} 
+                onChange={(e) => setEditClassLabel(e.target.value)} 
+                className="italic"
+              />
+            </div>
+            <Button onClick={handleEditClass} className="w-full italic">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Section Dialog */}
+      <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
+        <DialogContent className="glass-card border-white/10">
+          <DialogHeader><DialogTitle className="italic">Add New Section</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="italic">Section Name (e.g., A, B, C)</Label>
+              <Input 
+                value={newSectionName} 
+                onChange={(e) => setNewSectionName(e.target.value)} 
+                placeholder="A"
+                className="italic"
+                maxLength={2}
+              />
+            </div>
+            <Button onClick={handleAddSection} className="w-full italic">Add Section</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Section Dialog */}
+      <Dialog open={isEditSectionOpen} onOpenChange={setIsEditSectionOpen}>
+        <DialogContent className="glass-card border-white/10">
+          <DialogHeader><DialogTitle className="italic">Edit Section Name</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="italic">Section Name</Label>
+              <Input 
+                value={editSectionName} 
+                onChange={(e) => setEditSectionName(e.target.value)} 
+                className="italic"
+                maxLength={2}
+              />
+            </div>
+            <Button onClick={handleEditSection} className="w-full italic">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
