@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { StatCard, GlassStatCard, ProgressCard } from '@/components/dashboard/StatCards';
+import { StatCard } from '@/components/dashboard/StatCards';
 import { 
   Users, 
   GraduationCap, 
@@ -17,9 +17,9 @@ import {
   AlertCircle,
   Settings,
   BookOpen,
-    Trophy,
-    ExternalLink,
-  } from 'lucide-react';
+  Trophy,
+  ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AreaChart,
