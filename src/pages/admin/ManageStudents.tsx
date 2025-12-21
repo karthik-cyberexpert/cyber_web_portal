@@ -379,11 +379,17 @@ export default function ManageStudents() {
                         {student.cgpa}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(student.status)}`}>
-                        {student.status}
-                      </span>
-                    </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(student.status)}`}>
+                            {student.status}
+                          </span>
+                          {student.status === 'Graduated' && (
+                            <Lock className="w-3 h-3 text-muted-foreground" />
+                          )}
+                        </div>
+                      </td>
+
                     <td className="p-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
