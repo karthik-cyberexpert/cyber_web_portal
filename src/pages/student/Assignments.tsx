@@ -92,7 +92,7 @@ export default function Assignments() {
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{assignment.subject}</p>
                       <Badge variant="outline" className={`text-[10px] font-bold uppercase ${getPriorityColor(assignment.priority)} border-0`}>
                         {assignment.priority}
-                      </priority>
+                      </Badge>
                     </div>
                     <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{assignment.title}</h3>
                   </div>
