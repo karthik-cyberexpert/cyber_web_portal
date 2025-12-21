@@ -104,39 +104,44 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Students"
-          value="840"
-          subtitle="Across all batches"
-          icon={GraduationCap}
-          trend={{ value: 5, isPositive: true }}
-          variant="primary"
-          delay={0.1}
-        />
           <StatCard
-            title="Faculty Members"
-            value="27"
-            subtitle="Including 8 tutors"
-            icon={Users}
-            variant="accent"
-            delay={0.2}
+            title="Total Students"
+            value="840"
+            subtitle="Across all batches"
+            icon={GraduationCap}
+            trend={{ value: 5, isPositive: true }}
+            variant="primary"
+            delay={0.1}
+            onClick={() => navigate('/admin/students')}
           />
-          <StatCard
-            title="Pending Leaves"
-            value="14"
-            subtitle="Awaiting approval"
-            icon={ExternalLink}
-            variant="success"
-            delay={0.3}
-          />
-          <StatCard
-            title="Approve Marks"
-            value="8"
-            subtitle="Awaiting approval"
-            icon={ClipboardCheck}
-            variant="warning"
-            delay={0.4}
-          />
+            <StatCard
+              title="Faculty Members"
+              value="27"
+              subtitle="Including 8 tutors"
+              icon={Users}
+              variant="accent"
+              delay={0.2}
+              onClick={() => navigate('/admin/faculty')}
+            />
+            <StatCard
+              title="Pending Leaves"
+              value="14"
+              subtitle="Awaiting approval"
+              icon={ExternalLink}
+              variant="success"
+              delay={0.3}
+              onClick={() => navigate('/admin/leave')}
+            />
+            <StatCard
+              title="Approve Marks"
+              value="8"
+              subtitle="Awaiting approval"
+              icon={ClipboardCheck}
+              variant="warning"
+              delay={0.4}
+              onClick={() => navigate('/admin/marks')}
+            />
+
       </div>
 
       {/* Main Content Grid */}
