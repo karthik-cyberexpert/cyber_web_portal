@@ -77,6 +77,14 @@ const semesterProgress = [
   { semester: 'Sem 8', progress: 0, status: 'pending' },
 ];
 
+interface LeaveRequest {
+  status: string;
+}
+
+interface MarksInternal {
+  status: string;
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -87,17 +95,17 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    const studentsArr = getData<any[]>('college_portal_students') || [];
-    const facultyArr = getData<any[]>('college_portal_faculty') || [];
-    const leavesArr = getData<any[]>('college_portal_leave_requests') || [];
-    const marksArr = getData<any[]>('college_portal_marksInternal') || [];
+    const studentsArr = getData<unknown[]>('college_portal_students') || [];
+    const facultyArr = getData<unknown[]>('college_portal_faculty') || [];
+    const leavesArr = getData<LeaveRequest[]>('college_portal_leave_requests') || [];
+    const marksArr = getData<MarksInternal[]>('college_portal_marksInternal') || [];
     
-    const pendingAdminMarks = marksArr.filter((m: any) => m.status === 'pending_admin');
+    const pendingAdminMarks = marksArr.filter((m) => m.status === 'pending_admin');
 
     setStats({
       students: studentsArr.length,
       faculty: facultyArr.length,
-      pendingLeaves: leavesArr.filter((l: any) => l.status === 'pending').length,
+      pendingLeaves: leavesArr.filter((l) => l.status === 'pending').length,
       pendingMarks: pendingAdminMarks.length
     });
   }, []);
@@ -302,7 +310,7 @@ export default function AdminDashboard() {
           </div>
           <div className="space-y-4">
             {recentActivities.map((activity, index) => {
-              const icons: Record<string, any> = {
+              const icons: Record<string, React.ElementType> = {
                 timetable: Calendar,
                 circular: Bell,
                 faculty: Users,
