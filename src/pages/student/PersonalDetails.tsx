@@ -11,10 +11,16 @@ import {
   Globe,
   Camera,
   Edit,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  Heart,
+  Droplets,
+  Link
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 export default function PersonalDetails() {
   const infoGroups = [
