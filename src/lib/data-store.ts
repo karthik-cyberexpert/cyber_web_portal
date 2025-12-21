@@ -130,7 +130,7 @@ export function initializeStorage() {
         days: 3, 
         reason: 'Severe fever and doctor advised rest.',
         status: 'pending',
-        photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=400&fit=crop'
+        photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop'
       },
       { 
         id: '2', 
@@ -146,6 +146,8 @@ export function initializeStorage() {
       }
     ]);
   }
+
+  checkGraduationLogic();
 }
 
 // Generate mock students
