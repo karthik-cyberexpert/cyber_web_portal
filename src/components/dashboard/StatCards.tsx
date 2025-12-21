@@ -35,14 +35,16 @@ export function StatCard({
   variant = 'primary',
   className,
   delay = 0,
+  onClick,
 }: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
+      onClick={onClick}
       className={cn(
-        'stat-card',
+        'stat-card cursor-pointer',
         variantStyles[variant],
         className
       )}
