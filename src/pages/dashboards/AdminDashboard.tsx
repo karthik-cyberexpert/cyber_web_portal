@@ -89,7 +89,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Students"
-            value="840"
+            value={stats.students.toString()}
             subtitle="Across all batches"
             icon={GraduationCap}
             trend={{ value: 5, isPositive: true }}
@@ -99,8 +99,8 @@ export default function AdminDashboard() {
           />
             <StatCard
               title="Faculty Members"
-              value="27"
-              subtitle="Including 8 tutors"
+              value={stats.faculty.toString()}
+              subtitle="Department staff"
               icon={Users}
               variant="accent"
               delay={0.2}
@@ -108,8 +108,8 @@ export default function AdminDashboard() {
             />
             <StatCard
               title="Pending Leaves"
-              value="14"
-              subtitle="Awaiting approval"
+              value={stats.pendingLeaves.toString()}
+              subtitle="Awaiting HOD approval"
               icon={ExternalLink}
               variant="success"
               delay={0.3}
@@ -117,8 +117,8 @@ export default function AdminDashboard() {
             />
             <StatCard
               title="Approve Marks"
-              value="8"
-              subtitle="Awaiting approval"
+              value={stats.pendingMarks.toString()}
+              subtitle="Awaiting final approval"
               icon={ClipboardCheck}
               variant="warning"
               delay={0.4}
