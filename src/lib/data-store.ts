@@ -76,6 +76,14 @@ export function saveData<T>(key: string, data: T[]): void {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+export function addItem<T extends { id: string }>(key: string, item: Omit<T, 'id'>): T {
+  const items = getData<T>(key);
+  const newItem = { ...item, id: Date.now().toString() } as T;
+  items.push(newItem);
+  saveData(key, items);
+  return newItem;
+}
+
 export function updateItem<T extends { id: string }>(key: string, id: string, updates: Partial<T>): T | null {
   const items = getData<T>(key);
   const index = items.findIndex(item => item.id === id);
@@ -93,18 +101,45 @@ export function deleteItem<T extends { id: string }>(key: string, id: string): b
   return true;
 }
 
+// Hierarchical Storage Keys
+export const BATCHES_KEY = 'batches';
+export const CLASSES_KEY = 'classes';
+export const SECTIONS_KEY = 'sections';
+
+export interface BatchData {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  label: string;
+}
+
+export interface ClassData {
+  id: string;
+  batchId: string;
+  yearNumber: number;
+  yearLabel: string;
+}
+
+export interface SectionData {
+  id: string;
+  classId: string;
+  sectionName: string;
+}
+
 // Initialization Logic
 export function initializeStorage() {
-  const keys = [
+  const portalKeys = [
     'users', 'students', 'faculties', 'tutors', 'admins', 'batches', 'classes', 
     'sections', 'semesters', 'subjects', 'subjectAssignments', 'timetable', 
     'notesQbank', 'assignments', 'submissions', 'notices', 'marksInternal', 
     'marksExternal', 'eca', 'lmsAttempts', 'resumeData', 'leaveRequests'
   ];
 
-  keys.forEach(key => {
-    if (!localStorage.getItem(`college_portal_${key}`)) {
-      localStorage.setItem(`college_portal_${key}`, JSON.stringify([]));
+  portalKeys.forEach(key => {
+    const storageKey = key === 'batches' || key === 'classes' || key === 'sections' ? key : `college_portal_${key}`;
+    if (!localStorage.getItem(storageKey)) {
+      localStorage.setItem(storageKey, JSON.stringify([]));
     }
   });
 
