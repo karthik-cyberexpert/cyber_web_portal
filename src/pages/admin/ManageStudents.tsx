@@ -385,7 +385,7 @@ export default function ManageStudents() {
                             {student.status}
                           </span>
                           {student.status === 'Graduated' && (
-                            <Lock className="w-3 h-3 text-muted-foreground" />
+                            <Lock className="w-3 h-3 text-muted-foreground" title="Portal access locked" />
                           )}
                         </div>
                       </td>
