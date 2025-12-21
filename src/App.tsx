@@ -3,72 +3,21 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { initializeStorage } from "@/lib/data-store";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import LoginPage from "@/pages/LoginPage";
-import StudentDashboard from "@/pages/dashboards/StudentDashboard";
-import FacultyDashboard from "@/pages/dashboards/FacultyDashboard";
-import TutorDashboard from "@/pages/dashboards/TutorDashboard";
-
-// Student Imports
-import PersonalDetailsStudent from "@/pages/student/PersonalDetails";
-import AcademicDetailsStudent from "@/pages/student/AcademicDetails";
-import TimetableSyllabusStudent from "@/pages/student/TimetableSyllabus";
-import MarksGradesStudent from "@/pages/student/MarksGrades";
-import NotesQuestionBankStudent from "@/pages/student/NotesQuestionBank";
-import AssignmentsStudent from "@/pages/student/Assignments";
-import CircularsStudent from "@/pages/student/Circulars";
-import LeavePortalStudent from "@/pages/student/LeavePortal";
-import LMSQuizStudent from "@/pages/student/LMSQuiz";
-import ECAAchievementsStudent from "@/pages/student/ECAAchievements";
-import ResumeBuilderStudent from "@/pages/student/ResumeBuilder";
-
-// Faculty Imports
-import PersonalDetailsFaculty from "@/pages/faculty/PersonalDetails";
-import MyClassesFaculty from "@/pages/faculty/MyClasses";
-import TimetableFaculty from "@/pages/faculty/Timetable";
-import MarksEntryFaculty from "@/pages/faculty/MarksEntry";
-import NotesUploadFaculty from "@/pages/faculty/NotesUpload";
-import AssignmentsFaculty from "@/pages/faculty/Assignments";
-import CircularsFaculty from "@/pages/faculty/Circulars";
-
-// Tutor Imports
-import PersonalDetails from "@/pages/tutor/PersonalDetails";
-import ClassManagement from "@/pages/tutor/ClassManagement";
-import TimetableTutor from "@/pages/tutor/Timetable";
-import VerifyMarks from "@/pages/tutor/VerifyMarks";
-import NotesStatus from "@/pages/tutor/NotesStatus";
-import AssignmentStatus from "@/pages/tutor/AssignmentStatus";
-import LeaveApprovals from "@/pages/tutor/LeaveApprovals";
-import LMSAnalytics from "@/pages/tutor/LMSAnalytics";
-import ECAApprovals from "@/pages/tutor/ECAApprovals";
-import CircularsTutor from "@/pages/tutor/Circulars";
-import ClassAnalytics from "@/pages/tutor/ClassAnalytics";
-import AdminDashboard from "@/pages/dashboards/AdminDashboard";
-import ManageStudents from "@/pages/admin/ManageStudents";
-import ManageFaculty from "@/pages/admin/ManageFaculty";
-import ManageTutors from "@/pages/admin/ManageTutors";
-import BatchesClasses from "@/pages/admin/BatchesClasses";
-import TimetableAdmin from "@/pages/admin/Timetable";
-import ApproveMarks from "@/pages/admin/ApproveMarks";
-import NotesAnalytics from "@/pages/admin/NotesAnalytics";
-import Assignments from "@/pages/admin/Assignments";
-import CircularsAdmin from "@/pages/admin/Circulars";
-import LMSManagement from "@/pages/admin/LMSManagement";
-import ECAAnalytics from "@/pages/admin/ECAAnalytics";
-import Settings from "@/pages/admin/Settings";
-import Profile from "@/pages/admin/Profile";
-import LeaveApprovalsAdmin from "@/pages/admin/LeaveApprovals";
-import NotFound from "./pages/NotFound";
-import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+const App = () => {
+  useEffect(() => {
+    initializeStorage();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
       <Toaster />
       <Sonner />
       <HoverReceiver />
