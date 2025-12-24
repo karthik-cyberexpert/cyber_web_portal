@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, 
@@ -16,60 +16,72 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useAuth } from '@/contexts/AuthContext';
+import { getTimetable, getSyllabus, getStudents, TimetableSlot, Syllabus } from '@/lib/data-store';
 
 export default function TimetableSyllabus() {
-  const timetable = [
-    { time: "09:00 - 10:00", subject: "Data Structures", room: "LT-101", faculty: "Dr. Ramesh", type: "Theory", color: "bg-blue-500", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" },
-    { time: "10:00 - 11:00", subject: "DBMS", room: "LT-202", faculty: "Prof. Lakshmi", type: "Theory", color: "bg-emerald-500", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" },
-    { time: "11:15 - 12:15", subject: "OS Lab", room: "Lab-A", faculty: "Mr. Senthil", type: "Lab", color: "bg-purple-500", avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop" },
-    { time: "12:15 - 01:15", subject: "OS Lab", room: "Lab-A", faculty: "Mr. Senthil", type: "Lab", color: "bg-purple-500" },
-    { time: "02:15 - 03:15", subject: "Networks", room: "LT-105", faculty: "Ms. Priya", type: "Theory", color: "bg-orange-500" },
-  ];
+  const { user } = useAuth();
+  const [timetable, setTimetable] = useState<any[]>([]);
+  const [syllabus, setSyllabus] = useState<Syllabus[]>([]);
+  const [selectedDay, setSelectedDay] = useState('Mon');
 
-  const syllabus = [
-    { 
-      code: "CS301", 
-      name: "Data Structures", 
-      credits: 4, 
-      type: "Core", 
-      completion: 65,
-      units: [
-        { title: "Unit I: Introduction & Linear Data Structures", status: "completed" },
-        { title: "Unit II: Trees & Graphs", status: "in-progress" },
-        { title: "Unit III: Hashing & Sets", status: "pending" },
-        { title: "Unit IV: Sorting & Searching", status: "pending" },
-        { title: "Unit V: Advanced Data Structures", status: "pending" },
-      ]
-    },
-    { 
-      code: "CS302", 
-      name: "Database Management Systems", 
-      credits: 3, 
-      type: "Core", 
-      completion: 50,
-      units: [
-        { title: "Unit I: Relational Model", status: "completed" },
-        { title: "Unit II: SQL & Advanced queries", status: "in-progress" },
-        { title: "Unit III: Database Design", status: "pending" },
-        { title: "Unit IV: Transactions & Concurrency", status: "pending" },
-        { title: "Unit V: NoSQL & Recovery", status: "pending" },
-      ]
-    },
-    { 
-      code: "CS303", 
-      name: "Operating Systems", 
-      credits: 4, 
-      type: "Core", 
-      completion: 40,
-      units: [
-        { title: "Unit I: Process Management", status: "completed" },
-        { title: "Unit II: CPU Scheduling", status: "in-progress" },
-        { title: "Unit III: Memory Management", status: "pending" },
-        { title: "Unit IV: File Systems", status: "pending" },
-        { title: "Unit V: I/O Systems", status: "pending" },
-      ]
-    },
-  ];
+  useEffect(() => {
+    if (!user) return;
+    const allStudents = getStudents();
+    const student = allStudents.find(s => s.id === user.id || s.email === user.email);
+    
+    if (student) {
+        // Fetch Timetable
+        const allSlots = getTimetable();
+        // Assuming student.class matches batch or classId used in timetable
+        const mySlots = allSlots.filter(s => 
+            (s.classId === student.batch || s.classId === student.year.toString()) && 
+            s.sectionId === student.section
+        );
+        
+        // Transform for display based on selected day
+        // Need to re-trigger this when selectedDay changes
+        updateTimetableDisplay(mySlots, selectedDay);
+
+        // Fetch Syllabus
+        // Syllabus is by subject. We need subjects for this student.
+         // In a real app we'd get subjects from curriculum. Here we infer from timetable or just get all for now for demo
+        const allSyllabus = getSyllabus();
+        setSyllabus(allSyllabus); // Ideally filter by semester/year
+    }
+  }, [user, selectedDay]); // added selectedDay dependency to re-filter
+
+  const updateTimetableDisplay = (slots: TimetableSlot[], dayShort: string) => {
+      // Map short day to full day
+      const dayMap: any = { 'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday' };
+      const fullDay = dayMap[dayShort];
+      
+      const daysSlots = slots.filter(s => s.day === fullDay).sort((a, b) => a.period - b.period);
+      
+      const mapped = daysSlots.map(s => ({
+          time: getTimeFromPeriod(s.period), // Helper needed
+          subject: s.subject,
+          room: s.room,
+          faculty: s.facultyName,
+          type: s.type, // theory/lab
+          color: getSubjectColor(s.subject), // Helper
+          avatar: '' 
+      }));
+      setTimetable(mapped);
+  };
+
+  const getTimeFromPeriod = (p: number) => {
+      const times = ['09:00 - 09:50', '09:50 - 10:40', '10:50 - 11:40', '11:40 - 12:30', '01:30 - 02:20', '02:20 - 03:10', '03:10 - 04:10', '04:10 - 05:00'];
+      return times[p-1] || 'Unknown';
+  };
+
+  const getSubjectColor = (subject: string) => {
+      // Consistent coloring
+      const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
+      let hash = 0;
+      for (let i = 0; i < subject.length; i++) hash = subject.charCodeAt(i) + ((hash << 5) - hash);
+      return colors[Math.abs(hash) % colors.length];
+  };
 
   return (
     <div className="space-y-6">
@@ -95,8 +107,9 @@ export default function TimetableSyllabus() {
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
               <Button 
                 key={idx} 
-                variant={day === 'Mon' ? 'default' : 'outline'} 
+                variant={selectedDay === day ? 'default' : 'outline'} 
                 className={`rounded-xl ${day === 'Sun' ? 'opacity-50' : ''}`}
+                onClick={() => setSelectedDay(day)}
               >
                 {day}
               </Button>
@@ -104,7 +117,7 @@ export default function TimetableSyllabus() {
           </div>
 
           <div className="space-y-4">
-            {timetable.map((session, idx) => (
+            {timetable.length > 0 ? timetable.map((session, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, x: -20 }}
@@ -119,7 +132,7 @@ export default function TimetableSyllabus() {
                   <div>
                     <p className="text-sm font-bold">{session.time}</p>
                     <p className={`text-[10px] font-black uppercase tracking-tighter ${
-                      session.type === 'Lab' ? 'text-accent' : 'text-primary'
+                      session.type === 'lab' ? 'text-accent' : 'text-primary'
                     }`}>{session.type}</p>
                   </div>
                 </div>
@@ -150,13 +163,15 @@ export default function TimetableSyllabus() {
                   </Button>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+                <div className="text-center py-10 text-muted-foreground">No classes scheduled for this day.</div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="syllabus" className="outline-none">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {syllabus.map((course, idx) => (
+            {syllabus.length > 0 ? syllabus.map((course, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -174,8 +189,8 @@ export default function TimetableSyllabus() {
                 </div>
 
                 <div className="space-y-1 mb-6">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{course.code}</p>
-                  <h3 className="text-xl font-bold">{course.name}</h3>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{course.subjectCode}</p>
+                  <h3 className="text-xl font-bold">{course.subjectName}</h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{course.type}</span>
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{course.credits} Credits</span>
@@ -185,12 +200,14 @@ export default function TimetableSyllabus() {
                 <div className="space-y-2 mb-6">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-muted-foreground uppercase tracking-tighter">Course Completion</span>
-                    <span className="text-accent">{course.completion}%</span>
+                    <span className="text-accent">
+                        {Math.round((course.units.filter(u => u.status === 'completed').length / course.units.length) * 100) || 0}%
+                    </span>
                   </div>
                   <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${course.completion}%` }}
+                      animate={{ width: `${(course.units.filter(u => u.status === 'completed').length / course.units.length) * 100}%` }}
                       transition={{ duration: 1, delay: 0.5 + idx * 0.1 }}
                       className="h-full bg-accent rounded-full"
                     />
@@ -223,7 +240,9 @@ export default function TimetableSyllabus() {
                   </AccordionItem>
                 </Accordion>
               </motion.div>
-            ))}
+            )) : (
+                <div className="col-span-2 text-center py-10 text-muted-foreground">No syllabus data available.</div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

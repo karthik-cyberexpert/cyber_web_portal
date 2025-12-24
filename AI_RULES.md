@@ -36,3 +36,12 @@ The application is built using the following technologies:
 *   **File Organization:** Components go in `src/components/`, pages in `src/pages/`, and utilities/hooks in `src/lib/` or `src/hooks/`.
 *   **Responsiveness:** All new components and layouts must be responsive by default, utilizing Tailwind's responsive prefixes (e.g., `md:`, `lg:`).
 *   **Simplicity:** Prioritize simple, elegant solutions. Avoid over-engineering complex state management or error handling unless explicitly requested.
+
+## 4. Theme and Color Preservation (STRICT)
+
+*   **DO NOT CHANGE THEME COLORS:** The current color palette, as defined in `tailwind.config.ts` and the global CSS variables, is **FROZEN**.
+    *   Do not modify `tailwind.config.ts` colors.
+    *   Do not change HSL values in `src/index.css` (or equivalent global CSS).
+    *   Do not introduce new color variables that clash with or attempt to replace the existing design system.
+*   **Maintain Aesthetic:** Any new UI components must strictly adhere to the existing look and feel. Use the existing `primary`, `secondary`, `accent`, `muted`, and `card` colors.
+*   **Gradients and Shadows:** Preserve the existing specific shadow and gradient definitions (e.g., `glow`, `glass`, `mesh-gradient`) found in the tailwind config.

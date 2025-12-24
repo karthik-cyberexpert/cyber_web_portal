@@ -46,7 +46,9 @@ import {
   addTutor, 
   updateTutor, 
   deleteTutor,
-  getFaculty 
+  getFaculty,
+  getData,
+  BATCHES_KEY 
 } from '@/lib/data-store';
 import { StatCard } from '@/components/dashboard/StatCards';
 
@@ -447,10 +449,18 @@ export default function ManageTutors() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2021-2025">2021-2025</SelectItem>
-                    <SelectItem value="2022-2026">2022-2026</SelectItem>
-                    <SelectItem value="2023-2027">2023-2027</SelectItem>
-                    <SelectItem value="2024-2028">2024-2028</SelectItem>
+                    {getData<any>(BATCHES_KEY).map((b: any) => (
+                      <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                    ))}
+                    {/* Fallback if store is empty */}
+                    {getData<any>(BATCHES_KEY).length === 0 && (
+                      <>
+                        <SelectItem value="2021-2025">2021-2025</SelectItem>
+                        <SelectItem value="2022-2026">2022-2026</SelectItem>
+                        <SelectItem value="2023-2027">2023-2027</SelectItem>
+                        <SelectItem value="2024-2028">2024-2028</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

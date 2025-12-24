@@ -20,6 +20,15 @@ export interface Student {
   guardianPhone: string;
   attendance: number;
   cgpa: number;
+  programme: string;
+  class: string;
+  backlogs: number;
+  gender: string;
+  bloodGroup: string;
+  nationality: string;
+  linkedin?: string;
+  github?: string;
+  semesterHistory: { sem: number; gpa: number; credits: number; status: string }[];
   createdAt: string;
 }
 
@@ -39,6 +48,8 @@ export interface Faculty {
   avatar: string;
   dateOfJoining: string;
   address: string;
+  office: string;
+  education: { degree: string; institution: string; year: string }[];
   createdAt: string;
 }
 
@@ -143,166 +154,68 @@ export function initializeStorage() {
     }
   });
 
-  // Seed with mock data if students are empty
-  if (getData(STUDENTS_KEY).length === 0) {
-    saveStudents(generateMockStudents());
-  }
-  if (getData(FACULTY_KEY).length === 0) {
-    saveFaculty(generateMockFaculty());
-  }
-  if (getData(TUTORS_KEY).length === 0) {
-    saveTutors(generateMockTutors());
-  }
+  // Seed with mock data - REMOVED
+  // const currentStudents = getData<Student>(STUDENTS_KEY);
+  // if (currentStudents.length === 0 || !(currentStudents[0] as any).programme) {
+  //   saveStudents(generateMockStudents());
+  // }
+  // const currentFaculty = getData<Faculty>(FACULTY_KEY);
+  // if (currentFaculty.length === 0 || !(currentFaculty[0] as any).education) {
+  //   saveFaculty(generateMockFaculty());
+  // }
+  // if (getData(TUTORS_KEY).length === 0) {
+  //   saveTutors(generateMockTutors());
+  // }
 
-  // Seed batches if empty
-  const BATCHES_KEY = 'college_portal_batches';
-  if (getData(BATCHES_KEY).length === 0) {
-    saveData(BATCHES_KEY, [
-      { id: '1', name: '2021-2025', sem8EndDate: '2025-05-30' },
-      { id: '2', name: '2022-2026', sem8EndDate: '2026-05-30' },
-      { id: '3', name: '2023-2027', sem8EndDate: '2027-05-30' },
-      { id: '4', name: '2024-2028', sem8EndDate: '2028-05-30' },
-      { id: '5', name: '2020-2024', sem8EndDate: '2024-05-30' }, // This batch is graduated
-    ]);
-  }
+  // Seed batches if empty - REMOVED
+  // const BATCHES_KEY = 'college_portal_batches';
+  // if (getData(BATCHES_KEY).length === 0) {
+  //   saveData(BATCHES_KEY, [
+  //     { id: '1', name: '2021-2025', sem8EndDate: '2025-05-30' },
+  //     { id: '2', name: '2022-2026', sem8EndDate: '2026-05-30' },
+  //     { id: '3', name: '2023-2027', sem8EndDate: '2027-05-30' },
+  //     { id: '4', name: '2024-2028', sem8EndDate: '2028-05-30' },
+  //     { id: '5', name: '2020-2024', sem8EndDate: '2024-05-30' }, // This batch is graduated
+  //   ]);
+  // }
 
-  checkGraduationLogic();
+  // checkGraduationLogic();
 
-  if (getData(LEAVE_REQUESTS_KEY).length === 0) {
-    saveData(LEAVE_REQUESTS_KEY, [
-      { 
-        id: '1', 
-        student: 'Arun Prasath', 
-        rollNo: '21CS001', 
-        type: 'Medical', 
-        startDate: '2024-03-20', 
-        endDate: '2024-03-22', 
-        days: 3, 
-        reason: 'Severe fever and doctor advised rest.',
-        status: 'pending',
-        photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop'
-      },
-      { 
-        id: '2', 
-        student: 'Priya Sharma', 
-        rollNo: '21CS045', 
-        type: 'Family Function', 
-        startDate: '2024-03-25', 
-        endDate: '2024-03-25', 
-        days: 1, 
-        reason: "Sister's wedding engagement ceremony.",
-        status: 'pending',
-        photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'
-      }
-    ]);
-  }
+  // if (getData(LEAVE_REQUESTS_KEY).length === 0) {
+  //   saveData(LEAVE_REQUESTS_KEY, [
+  //     { 
+  //       id: '1', 
+  //       student: 'Arun Prasath', 
+  //       rollNo: '21CS001', 
+  //       type: 'Medical', 
+  //       startDate: '2024-03-20', 
+  //       endDate: '2024-03-22', 
+  //       days: 3, 
+  //       reason: 'Severe fever and doctor advised rest.',
+  //       status: 'pending',
+  //       photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop'
+  //     },
+  //     { 
+  //       id: '2', 
+  //       student: 'Priya Sharma', 
+  //       rollNo: '21CS045', 
+  //       type: 'Family Function', 
+  //       startDate: '2024-03-25', 
+  //       endDate: '2024-03-25', 
+  //       days: 1, 
+  //       reason: "Sister's wedding engagement ceremony.",
+  //       status: 'pending',
+  //       photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'
+  //     }
+  //   ]);
+  // }
 
-  checkGraduationLogic();
+  // checkGraduationLogic();
 }
 
-// Generate mock students
-const generateMockStudents = (): Student[] => {
-  const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028', '2020-2024'];
-  const sections = ['A', 'B', 'C', 'D'];
-  const names = [
-    'Arun Prasath', 'Priya Sharma', 'Karthik Raja', 'Divya Lakshmi', 'Rahul Kumar',
-    'Sneha Patel', 'Vikram Singh', 'Anitha Devi', 'Suresh Babu', 'Meena Kumari',
-    'Rajesh Kannan', 'Lakshmi Priya', 'Ganesh Murthy', 'Kavitha Rani', 'Mohan Das',
-    'Revathi Subramaniam', 'Senthil Kumar', 'Uma Maheswari', 'Venkat Raman', 'Yamini Krishnan',
-    'Arjun Reddy', 'Bhavani Devi', 'Chandru Mohan', 'Deepa Sundaram', 'Ezhil Arasan',
-    'Fathima Begum', 'Gokul Nath', 'Harini Venkatesan', 'Ibrahim Khan', 'Janani Ramesh'
-  ];
+// Generate mock students - REMOVED
 
-  return names.map((name, index) => {
-    const batchIndex = Math.floor(index / 6);
-    const batch = batches[batchIndex] || batches[0];
-    const year = batch === '2020-2024' ? 4 : 4 - batchIndex;
-    const semester = year * 2 - (Math.random() > 0.5 ? 0 : 1);
-    const section = sections[index % 4];
-
-    return {
-      id: `student-${index + 1}`,
-      rollNumber: `21CSE${String(index + 1).padStart(3, '0')}`,
-      name,
-      email: `${name.toLowerCase().replace(' ', '.')}@student.college.edu`,
-      phone: `+91 ${Math.floor(7000000000 + Math.random() * 3000000000)}`,
-      batch,
-      year: Math.max(1, Math.min(4, year)),
-      semester: Math.max(1, Math.min(8, semester)),
-      section,
-      enrollmentType: Math.random() > 0.2 ? 'Regular' : 'Lateral',
-      admissionType: Math.random() > 0.7 ? 'Management' : Math.random() > 0.5 ? 'Government' : 'NRI',
-      status: Math.random() > 0.9 ? 'On Leave' : 'Active',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-      dateOfBirth: `${2000 + Math.floor(Math.random() * 4)}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-      address: 'Chennai, Tamil Nadu',
-      guardianName: `Mr/Mrs ${name.split(' ')[1] || 'Parent'}`,
-      guardianPhone: `+91 ${Math.floor(7000000000 + Math.random() * 3000000000)}`,
-      attendance: Math.floor(75 + Math.random() * 25),
-      cgpa: Number((6 + Math.random() * 4).toFixed(2)),
-      createdAt: new Date().toISOString(),
-    };
-  });
-};
-
-// Generate mock faculty
-const generateMockFaculty = (): Faculty[] => {
-  const designations: Faculty['designation'][] = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer'];
-  const subjects = ['Data Structures', 'DBMS', 'Operating Systems', 'Computer Networks', 'Machine Learning', 'Web Development', 'Cloud Computing', 'Cyber Security'];
-  const sections = ['CSE-A', 'CSE-B', 'CSE-C', 'CSE-D'];
-  
-  const names = [
-    'Dr. Rajesh Kumar', 'Prof. Lakshmi Devi', 'Mr. Senthil Murugan', 'Dr. Anand Sharma',
-    'Prof. Kavitha Sundaram', 'Dr. Ramesh Babu', 'Ms. Priya Krishnan', 'Mr. Vijay Anand',
-    'Dr. Uma Maheswari', 'Prof. Suresh Kumar', 'Dr. Meena Rani', 'Mr. Karthik Raja',
-    'Dr. Ganesh Iyer', 'Prof. Revathi Subramaniam', 'Ms. Deepa Venkat'
-  ];
-
-  return names.map((name, index) => ({
-    id: `faculty-${index + 1}`,
-    employeeId: `EMP${String(index + 1).padStart(4, '0')}`,
-    name,
-    email: `${name.toLowerCase().replace(/[^a-z]/g, '.').replace(/\.+/g, '.')}@college.edu`,
-    phone: `+91 ${Math.floor(7000000000 + Math.random() * 3000000000)}`,
-    designation: designations[index % designations.length],
-    qualification: index < 5 ? 'Ph.D in Computer Science' : index < 10 ? 'M.Tech in CSE' : 'M.Sc in Computer Science',
-    specialization: subjects[index % subjects.length],
-    experience: Math.floor(5 + Math.random() * 20),
-    subjects: [subjects[index % subjects.length], subjects[(index + 1) % subjects.length]],
-    sections: [sections[index % sections.length], sections[(index + 1) % sections.length]],
-    status: 'Active' as const,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-    dateOfJoining: `${2010 + Math.floor(Math.random() * 14)}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-01`,
-    address: 'Chennai, Tamil Nadu',
-    createdAt: new Date().toISOString(),
-  }));
-};
-
-// Generate mock tutors
-const generateMockTutors = (): Tutor[] => {
-  const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028'];
-  const sections = ['A', 'B', 'C', 'D'];
-  
-  const tutorNames = [
-    'Prof. Lakshmi Devi', 'Dr. Ramesh Babu', 'Mr. Senthil Murugan', 'Dr. Anand Sharma',
-    'Prof. Kavitha Sundaram', 'Ms. Priya Krishnan', 'Mr. Vijay Anand', 'Dr. Uma Maheswari'
-  ];
-
-  return tutorNames.map((name, index) => ({
-    id: `tutor-${index + 1}`,
-    facultyId: `faculty-${index + 2}`,
-    name,
-    email: `${name.toLowerCase().replace(/[^a-z]/g, '.').replace(/\.+/g, '.')}@college.edu`,
-    phone: `+91 ${Math.floor(7000000000 + Math.random() * 3000000000)}`,
-    designation: index % 2 === 0 ? 'Associate Professor' : 'Assistant Professor',
-    batch: batches[Math.floor(index / 2)],
-    section: sections[index % 4],
-    studentsCount: Math.floor(55 + Math.random() * 10),
-    status: 'Active',
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-    createdAt: new Date().toISOString(),
-  }));
-};
+// Generate mock faculty - REMOVED
 
 // Graduation Logic
 export function checkGraduationLogic() {
@@ -335,11 +248,12 @@ export function getStudents(): Student[] {
     if (stored) {
       return JSON.parse(stored);
     }
-    const mockData = generateMockStudents();
-    localStorage.setItem(STUDENTS_KEY, JSON.stringify(mockData));
-    return mockData;
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return [];
   } catch {
-    return generateMockStudents();
+    return [];
   }
 }
 
@@ -382,11 +296,12 @@ export function getFaculty(): Faculty[] {
     if (stored) {
       return JSON.parse(stored);
     }
-    const mockData = generateMockFaculty();
-    localStorage.setItem(FACULTY_KEY, JSON.stringify(mockData));
-    return mockData;
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return [];
   } catch {
-    return generateMockFaculty();
+    return [];
   }
 }
 
@@ -423,17 +338,14 @@ export function deleteFaculty(id: string): boolean {
   return true;
 }
 
+// Generate mock tutors - REMOVED
+
 export function getTutors(): Tutor[] {
   try {
     const stored = localStorage.getItem(TUTORS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    const mockData = generateMockTutors();
-    localStorage.setItem(TUTORS_KEY, JSON.stringify(mockData));
-    return mockData;
+    return stored ? JSON.parse(stored) : [];
   } catch {
-    return generateMockTutors();
+    return [];
   }
 }
 
@@ -462,10 +374,513 @@ export function updateTutor(id: string, updates: Partial<Tutor>): Tutor | null {
   return allTutors[index];
 }
 
+
 export function deleteTutor(id: string): boolean {
   const allTutors = getTutors();
   const filtered = allTutors.filter(t => t.id !== id);
   if (filtered.length === allTutors.length) return false;
   saveTutors(filtered);
   return true;
+}
+
+// Marks Management
+export const MARKS_KEY = 'college_portal_marks';
+
+export interface MarkEntry {
+  id: string;
+  studentId: string;
+  subjectCode: string;
+  examType: 'ia1' | 'ia2' | 'model' | 'semester' | string;
+  marks: number;
+  maxMarks: number;
+  date: string;
+  status: 'saved' | 'submitted' | 'verified' | 'approved' | 'rejected';
+  submittedBy?: string;
+  verifiedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getMarks(): MarkEntry[] {
+  return getData<MarkEntry>(MARKS_KEY);
+}
+
+export function saveMarks(marks: MarkEntry[]): void {
+  saveData(MARKS_KEY, marks);
+}
+
+export function addOrUpdateMark(mark: Omit<MarkEntry, 'id' | 'createdAt' | 'updatedAt'>): MarkEntry {
+  const allMarks = getMarks();
+  const existingIndex = allMarks.findIndex(
+    m => m.studentId === mark.studentId && m.subjectCode === mark.subjectCode && m.examType === mark.examType
+  );
+
+  const now = new Date().toISOString();
+
+  if (existingIndex >= 0) {
+    allMarks[existingIndex] = { ...allMarks[existingIndex], ...mark, updatedAt: now };
+    saveMarks(allMarks);
+    return allMarks[existingIndex];
+  } else {
+    const newMark = { ...mark, id: `mark-${Date.now()}-${Math.random()}`, createdAt: now, updatedAt: now };
+    allMarks.push(newMark);
+    saveMarks(allMarks);
+    return newMark;
+  }
+}
+
+export function updateMarkStatus(id: string, status: 'submitted' | 'verified' | 'approved' | 'rejected', processedBy: string): void {
+  const all = getMarks();
+  const index = all.findIndex(m => m.id === id);
+  if (index !== -1) {
+    all[index].status = status;
+    if (status === 'verified') all[index].verifiedBy = processedBy;
+    all[index].updatedAt = new Date().toISOString();
+    saveMarks(all);
+  }
+}
+
+export function getStudentMarks(studentId: string): MarkEntry[] {
+  return getMarks().filter(m => m.studentId === studentId);
+}
+
+// Timetable Management
+export const TIMETABLE_KEY = 'college_portal_timetable';
+
+export interface TimetableSlot {
+  id: string;
+  day: string;
+  period: number;
+  subject: string;
+  subjectCode: string;
+  facultyId: string; // Changed from faculty name to ID for relation
+  facultyName: string; // Kept for easy display, but should ideally be joined
+  sectionId: string; // e.g., "A", "B" or complex ID
+  classId: string; // e.g., "1st Year", "2021-2025"
+  room: string;
+  type: 'theory' | 'lab' | 'tutorial' | 'free';
+}
+
+export function getTimetable(): TimetableSlot[] {
+  return getData<TimetableSlot>(TIMETABLE_KEY);
+}
+
+export function saveTimetable(timetable: TimetableSlot[]): void {
+  saveData(TIMETABLE_KEY, timetable);
+}
+
+export function addTimetableSlot(slot: Omit<TimetableSlot, 'id'>): TimetableSlot {
+  const allSlots = getTimetable();
+  const newSlot = { ...slot, id: `slot-${Date.now()}-${Math.random()}` };
+  allSlots.push(newSlot);
+  saveTimetable(allSlots);
+  return newSlot;
+}
+
+export function deleteTimetableSlot(id: string): void {
+  const allSlots = getTimetable();
+  saveTimetable(allSlots.filter(s => s.id !== id));
+}
+
+// Assignments Management
+export const ASSIGNMENTS_KEY = 'college_portal_assignments';
+export const SUBMISSIONS_KEY = 'college_portal_submissions';
+
+export interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  subject: string;
+  subjectCode: string;
+  facultyId: string;
+  facultyName: string;
+  classId: string; // Year
+  sectionId: string;
+  dueDate: string;
+  maxMarks: number;
+  createdAt: string;
+  status: 'active' | 'completed' | 'overdue'; // Derived or stored
+}
+
+export interface Submission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  submittedAt: string;
+  fileUrl?: string; // Mock URL
+  status: 'submitted' | 'late' | 'graded';
+  obtainedMarks?: number;
+  feedback?: string;
+}
+
+export function getAssignments(): Assignment[] {
+  return getData<Assignment>(ASSIGNMENTS_KEY);
+}
+
+export function saveAssignments(assignments: Assignment[]): void {
+  saveData(ASSIGNMENTS_KEY, assignments);
+}
+
+export function addAssignment(assignment: Omit<Assignment, 'id' | 'createdAt'>): Assignment {
+  const allAssignments = getAssignments();
+  const newAssignment = { 
+    ...assignment, 
+    id: `asg-${Date.now()}-${Math.random()}`,
+    createdAt: new Date().toISOString()
+  };
+  allAssignments.push(newAssignment);
+  saveAssignments(allAssignments);
+  return newAssignment;
+}
+
+export function getSubmissions(): Submission[] {
+  return getData<Submission>(SUBMISSIONS_KEY);
+}
+
+export function saveSubmissions(submissions: Submission[]): void {
+  saveData(SUBMISSIONS_KEY, submissions);
+}
+
+export function submitAssignment(submission: Omit<Submission, 'id' | 'submittedAt' | 'status'>): Submission {
+  const all = getSubmissions();
+  // Check if already submitted
+  const existingIndex = all.findIndex(s => s.assignmentId === submission.assignmentId && s.studentId === submission.studentId);
+  
+  const newSubmission: Submission = {
+    ...submission,
+    id: existingIndex >= 0 ? all[existingIndex].id : `sub-${Date.now()}-${Math.random()}`,
+    submittedAt: new Date().toISOString(),
+    status: 'submitted', // logic for 'late' can be added later
+  };
+
+  if (existingIndex >= 0) {
+    all[existingIndex] = { ...all[existingIndex], ...newSubmission };
+  } else {
+    all.push(newSubmission);
+  }
+  
+  saveSubmissions(all);
+  return newSubmission;
+}
+
+export function gradeSubmission(submissionId: string, marks: number, feedback: string): Submission | null {
+  const all = getSubmissions();
+  const index = all.findIndex(s => s.id === submissionId);
+  if (index === -1) return null;
+  
+  all[index].obtainedMarks = marks;
+  all[index].feedback = feedback;
+  all[index].status = 'graded';
+  
+  saveSubmissions(all);
+  return all[index];
+}
+
+// Syllabus Management
+export const SYLLABUS_KEY = 'college_portal_syllabus';
+
+export interface Unit {
+  title: string;
+  status: 'completed' | 'in-progress' | 'pending';
+}
+
+export interface Syllabus {
+  id: string;
+  subjectCode: string;
+  subjectName: string;
+  credits: number;
+  type: string;
+  units: Unit[];
+}
+
+export function getSyllabus(): Syllabus[] {
+  return getData<Syllabus>(SYLLABUS_KEY);
+}
+
+export function saveSyllabus(syllabus: Syllabus[]): void {
+  saveData(SYLLABUS_KEY, syllabus);
+}
+// Resources Management (Notes, Question Banks, Manuals)
+export const RESOURCES_KEY = 'college_portal_resources';
+
+export interface Resource {
+  id: string;
+  title: string;
+  subject: string;
+  subjectCode: string;
+  classId: string;
+  sectionId?: string;
+  type: 'Note' | 'QP' | 'Manual';
+  fileType: string; // PDF, PPTX, etc.
+  fileSize: string;
+  facultyId: string;
+  facultyName: string;
+  downloads: number;
+  createdAt: string;
+}
+
+export function getResources(): Resource[] {
+  return getData<Resource>(RESOURCES_KEY);
+}
+
+export function saveResources(resources: Resource[]): void {
+  saveData(RESOURCES_KEY, resources);
+}
+
+export function addResource(resource: Omit<Resource, 'id' | 'createdAt' | 'downloads'>): Resource {
+  const all = getResources();
+  const newResource: Resource = {
+    ...resource,
+    id: `res-${Date.now()}-${Math.random()}`,
+    createdAt: new Date().toISOString(),
+    downloads: 0
+  };
+  all.push(newResource);
+  saveResources(all);
+  return newResource;
+}
+
+export function deleteResource(id: string): boolean {
+  const all = getResources();
+  const filtered = all.filter(r => r.id !== id);
+  if (filtered.length === all.length) return false;
+  saveResources(filtered);
+  return true;
+}
+
+export function incrementDownload(id: string): void {
+  const all = getResources();
+  const index = all.findIndex(r => r.id === id);
+  if (index !== -1) {
+    all[index].downloads += 1;
+    saveResources(all);
+  }
+}
+
+// Circulars & Notices
+export const CIRCULARS_KEY = 'college_portal_circulars';
+
+export interface Circular {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  category: string;
+  priority: 'low' | 'medium' | 'high';
+  audience: 'all' | 'students' | 'faculty' | 'tutors';
+  attachment?: string;
+  createdAt: string;
+}
+
+export function getCirculars(): Circular[] {
+  return getData<Circular>(CIRCULARS_KEY);
+}
+
+export function saveCirculars(circulars: Circular[]): void {
+  saveData(CIRCULARS_KEY, circulars);
+}
+
+export function addCircular(circular: Omit<Circular, 'id' | 'createdAt'>): Circular {
+  const all = getCirculars();
+  const newCircular: Circular = {
+    ...circular,
+    id: `circ-${Date.now()}`,
+    createdAt: new Date().toISOString()
+  };
+  all.push(newCircular);
+  saveCirculars(all);
+  return newCircular;
+}
+
+// Leave Management
+export const LEAVE_KEY = 'college_portal_leave';
+
+export interface LeaveRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  contact: string;
+  status: 'pending' | 'approved' | 'rejected';
+  processedBy?: string;
+  processedDate?: string;
+  createdAt: string;
+}
+
+export function getLeaveRequests(): LeaveRequest[] {
+  return getData<LeaveRequest>(LEAVE_KEY);
+}
+
+export function addLeaveRequest(request: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>): LeaveRequest {
+  const all = getLeaveRequests();
+  const newRequest: LeaveRequest = {
+    ...request,
+    id: `lv-${Date.now()}`,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  all.push(newRequest);
+  saveData(LEAVE_KEY, all);
+  return newRequest;
+}
+
+export function updateLeaveStatus(id: string, status: 'approved' | 'rejected', processedBy: string): void {
+  const all = getLeaveRequests();
+  const index = all.findIndex(l => l.id === id);
+  if (index !== -1) {
+    all[index].status = status;
+    all[index].processedBy = processedBy;
+    all[index].processedDate = new Date().toISOString();
+    saveData(LEAVE_KEY, all);
+  }
+}
+
+// LMS Quizzes
+export const QUIZZES_KEY = 'college_portal_quizzes';
+
+export interface Quiz {
+  id: string;
+  title: string;
+  subject: string;
+  subjectCode: string;
+  duration: string;
+  questions: number;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  deadline: string;
+  status: 'active' | 'scheduled' | 'expired';
+  createdAt: string;
+}
+
+export function getQuizzes(): Quiz[] {
+  return getData<Quiz>(QUIZZES_KEY);
+}
+
+export function addQuiz(quiz: Omit<Quiz, 'id' | 'createdAt'>): Quiz {
+  const all = getQuizzes();
+  const newQuiz: Quiz = {
+    ...quiz,
+    id: `qz-${Date.now()}`,
+    createdAt: new Date().toISOString()
+  };
+  all.push(newQuiz);
+  saveData(QUIZZES_KEY, all);
+  return newQuiz;
+}
+
+// ECA & Achievements
+export const ACHIEVEMENTS_KEY = 'college_portal_achievements';
+
+export interface Achievement {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  organization: string;
+  date: string;
+  category: 'Technical' | 'Cultural' | 'Sports' | 'Social Service' | 'Leadership';
+  status: 'pending' | 'approved' | 'rejected';
+  points: number;
+  certificateUrl?: string;
+  link?: string;
+  remarks?: string;
+  level: 'College' | 'District' | 'State' | 'National' | 'International';
+  createdAt: string;
+}
+
+export function getAchievements(): Achievement[] {
+  return getData<Achievement>(ACHIEVEMENTS_KEY);
+}
+
+export function addAchievement(achievement: Omit<Achievement, 'id' | 'status' | 'points' | 'createdAt'>): Achievement {
+  const all = getAchievements();
+  const newAchievement: Achievement = {
+    ...achievement,
+    id: `ach-${Date.now()}`,
+    status: 'pending',
+    points: 0,
+    createdAt: new Date().toISOString()
+  };
+  all.push(newAchievement);
+  saveData(ACHIEVEMENTS_KEY, all);
+  return newAchievement;
+}
+
+export function updateAchievementStatus(id: string, status: 'approved' | 'rejected', points: number = 0, remarks?: string): void {
+  const all = getAchievements();
+  const index = all.findIndex(a => a.id === id);
+  if (index !== -1) {
+    all[index].status = status;
+    all[index].points = points;
+    all[index].remarks = remarks;
+    saveData(ACHIEVEMENTS_KEY, all);
+  }
+}
+
+// Resume Builder
+export const RESUME_KEY = 'college_portal_resumes';
+
+export interface Resume {
+  userId: string;
+  personalInfo: {
+    fullName: string;
+    email: string;
+    phone: string;
+    summary: string;
+  };
+  sections: {
+    name: string;
+    completion: number;
+    data: any;
+  }[];
+  template: string;
+  lastUpdated: string;
+}
+
+export function getResume(userId: string): Resume | null {
+  const all = getData<Resume>(RESUME_KEY);
+  return all.find(r => r.userId === userId) || null;
+}
+
+export function saveResume(resume: Resume): void {
+  const all = getData<Resume>(RESUME_KEY);
+  const index = all.findIndex(r => r.userId === resume.userId);
+  if (index !== -1) {
+    all[index] = resume;
+  } else {
+    all.push(resume);
+  }
+  saveData(RESUME_KEY, all);
+}
+
+// Quiz Results (for Leaderboard)
+export const QUIZ_RESULTS_KEY = 'college_portal_quiz_results';
+
+export interface QuizResult {
+  id: string;
+  quizId: string;
+  userId: string;
+  userName: string;
+  score: number;
+  timeTaken: string;
+  completedAt: string;
+}
+
+export function getQuizResults(): QuizResult[] {
+  return getData<QuizResult>(QUIZ_RESULTS_KEY);
+}
+
+export function addQuizResult(result: Omit<QuizResult, 'id' | 'completedAt'>): QuizResult {
+  const all = getQuizResults();
+  const newResult: QuizResult = {
+    ...result,
+    id: `qr-${Date.now()}`,
+    completedAt: new Date().toISOString()
+  };
+  all.push(newResult);
+  saveData(QUIZ_RESULTS_KEY, all);
+  return newResult;
 }

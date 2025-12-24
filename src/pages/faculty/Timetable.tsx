@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Calendar, 
@@ -14,38 +14,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { getTimetable, TimetableSlot } from '@/lib/data-store';
 
 const timeSlots = [
   '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
   '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM'
-];
-
-const facultyTimetable = [
-  { day: 'Monday', slots: [
-    { time: '09:00 AM', subject: 'Data Structures', class: 'CSE-A', room: 'LH-201', type: 'theory' },
-    { time: '11:00 AM', subject: 'DBMS Lab', class: 'CSE-B', room: 'Lab-3', type: 'lab' },
-    { time: '02:00 PM', subject: 'Operating Systems', class: 'CSE-C', room: 'LH-105', type: 'theory' }
-  ]},
-  { day: 'Tuesday', slots: [
-    { time: '10:00 AM', subject: 'Data Structures', class: 'CSE-C', room: 'LH-105', type: 'theory' },
-    { time: '12:00 PM', subject: 'Theory of Computation', class: 'CSE-A', room: 'LH-201', type: 'theory' },
-    { time: '03:00 PM', subject: 'Project Review', class: 'Final Year', room: 'Project Lab', type: 'tutorial' }
-  ]},
-  { day: 'Wednesday', slots: [
-    { time: '09:00 AM', subject: 'DBMS Lab', class: 'CSE-B', room: 'Lab-3', type: 'lab' },
-    { time: '11:00 AM', subject: 'Operating Systems', class: 'CSE-A', room: 'LH-201', type: 'theory' },
-    { time: '02:00 PM', subject: 'Data Structures', class: 'CSE-B', room: 'LH-202', type: 'theory' }
-  ]},
-  { day: 'Thursday', slots: [
-    { time: '10:00 AM', subject: 'Theory of Computation', class: 'CSE-C', room: 'LH-105', type: 'theory' },
-    { time: '01:00 PM', subject: 'Data Structures', class: 'CSE-A', room: 'LH-201', type: 'theory' },
-    { time: '03:00 PM', subject: 'DBMS Lab', class: 'CSE-B', room: 'Lab-3', type: 'lab' }
-  ]},
-  { day: 'Friday', slots: [
-    { time: '09:00 AM', subject: 'Operating Systems', class: 'CSE-C', room: 'LH-105', type: 'theory' },
-    { time: '11:00 AM', subject: 'Theory of Computation', class: 'CSE-A', room: 'LH-201', type: 'theory' },
-    { time: '02:00 PM', subject: 'Mentoring Session', class: 'CSE-A', room: 'Staff Room', type: 'tutorial' }
-  ]}
 ];
 
 const getSlotColor = (type: string) => {
@@ -58,6 +32,39 @@ const getSlotColor = (type: string) => {
 };
 
 export default function Timetable() {
+  const { user } = useAuth();
+  const [schedule, setSchedule] = useState<{day: string, slots: any[]}[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const allSlots = getTimetable();
+    const mySlots = allSlots.filter(s => s.facultyId === user.id || s.facultyName === user.name);
+    
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const formattedSchedule = days.map(day => {
+        const dailySlots = mySlots.filter(s => s.day === day);
+        // Map data-store periods to display times
+        const mappedSlots = dailySlots.map(s => ({
+            time: getTimeFromPeriod(s.period),
+            subject: s.subject,
+            class: `${s.classId} (${s.sectionId})`, // Combine class and section
+            room: s.room,
+            type: s.type
+        }));
+        return { day, slots: mappedSlots };
+    });
+    setSchedule(formattedSchedule);
+  }, [user]);
+
+  const getTimeFromPeriod = (p: number) => {
+    // Basic mapping, assuming 1-based periods starting at 9 AM
+    // This logic should ideally match the period definitions in Admin Timetable
+    const startHour = 8 + p; 
+    const ampm = startHour >= 12 ? 'PM' : 'AM';
+    const hour12 = startHour > 12 ? startHour - 12 : startHour;
+    return `${hour12.toString().padStart(2, '0')}:00 ${ampm}`;
+  };
+
   return (
     <div className="space-y-8">
       <motion.div
@@ -93,7 +100,7 @@ export default function Timetable() {
             <thead>
               <tr className="bg-muted/30">
                 <th className="p-4 border-b border-r border-white/5 text-xs font-black uppercase tracking-tighter text-muted-foreground w-32">Time / Day</th>
-                {facultyTimetable.map(day => (
+                {schedule.map(day => (
                   <th key={day.day} className="p-4 border-b border-white/5 text-sm font-black uppercase tracking-widest">{day.day}</th>
                 ))}
               </tr>
@@ -102,7 +109,9 @@ export default function Timetable() {
               {timeSlots.map(time => (
                 <tr key={time} className="group hover:bg-white/5 transition-colors">
                   <td className="p-4 border-r border-b border-white/5 text-xs font-bold text-muted-foreground text-center bg-muted/10">{time}</td>
-                  {facultyTimetable.map(day => {
+                  {schedule.map(day => {
+                    // Fuzzy match time for now since period mapping might be exact hour vs range
+                    // In real app, we'd match exact period ID or time range
                     const slot = day.slots.find(s => s.time === time);
                     return (
                       <td key={`${day.day}-${time}`} className="p-2 border-b border-white/5 min-w-[160px]">
@@ -140,52 +149,51 @@ export default function Timetable() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
          <Card className="glass-card p-8 border-none shadow-xl bg-gradient-to-br from-primary/5 to-transparent">
-            <h3 className="text-xl font-black mb-6 uppercase tracking-tight flex items-center gap-3">
+            <h3 className="text-xl font-black mb-6 uppercase tracking-tight flex items-center gap-3 italic">
                <Calendar className="w-6 h-6 text-primary" />
-               Upcoming Highlights
+               Upcoming Seminars
             </h3>
             <div className="space-y-4">
                {[
-                 { event: 'Guest Lecture: AI Trends', date: 'Mar 22, 10:00 AM', status: 'Confirmed' },
-                 { event: 'Board of Studies Meeting', date: 'Mar 25, 02:30 PM', status: 'Mandatory' },
-                 { event: 'Internal Audit - Lab 3', date: 'Mar 28, 09:00 AM', status: 'Pending' }
+                 { event: 'Research Methodology', date: 'Upcoming Friday', status: 'Department' },
+                 { event: 'Curriculum Review', date: 'Nex Monday', status: 'Mandatory' },
                ].map((item, idx) => (
-                 <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                 <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-all">
                     <div>
-                       <p className="text-sm font-bold">{item.event}</p>
-                       <p className="text-xs text-muted-foreground font-medium">{item.date}</p>
+                       <p className="text-sm font-bold italic">{item.event}</p>
+                       <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{item.date}</p>
                     </div>
-                    <Badge variant="secondary" className="bg-primary/20 text-primary border-none text-[10px] uppercase font-black">{item.status}</Badge>
+                    <Badge variant="secondary" className="bg-primary/20 text-primary border-none text-[9px] uppercase font-black tracking-widest">{item.status}</Badge>
                  </div>
                ))}
             </div>
          </Card>
 
          <Card className="glass-card p-8 border-none shadow-xl bg-gradient-to-br from-accent/5 to-transparent">
-            <h3 className="text-xl font-black mb-6 uppercase tracking-tight flex items-center gap-3">
+            <h3 className="text-xl font-black mb-6 uppercase tracking-tight flex items-center gap-3 italic">
                <Clock className="w-6 h-6 text-accent" />
-               Teaching Load Summary
+               Teaching Load Analytics
             </h3>
             <div className="space-y-6">
                <div className="flex justify-between items-end">
                   <div>
-                     <p className="text-3xl font-black tracking-tighter">16 hrs</p>
-                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Weekly Contact Hours</p>
+                     <p className="text-3xl font-black tracking-tighter italic">{schedule.reduce((acc, d) => acc + d.slots.length, 0)} hrs</p>
+                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Weekly Contact Load</p>
                   </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-500 border-none">Optimal Load</Badge>
+                  <Badge className="bg-emerald-500/20 text-emerald-500 border-none font-black text-[9px] tracking-widest uppercase px-3 py-1">Active Schedule</Badge>
                </div>
                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-2xl bg-white/5">
-                     <p className="text-lg font-black">9</p>
-                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Theory</p>
+                  <div className="text-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                     <p className="text-xl font-black italic">{schedule.reduce((acc, d) => acc + d.slots.filter(s => s.type === 'theory').length, 0)}</p>
+                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Theory</p>
                   </div>
-                  <div className="text-center p-3 rounded-2xl bg-white/5">
-                     <p className="text-lg font-black">6</p>
-                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Lab</p>
+                  <div className="text-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                     <p className="text-xl font-black italic">{schedule.reduce((acc, d) => acc + d.slots.filter(s => s.type === 'lab').length, 0)}</p>
+                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Lab</p>
                   </div>
-                  <div className="text-center p-3 rounded-2xl bg-white/5">
-                     <p className="text-lg font-black">1</p>
-                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Tutorial</p>
+                  <div className="text-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                     <p className="text-xl font-black italic">{schedule.reduce((acc, d) => acc + d.slots.filter(s => s.type === 'tutorial').length, 0)}</p>
+                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Tutorial</p>
                   </div>
                </div>
             </div>

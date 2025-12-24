@@ -6,32 +6,36 @@ import {
   Users, 
   GraduationCap, 
   ClipboardCheck, 
-  FileCheck,
   Bell,
   Calendar,
-  TrendingUp,
   BarChart3,
-  ChevronRight,
-  CheckCircle,
-  Clock,
-  AlertCircle,
+  ExternalLink,
   Settings,
-  BookOpen,
-  Trophy,
-  ExternalLink
+  Clock,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getData } from '@/lib/data-store';
+import { 
+  getData, 
+  getStudents, 
+  getFaculty, 
+  getMarks, 
+  getLeaveRequests,
+  getCirculars,
+  Student, 
+  Faculty, 
+  MarkEntry,
+  LEAVE_KEY
+} from '@/lib/data-store';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -46,59 +50,151 @@ export default function AdminDashboard() {
     pendingMarks: 0
   });
 
-  const departmentStats = [
-    { month: 'Jan', students: 400, faculty: 24 },
-    { month: 'Feb', students: 450, faculty: 25 },
-    { month: 'Mar', students: 480, faculty: 26 },
-    { month: 'Apr', students: 510, faculty: 28 },
-    { month: 'May', students: 540, faculty: 30 },
-    { month: 'Jun', students: 580, faculty: 32 },
-  ];
-
-  const batchDistribution = [
-    { name: 'Batch 2021-25', value: 160, color: 'hsl(var(--primary))' },
-    { name: 'Batch 2022-26', value: 140, color: 'hsl(var(--accent))' },
-    { name: 'Batch 2023-27', value: 150, color: 'hsl(var(--success))' },
-    { name: 'Batch 2024-28', value: 130, color: 'hsl(var(--warning))' },
-  ];
-
-  const marksApprovalQueue = [
-    { exam: 'End-Sem Theory Portions', tutor: 'Prof. Amrita', section: 'CSE-A', count: 64 },
-    { exam: 'Internal Assessment 2', tutor: 'Dr. Ramesh', section: 'CSE-B', count: 62 },
-    { exam: 'Practical Exam Viva', tutor: 'Prof. Suresh', section: 'CSE-C', count: 60 },
-  ];
-
-  const recentActivities = [
-    { type: 'circular', action: 'Posted New Circular', target: 'Regarding Semester Holidays', time: '2h ago' },
-    { type: 'marks', action: 'Approved Internal Marks', target: 'Data Structures • Section B', time: '4h ago' },
-    { type: 'timetable', action: 'Updated Timetable', target: 'Third Year • Semester 6', time: '1d ago' },
-    { type: 'faculty', action: 'New Faculty Joined', target: 'Dr. Preeti • AI/ML Dept', time: '2d ago' },
-  ];
-
-  const semesterProgress = [
-    { semester: 'Sem 1', progress: 100, status: 'completed' },
-    { semester: 'Sem 2', progress: 100, status: 'completed' },
-    { semester: 'Sem 3', progress: 100, status: 'completed' },
-    { semester: 'Sem 4', progress: 100, status: 'completed' },
-    { semester: 'Sem 5', progress: 100, status: 'completed' },
-    { semester: 'Sem 6', progress: 100, status: 'completed' },
-    { semester: 'Sem 7', progress: 45, status: 'active' },
-    { semester: 'Sem 8', progress: 0, status: 'pending' },
-  ];
+  const [departmentStats, setDepartmentStats] = useState<any[]>([]);
+  const [batchDistribution, setBatchDistribution] = useState<any[]>([]);
+  const [marksApprovalQueue, setMarksApprovalQueue] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
-    const studentsArr = getData<any[]>('college_portal_students') || [];
-    const facultyArr = getData<any[]>('college_portal_faculty') || [];
-    const leavesArr = getData<any[]>('college_portal_leave_requests') || [];
-    const marksArr = getData<any[]>('college_portal_marksInternal') || [];
+    const studentsArr = getStudents();
+    const facultyArr = getFaculty();
+    const marksArr = getMarks();
+    const leavesArr = getLeaveRequests();
+    const circularsArr = getCirculars();
     
+    // Calculate Stats
     setStats({
       students: studentsArr.length,
       faculty: facultyArr.length,
       pendingLeaves: leavesArr.filter((l: any) => l.status === 'pending').length,
-      pendingMarks: marksArr.filter((m: any) => m.status === 'pending_admin').length
+      pendingMarks: marksArr.filter((m: MarkEntry) => m.status === 'verified').length
     });
+
+    // Calculate Department Stats (Real Cumulative Growth)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const last6Months = Array.from({length: 6}, (_, i) => {
+        const d = new Date();
+        d.setMonth(now.getMonth() - 5 + i);
+        return d;
+    });
+
+    const statsData = last6Months.map(date => {
+        const monthYear = `${months[date.getMonth()]}`;
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        return {
+            month: monthYear,
+            students: studentsArr.filter(s => new Date(s.createdAt) <= endOfMonth).length,
+            faculty: facultyArr.filter(f => new Date(f.createdAt) <= endOfMonth).length
+        };
+    });
+    setDepartmentStats(statsData);
+
+    // Calculate Batch Distribution
+    const batchCounts = studentsArr.reduce((acc: any, student) => {
+        acc[student.batch] = (acc[student.batch] || 0) + 1;
+        return acc;
+    }, {});
+
+    const batchColors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--info))'];
+    const batchDist = Object.keys(batchCounts).map((batch, index) => ({
+        name: `Batch ${batch}`,
+        value: batchCounts[batch],
+        color: batchColors[index % batchColors.length]
+    }));
+    setBatchDistribution(batchDist);
+
+    // Calculate Marks Approval Queue
+    const pending = marksArr.filter(m => m.status === 'verified');
+    const groupedPending = pending.reduce((acc: any, mark) => {
+        const key = `${mark.subjectCode}-${mark.examType}`; 
+        if (!acc[key]) {
+            acc[key] = {
+                exam: mark.examType.toUpperCase(),
+                subject: mark.subjectCode,
+                count: 0,
+                section: 'Unknown' 
+            };
+        }
+        acc[key].count++;
+        const student = studentsArr.find(s => s.id === mark.studentId);
+        if (student) acc[key].section = student.section;
+        return acc;
+    }, {});
+    setMarksApprovalQueue(Object.values(groupedPending));
+
+    // Recent Activities (Combined Source)
+    const activities = [
+        ...studentsArr.map(s => ({ type: 'student', action: 'New Student Joined', target: `${s.name} • ${s.batch}`, time: s.createdAt })),
+        ...facultyArr.map(f => ({ type: 'faculty', action: 'New Faculty Joined', target: `${f.name} • ${f.designation}`, time: f.createdAt })),
+        ...circularsArr.map(c => ({ type: 'circular', action: 'Notice Posted', target: c.title, time: c.createdAt })),
+        ...leavesArr.filter(l => l.status !== 'pending').map(l => ({ 
+            type: 'marks', 
+            action: `Leave ${l.status}`, 
+            target: `${l.userName} (${l.type})`, 
+            time: l.processedDate || l.createdAt 
+        })),
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+    
+    const formattedActivities = activities.map(a => {
+        const dateString = new Date(a.time).toLocaleDateString();
+        // Simple relative time approximation
+        const diffMs = now.getTime() - new Date(a.time).getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60) ;
+        const diffDays = Math.floor(diffHours / 24);
+        
+        let relativeTime = dateString;
+        if (diffDays > 0) relativeTime = `${diffDays}d ago`;
+        else if (diffHours > 0) relativeTime = `${diffHours}h ago`;
+        else if (diffMins > 0) relativeTime = `${diffMins}m ago`;
+        else relativeTime = 'Just now';
+
+        return {
+            ...a,
+            time: relativeTime
+        };
+    });
+    setRecentActivities(formattedActivities);
+
   }, []);
+
+  // Calculate Semester Progress for the primary active batch (2021-2025)
+  const calculateSemesterProgress = () => {
+    const startYear = 2021;
+    const now = new Date();
+    const semesters = [];
+    
+    for (let i = 1; i <= 8; i++) {
+        const semStartYear = startYear + Math.floor((i - 1) / 2);
+        const isOdd = i % 2 !== 0;
+        const semStartDate = new Date(semStartYear, isOdd ? 6 : 0, 1); // July or Jan
+        const semEndDate = new Date(semStartYear + (isOdd ? 0 : 0), isOdd ? 11 : 5, 30); // Dec or June
+        
+        let status: 'completed' | 'active' | 'pending' = 'pending';
+        let progress = 0;
+        
+        if (now > semEndDate) {
+            status = 'completed';
+            progress = 100;
+        } else if (now >= semStartDate && now <= semEndDate) {
+            status = 'active';
+            const total = semEndDate.getTime() - semStartDate.getTime();
+            const elapsed = now.getTime() - semStartDate.getTime();
+            progress = Math.round((elapsed / total) * 100);
+        }
+        
+        semesters.push({
+            semester: `Sem ${i}`,
+            progress,
+            status
+        });
+    }
+    return semesters;
+  };
+
+  const semesterProgress = calculateSemesterProgress();
 
   return (
     <div className="space-y-6">
@@ -109,8 +205,8 @@ export default function AdminDashboard() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold font-display">Welcome, Dr. Rajesh! 🎓</h1>
-          <p className="text-muted-foreground">Head of Department • Computer Science & Engineering</p>
+          <h1 className="text-3xl font-bold font-display">Welcome, Admin! 🎓</h1>
+          <p className="text-muted-foreground">Manage your institution efficiently</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => navigate('/admin/circulars')}>
@@ -147,7 +243,7 @@ export default function AdminDashboard() {
         <StatCard
           title="Pending Leaves"
           value={stats.pendingLeaves}
-          subtitle="Awaiting HOD approval"
+          subtitle="Awaiting approval"
           icon={ExternalLink}
           variant="success"
           delay={0.3}
@@ -239,6 +335,9 @@ export default function AdminDashboard() {
                 <span className="text-xs text-muted-foreground">{batch.name}</span>
               </div>
             ))}
+            {batchDistribution.length === 0 && (
+                 <div className="col-span-2 text-center text-sm text-muted-foreground">No batches found</div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -257,7 +356,7 @@ export default function AdminDashboard() {
             <Button variant="gradient" size="sm" onClick={() => navigate('/admin/marks')}>Approve All</Button>
           </div>
           <div className="space-y-3">
-            {marksApprovalQueue.map((item, index) => (
+            {marksApprovalQueue.length > 0 ? marksApprovalQueue.map((item, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
@@ -270,9 +369,9 @@ export default function AdminDashboard() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">{item.exam}</p>
+                    <p className="font-medium text-sm">{item.subject} - {item.exam}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.tutor} • {item.section} • {item.count} students
+                       Section {item.section} • {item.count} students
                     </p>
                   </div>
                 </div>
@@ -283,7 +382,9 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+                <div className="text-center py-4 text-muted-foreground">No pending marks for approval</div>
+            )}
           </div>
         </motion.div>
 
@@ -299,12 +400,13 @@ export default function AdminDashboard() {
             <Button variant="ghost" size="sm">View All</Button>
           </div>
           <div className="space-y-4">
-            {recentActivities.map((activity, index) => {
+            {recentActivities.length > 0 ? recentActivities.map((activity, index) => {
               const icons: Record<string, React.ElementType> = {
                 timetable: Calendar,
                 circular: Bell,
                 faculty: Users,
                 marks: ClipboardCheck,
+                student: GraduationCap
               };
               const Icon = icons[activity.type] || Bell;
               
@@ -326,12 +428,14 @@ export default function AdminDashboard() {
                   <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
                 </motion.div>
               );
-            })}
+            }) : (
+                <div className="text-center py-4 text-muted-foreground">No recent activities</div>
+            )}
           </div>
         </motion.div>
       </div>
 
-      {/* Semester Progress */}
+      {/* Semester Progress (Primary active batch 2021-2025) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -421,3 +525,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

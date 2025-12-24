@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, 
@@ -14,57 +14,96 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  MessageSquare
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from '@/components/ui/select';
+import { getAchievements, addAchievement, Achievement } from '@/lib/data-store';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export default function ECAAchievements() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newAch, setNewAch] = useState({
+    title: '',
+    organization: '',
+    date: '',
+    category: 'Technical' as Achievement['category'],
+    level: 'College' as Achievement['level'],
+    link: ''
+  });
 
-  const achievements = [
-    { 
-      id: 1, 
-      title: "1st Place - National Hackathon 2024", 
-      org: "IEEE Computer Society", 
-      date: "Aug 2024", 
-      category: "Technical", 
-      status: "approved",
-      points: 50,
-      icon: Code,
-      certificate: "https://images.unsplash.com/photo-1589330694653-ded6df03f754?w=400&h=300&fit=crop",
-      link: "https://github.com/arun/hackathon-win"
-    },
-    { 
-      id: 2, 
-      title: "Cultural Excellence Award", 
-      org: "College Fine Arts Club", 
-      date: "May 2024", 
-      category: "Cultural", 
-      status: "pending",
-      points: 30,
-      icon: Palette,
-      certificate: "https://images.unsplash.com/photo-1544923246-77307dd654ca?w=400&h=300&fit=crop",
-    },
-    { 
-      id: 3, 
-      title: "Inter-College Cricket Winner", 
-      org: "University Sports Board", 
-      date: "Mar 2024", 
-      category: "Sports", 
-      status: "rejected",
-      remarks: "Certificate scan is blurry. Please re-upload.",
-      points: 40,
-      icon: Target,
-      certificate: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=300&fit=crop",
-    },
-  ];
+  useEffect(() => {
+    if (user) {
+        setAchievements(getAchievements().filter(a => a.userId === user.id));
+    }
+  }, [user]);
+
+  const handleAdd = () => {
+    if (!user) return;
+    if (!newAch.title || !newAch.organization || !newAch.date) {
+        toast.error("Please fill in required fields");
+        return;
+    }
+
+    addAchievement({
+        userId: user.id,
+        userName: user.name,
+        ...newAch
+    });
+
+    setAchievements(getAchievements().filter(a => a.userId === user.id));
+    setIsAddOpen(false);
+    toast.success("Achievement submitted for verification!");
+    setNewAch({
+        title: '',
+        organization: '',
+        date: '',
+        category: 'Technical',
+        level: 'College',
+        link: ''
+    });
+  };
+
+  const totalPoints = useMemo(() => {
+    return achievements.reduce((acc, a) => acc + (a.points || 0), 0);
+  }, [achievements]);
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'approved': return { icon: CheckCircle2, color: "text-success", bg: "bg-success/10", border: "border-success/20", shadow: "shadow-success/20" };
       case 'rejected': return { icon: XCircle, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", shadow: "shadow-destructive/20" };
       default: return { icon: Clock, color: "text-warning", bg: "bg-warning/10", border: "border-warning/20", shadow: "shadow-warning/20" };
+    }
+  };
+
+  const getCategoryIcon = (cat: string) => {
+    switch (cat) {
+        case 'Technical': return Code;
+        case 'Cultural': return Music;
+        case 'Sports': return Target;
+        case 'Leadership': return Sparkles;
+        default: return Award;
     }
   };
 
@@ -76,13 +115,95 @@ export default function ECAAchievements() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold font-heading">ECA & Achievements</h1>
-          <p className="text-muted-foreground">Document your extracurricular activities and earn academic credits</p>
+          <h1 className="text-3xl font-bold italic">ECA & Achievements 🏆</h1>
+          <p className="text-muted-foreground font-medium">Document your extracurricular activities and earn academic credits</p>
         </div>
-        <Button variant="gradient" className="rounded-xl shadow-lg hover:scale-105 transition-all">
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Achievement
-        </Button>
+        
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+                <Button variant="gradient" className="rounded-xl shadow-glow-sm hover:scale-105 transition-all uppercase font-black tracking-widest text-[10px] h-10">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Achievement
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="glass-card border-white/10">
+                <DialogHeader>
+                    <DialogTitle className="italic font-bold">New Achievement Submission</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Achievement Title</Label>
+                        <Input 
+                            placeholder="e.g. 1st Place - National Hackathon" 
+                            value={newAch.title}
+                            onChange={e => setNewAch({...newAch, title: e.target.value})}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Organization / Issuer</Label>
+                        <Input 
+                            placeholder="IEEE, Google, Sports Club etc." 
+                            value={newAch.organization}
+                            onChange={e => setNewAch({...newAch, organization: e.target.value})}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Category</Label>
+                            <Select value={newAch.category} onValueChange={(val: any) => setNewAch({...newAch, category: val})}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Technical">Technical</SelectItem>
+                                    <SelectItem value="Cultural">Cultural</SelectItem>
+                                    <SelectItem value="Sports">Sports</SelectItem>
+                                    <SelectItem value="Social Service">Social Service</SelectItem>
+                                    <SelectItem value="Leadership">Leadership</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Level</Label>
+                            <Select value={newAch.level} onValueChange={(val: any) => setNewAch({...newAch, level: val})}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="College">College</SelectItem>
+                                    <SelectItem value="District">District</SelectItem>
+                                    <SelectItem value="State">State</SelectItem>
+                                    <SelectItem value="National">National</SelectItem>
+                                    <SelectItem value="International">International</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Date</Label>
+                            <Input 
+                                type="date"
+                                value={newAch.date}
+                                onChange={e => setNewAch({...newAch, date: e.target.value})}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Proof Link (Optional)</Label>
+                            <Input 
+                                placeholder="GitHub, LinkedIn etc." 
+                                value={newAch.link}
+                                onChange={e => setNewAch({...newAch, link: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                    <Button className="w-full gap-2 shadow-glow-sm font-black uppercase tracking-widest text-xs h-11" onClick={handleAdd}>
+                        <Send className="w-4 h-4" />
+                        Submit for Verification
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -91,9 +212,9 @@ export default function ECAAchievements() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-card rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20 relative overflow-hidden"
+            className="glass-card rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-4 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20 relative overflow-hidden shadow-2xl"
           >
-            <div className="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl opacity-50" />
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary border-4 border-white/20 z-10 relative">
                 <Trophy className="w-12 h-12" />
@@ -101,38 +222,38 @@ export default function ECAAchievements() {
               <motion.div 
                 animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
                 transition={{ repeat: Infinity, duration: 3 }}
-                className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center shadow-lg z-20"
+                className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center shadow-lg z-20 shadow-accent/50"
               >
                 <Sparkles className="w-5 h-5" />
               </motion.div>
             </div>
             <div>
-              <p className="text-4xl font-black text-primary font-mono tracking-tighter">150</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ECA Points Earned</p>
+              <p className="text-4xl font-black text-primary font-mono tracking-tighter">{totalPoints}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">ECA Points Earned</p>
             </div>
-            <div className="w-full space-y-2">
-              <div className="flex justify-between text-xs font-bold">
+            <div className="w-full space-y-2 pt-4">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                 <span className="text-muted-foreground">Semester Goal</span>
-                <span className="text-primary">80%</span>
+                <span className="text-primary">{Math.min(100, Math.round((totalPoints / 100) * 100))}%</span>
               </div>
               <div className="w-full h-2 bg-background/50 rounded-full overflow-hidden border border-white/5">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: '80%' }}
+                  animate={{ width: `${Math.min(100, Math.round((totalPoints / 100) * 100))}%` }}
                   className="h-full bg-primary rounded-full pulse-glow" 
                 />
               </div>
             </div>
           </motion.div>
 
-          <div className="glass-card rounded-2xl p-4 space-y-2">
-            <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2 mb-2">Filter Gallery</h3>
-            {['All', 'Technical', 'Cultural', 'Sports'].map((cat) => (
+          <div className="glass-card rounded-2xl p-4 space-y-2 shadow-xl border-white/5">
+            <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2 mb-2 italic">Gallery Filter</h3>
+            {['All', 'Technical', 'Cultural', 'Sports', 'Social Service', 'Leadership'].map((cat) => (
               <Button
                 key={cat}
                 variant={filter === cat.toLowerCase() ? 'default' : 'ghost'}
                 onClick={() => setFilter(cat.toLowerCase())}
-                className="w-full justify-start rounded-xl h-10 text-xs font-bold transition-all"
+                className="w-full justify-start rounded-xl h-10 text-[10px] font-black uppercase transition-all tracking-widest"
               >
                 <div className={`w-2 h-2 rounded-full mr-2 ${filter === cat.toLowerCase() ? 'bg-white' : 'bg-primary'}`} />
                 {cat}
@@ -144,11 +265,11 @@ export default function ECAAchievements() {
         {/* Gallery Grid */}
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {achievements
                 .filter(a => filter === 'all' || a.category.toLowerCase() === filter)
                 .map((item, idx) => {
-                const Icon = item.icon;
+                const Icon = getCategoryIcon(item.category);
                 const status = getStatusConfig(item.status);
                 const StatusIcon = status.icon;
 
@@ -160,58 +281,61 @@ export default function ECAAchievements() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: idx * 0.1 }}
-                    className="group glass-card rounded-2xl overflow-hidden hover:border-primary/20 transition-all flex flex-col"
+                    className="group glass-card rounded-2xl overflow-hidden hover:border-primary/20 transition-all flex flex-col shadow-xl border-white/5 relative bg-primary/[0.01]"
                   >
-                    <div className="relative aspect-video overflow-hidden">
-                      <img 
-                        src={item.certificate} 
-                        alt={item.title} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute top-3 right-3">
-                        <Badge className={`${status.bg} ${status.color} ${status.border} backdrop-blur-md shadow-lg font-black text-[9px] px-3 py-1 border`}>
-                          <StatusIcon className="w-3 h-3 mr-1.5" />
-                          {item.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className={`absolute bottom-3 left-3 flex items-center gap-2 text-white bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10`}>
-                        <Icon className="w-4 h-4 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{item.category}</span>
-                      </div>
+                    <div className="absolute top-4 right-4 z-20">
+                      <Badge className={`${status.bg} ${status.color} ${status.border} backdrop-blur-md shadow-lg font-black text-[9px] px-3 py-1 border`}>
+                        <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
+                        {item.status.toUpperCase()}
+                      </Badge>
                     </div>
 
-                    <div className="p-5 flex-1 flex flex-col">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{item.title}</h4>
-                        <Badge variant="secondary" className="bg-primary/5 text-primary border-0 font-black">+{item.points}</Badge>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                            <Icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/70">{item.category} • {item.level}</span>
+                            <h4 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors pr-20 italic">{item.title}</h4>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground font-medium mb-4">{item.org} • {item.date}</p>
+
+                      <div className="flex items-center justify-between mb-4 mt-2">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{item.organization}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground">{item.date}</p>
+                        </div>
+                        <div className="text-right">
+                             <p className="text-2xl font-black text-primary font-mono tracking-tighter">+{item.points}</p>
+                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Points</p>
+                        </div>
+                      </div>
                       
                       {item.remarks && (
-                        <div className="mb-4 p-3 rounded-xl bg-destructive/5 border border-destructive/10 flex items-start gap-2 animate-fade-in-up">
-                          <MessageSquare className="w-3 h-3 text-destructive mt-0.5" />
-                          <p className="text-[10px] text-destructive font-bold italic">{item.remarks}</p>
+                        <div className="mb-4 p-4 rounded-2xl bg-destructive/5 border border-destructive/10 flex items-start gap-3 animate-fade-in-up">
+                          <MessageSquare className="w-4 h-4 text-destructive mt-0.5" />
+                          <p className="text-xs text-destructive font-bold italic">"{item.remarks}"</p>
                         </div>
                       )}
 
-                      <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                      <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-all">
-                            <ImageIcon className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/10" disabled>
+                            <ImageIcon className="w-5 h-5" />
                           </Button>
                           {item.link && (
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="w-8 h-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                              className="w-10 h-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/10"
                               onClick={() => window.open(item.link, '_blank')}
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ExternalLink className="w-5 h-5" />
                             </Button>
                           )}
                         </div>
-                        <Button variant="outline" size="sm" className="rounded-xl text-[10px] font-black uppercase tracking-widest h-8">View Detailed</Button>
+                        <Button variant="outline" size="sm" className="rounded-xl text-[9px] font-black uppercase tracking-widest h-10 px-4 border-white/10 hover:bg-white/5">Details</Button>
                       </div>
                     </div>
                   </motion.div>
@@ -219,15 +343,12 @@ export default function ECAAchievements() {
               })}
             </AnimatePresence>
             
-            <motion.button 
-              whileHover={{ scale: 0.98 }}
-              className="rounded-2xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center p-8 gap-3 text-muted-foreground group min-h-[300px]"
-            >
-              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                <Plus className="w-6 h-6" />
-              </div>
-              <p className="text-sm font-bold uppercase tracking-widest">New Achievement</p>
-            </motion.button>
+            {achievements.length === 0 && (
+                <div className="col-span-full py-20 text-center bg-muted/20 border-2 border-dashed border-white/5 rounded-3xl">
+                    <Award className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                    <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">No achievements documented yet.</p>
+                </div>
+            )}
           </div>
         </div>
       </div>

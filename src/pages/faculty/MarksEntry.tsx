@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ClipboardCheck, 
@@ -23,29 +23,129 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from 'sonner';
+import { 
+  getStudents, 
+  getMarks, 
+  addOrUpdateMark, 
+  getFaculty,
+  Student, 
+  MarkEntry,
+  Faculty
+} from '@/lib/data-store';
+import { useAuth } from '@/contexts/AuthContext';
 
-const students = [
-  { id: '21CS001', name: 'Aravind Swamy', marks: 18, max: 20, status: 'saved' },
-  { id: '21CS002', name: 'Bhavana R', marks: 15, max: 20, status: 'saved' },
-  { id: '21CS003', name: 'Chandru M', marks: null, max: 20, status: 'pending' },
-  { id: '21CS004', name: 'Divya Parthiban', marks: 19, max: 20, status: 'saved' },
-  { id: '21CS005', name: 'Eswar K', marks: 12, max: 20, status: 'saved' },
-  { id: '21CS006', name: 'Farhan Ali', marks: null, max: 20, status: 'pending' },
-];
+interface StudentWithMarks extends Student {
+  currentMarks: number | null;
+  markStatus: 'saved' | 'pending' | 'changed';
+}
 
 export default function MarksEntry() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedExam, setSelectedExam] = useState('ia1');
-  const [marks, setMarks] = useState<any>(students);
+  const [selectedExam, setSelectedExam] = useState<'ia1' | 'ia2' | 'model'>('ia1');
+  const [selectedSubject, setSelectedSubject] = useState(''); 
+  const [selectedSection, setSelectedSection] = useState('all');
+  const [students, setStudents] = useState<StudentWithMarks[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [faculty, setFaculty] = useState<Faculty | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      const allFaculty = getFaculty();
+      const current = allFaculty.find(f => f.id === user.id || f.email === user.email);
+      if (current) {
+        setFaculty(current);
+        if (current.subjects.length > 0) setSelectedSubject(current.subjects[0]);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedSubject) {
+      loadData();
+    }
+  }, [selectedExam, selectedSubject, selectedSection, faculty]);
+
+  const loadData = () => {
+    setLoading(true);
+    const allStudents = getStudents();
+    const allMarks = getMarks();
+
+    console.log("Loading marks for", selectedExam, selectedSubject, selectedSection);
+
+    // Filter students by faculty sections or selected section
+    const filteredBySection = allStudents.filter(s => {
+      const matchSection = selectedSection === 'all' 
+        ? (faculty ? faculty.sections.includes(s.section) : true)
+        : s.section === selectedSection;
+      return matchSection;
+    });
+
+    const mappedStudents = filteredBySection.map(student => {
+      const existingMark = allMarks.find(m => 
+        m.studentId === student.id && 
+        m.subjectCode === selectedSubject && 
+        m.examType === selectedExam
+      );
+
+      return {
+        ...student,
+        currentMarks: existingMark ? existingMark.marks : null,
+        markStatus: existingMark ? 'saved' : 'pending'
+      } as StudentWithMarks;
+    });
+
+    setStudents(mappedStudents);
+    setLoading(false);
+  };
 
   const handleMarksChange = (id: string, value: string) => {
      const numVal = parseInt(value);
      if (!isNaN(numVal) && numVal >= 0 && numVal <= 20) {
-        setMarks(marks.map((s: any) => s.id === id ? { ...s, marks: numVal, status: 'changed' } : s));
+        setStudents(prev => prev.map(s => s.id === id ? { ...s, currentMarks: numVal, markStatus: 'changed' } : s));
      } else if (value === '') {
-        setMarks(marks.map((s: any) => s.id === id ? { ...s, marks: null, status: 'pending' } : s));
+        setStudents(prev => prev.map(s => s.id === id ? { ...s, currentMarks: null, markStatus: 'pending' } : s));
      }
   };
+
+  const handleSaveAll = () => {
+    const changed = students.filter(s => s.markStatus === 'changed');
+    if (changed.length === 0) {
+      toast.info('No changes to save');
+      return;
+    }
+
+    changed.forEach(student => {
+      if (student.currentMarks !== null) {
+        addOrUpdateMark({
+          studentId: student.id,
+          subjectCode: selectedSubject,
+          examType: selectedExam,
+          marks: student.currentMarks,
+          maxMarks: 20,
+          date: new Date().toISOString(),
+          status: 'submitted'
+        });
+      }
+    });
+
+    toast.success(`Saved marks for ${changed.length} students`);
+    loadData(); // Refresh to set status to 'saved'
+  };
+
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.rollNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const stats = {
+    total: students.length,
+    entered: students.filter(s => s.currentMarks !== null).length,
+    saved: students.filter(s => s.markStatus === 'saved').length
+  };
+
+  const progress = Math.round((stats.entered / stats.total) * 100) || 0;
 
   return (
     <div className="space-y-8">
@@ -63,7 +163,7 @@ export default function MarksEntry() {
              <FileSpreadsheet className="w-4 h-4 mr-2 group-hover:text-emerald-500 transition-colors" />
              Import CSV
           </Button>
-          <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20">
+          <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20" onClick={handleSaveAll}>
              <Save className="w-4 h-4 mr-2" />
              Save All Changes
           </Button>
@@ -77,31 +177,34 @@ export default function MarksEntry() {
                <div className="space-y-4">
                   <div className="space-y-2">
                      <p className="text-[10px] font-black uppercase text-primary">Requirement</p>
-                     <Select defaultValue="cse-a">
+                     <Select value={selectedSection} onValueChange={setSelectedSection}>
                         <SelectTrigger className="rounded-xl bg-white/5 border-white/10">
                            <SelectValue placeholder="Select Class" />
                         </SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="cse-a">CSE - A (Year III)</SelectItem>
-                           <SelectItem value="cse-b">CSE - B (Year III)</SelectItem>
+                           <SelectItem value="all">All My Sections</SelectItem>
+                           {faculty?.sections.map(sec => (
+                             <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                           ))}
                         </SelectContent>
                      </Select>
                   </div>
                   <div className="space-y-2">
                      <p className="text-[10px] font-black uppercase text-primary">Subject</p>
-                     <Select defaultValue="ds">
+                     <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                         <SelectTrigger className="rounded-xl bg-white/5 border-white/10">
                            <SelectValue placeholder="Select Subject" />
                         </SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="ds">Data Structures</SelectItem>
-                           <SelectItem value="dbms">DBMS</SelectItem>
+                          {faculty?.subjects.map(subCode => (
+                             <SelectItem key={subCode} value={subCode}>{subCode}</SelectItem>
+                          ))}
                         </SelectContent>
                      </Select>
                   </div>
                   <div className="space-y-2">
                      <p className="text-[10px] font-black uppercase text-primary">Assessment</p>
-                     <Select value={selectedExam} onValueChange={setSelectedExam}>
+                     <Select value={selectedExam} onValueChange={(v: any) => setSelectedExam(v)}>
                         <SelectTrigger className="rounded-xl bg-white/5 border-white/10">
                            <SelectValue placeholder="Select Exam" />
                         </SelectTrigger>
@@ -118,11 +221,11 @@ export default function MarksEntry() {
                   <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
                      <p className="text-[10px] font-black text-primary uppercase mb-1">Entry Progress</p>
                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xl font-black">84%</span>
-                        <span className="text-xs font-bold text-muted-foreground">55/62 Entered</span>
+                        <span className="text-xl font-black">{progress}%</span>
+                        <span className="text-xs font-bold text-muted-foreground">{stats.entered}/{stats.total} Entered</span>
                      </div>
                      <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-[84%]" />
+                        <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
                      </div>
                   </div>
                </div>
@@ -157,10 +260,7 @@ export default function MarksEntry() {
                      </thead>
                      <tbody className="divide-y divide-white/5">
                         <AnimatePresence>
-                           {marks.filter((s: any) => 
-                              s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              s.id.toLowerCase().includes(searchTerm.toLowerCase())
-                           ).map((student: any, idx: number) => (
+                           {filteredStudents.map((student, idx) => (
                               <motion.tr 
                                  key={student.id}
                                  initial={{ opacity: 0, x: -10 }}
@@ -173,7 +273,7 @@ export default function MarksEntry() {
                                        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                                           <Hash className="w-3 h-3" />
                                        </div>
-                                       <span className="font-bold text-sm tracking-tight">{student.id}</span>
+                                       <span className="font-bold text-sm tracking-tight">{student.rollNumber}</span>
                                     </div>
                                  </td>
                                  <td className="p-4 font-bold text-sm">{student.name}</td>
@@ -182,34 +282,34 @@ export default function MarksEntry() {
                                        <Input 
                                           type="text" 
                                           className={`w-20 text-center font-black rounded-lg transition-all ${
-                                             student.status === 'pending' ? 'bg-orange-500/10 border-orange-500/30' : 
-                                             student.status === 'changed' ? 'bg-primary/20 border-primary/40 text-primary' : 
+                                             student.markStatus === 'pending' ? 'bg-orange-500/10 border-orange-500/30' : 
+                                             student.markStatus === 'changed' ? 'bg-primary/20 border-primary/40 text-primary' : 
                                              'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
                                           }`}
-                                          value={student.marks === null ? '' : student.marks}
+                                          value={student.currentMarks === null ? '' : student.currentMarks}
                                           onChange={(e) => handleMarksChange(student.id, e.target.value)}
                                        />
                                     </div>
                                  </td>
                                  <td className="p-4">
                                     <div className="flex justify-center">
-                                       {student.status === 'saved' ? (
+                                       {student.markStatus === 'saved' ? (
                                           <Badge className="bg-emerald-500/10 text-emerald-500 border-none flex gap-1 items-center">
                                              <CheckCircle2 className="w-3 h-3" /> Saved
                                           </Badge>
-                                       ) : student.status === 'pending' ? (
+                                       ) : student.markStatus === 'pending' ? (
                                           <Badge className="bg-orange-500/10 text-orange-500 border-none flex gap-1 items-center">
                                              <AlertCircle className="w-3 h-3" /> Missing
                                           </Badge>
                                        ) : (
                                           <Badge className="bg-primary/20 text-primary border-none flex gap-1 items-center animate-pulse">
-                                             Draft...
+                                             Unsaved
                                           </Badge>
                                        )}
                                     </div>
                                  </td>
                                  <td className="p-4 text-right">
-                                    <Button variant="ghost" size="sm" className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">View History</Button>
+                                    <Button variant="ghost" size="sm" className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">History</Button>
                                  </td>
                               </motion.tr>
                            ))}
@@ -230,7 +330,7 @@ export default function MarksEntry() {
                   </div>
                   <div>
                      <h4 className="font-black uppercase tracking-tight">AI Insights</h4>
-                     <p className="text-xs font-medium text-muted-foreground">Class average for IA1 is currently <span className="text-primary font-bold">16.4/20</span>. Top performance by 5 students.</p>
+                     <p className="text-xs font-medium text-muted-foreground">Class performance analytics will appear here after sufficient data is collected.</p>
                   </div>
                </div>
                <Button variant="link" className="text-primary font-black uppercase text-xs">Full Report</Button>

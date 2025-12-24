@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { StatCard, GlassStatCard, ProgressCard } from '@/components/dashboard/StatCards';
 import { 
@@ -15,6 +15,22 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  getTimetable, 
+  getAssignments, 
+  getSubmissions, 
+  getMarks, 
+  getStudents, 
+  getResources,
+  getFaculty,
+  TimetableSlot, 
+  Assignment, 
+  Submission, 
+  MarkEntry,
+  Faculty
+} from '@/lib/data-store';
+
 import {
   BarChart,
   Bar,
@@ -25,33 +41,138 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const classesData = [
-  { subject: 'Data Structures', section: 'CSE-A', time: '9:00 AM', room: 'LH-201', status: 'upcoming' },
-  { subject: 'DBMS Lab', section: 'CSE-B', time: '11:00 AM', room: 'Lab-3', status: 'upcoming' },
-  { subject: 'Data Structures', section: 'CSE-C', time: '2:00 PM', room: 'LH-105', status: 'upcoming' },
-];
-
-const pendingSubmissions = [
-  { assignment: 'DS Assignment 3', section: 'CSE-A', submitted: 42, total: 60 },
-  { assignment: 'DBMS Assignment 2', section: 'CSE-B', submitted: 55, total: 60 },
-  { assignment: 'DS Quiz 2', section: 'CSE-C', submitted: 38, total: 58 },
-];
-
-const marksEntryStatus = [
-  { exam: 'IA1', section: 'CSE-A', status: 'completed', percentage: 100 },
-  { exam: 'IA1', section: 'CSE-B', status: 'pending', percentage: 75 },
-  { exam: 'IA2', section: 'CSE-A', status: 'pending', percentage: 0 },
-];
-
-const weeklyStats = [
-  { day: 'Mon', classes: 4, hours: 5 },
-  { day: 'Tue', classes: 3, hours: 4 },
-  { day: 'Wed', classes: 5, hours: 6 },
-  { day: 'Thu', classes: 4, hours: 5 },
-  { day: 'Fri', classes: 3, hours: 4 },
-];
-
 export default function FacultyDashboard() {
+  const { user } = useAuth();
+  const [classesData, setClassesData] = useState<any[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState<any[]>([]);
+  const [marksEntryStatus, setMarksEntryStatus] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    todayClasses: 0,
+    todayHours: 0,
+    subjects: 0,
+    sections: 0,
+    pendingEvaluations: 0,
+    notesUploaded: 0
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const allFaculty = getFaculty();
+    const currentFaculty = allFaculty.find(f => f.id === user.id || f.email === user.email);
+    
+    const allTimetable = getTimetable();
+    const allAssignments = getAssignments();
+    const allSubmissions = getSubmissions();
+    const allMarks = getMarks();
+    const allStudents = getStudents();
+    const allResources = getResources();
+
+    // Filter timetable for this faculty
+    const mySchedule = allTimetable.filter(t => t.facultyId === user.id || t.facultyName === user.name);
+    
+    // Today's schedule
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = days[new Date().getDay()];
+    const todaysClasses = mySchedule
+      .filter(t => t.day === today)
+      .sort((a, b) => a.period - b.period)
+      .map(t => ({
+        subject: t.subject,
+        section: t.sectionId || 'N/A',
+        time: getTimeFromPeriod(t.period),
+        room: t.room || 'TBD',
+        status: 'upcoming'
+      }));
+    setClassesData(todaysClasses);
+
+    // Weekly Stats
+    const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const wStats = weekDays.map(day => {
+        const dayClasses = mySchedule.filter(t => t.day === day);
+        return {
+            day: day.substring(0, 3),
+            classes: dayClasses.length,
+            hours: dayClasses.length
+        };
+    });
+    setWeeklyStats(wStats);
+
+    // Filter assignments by my subjects/sections
+    const myAssignments = allAssignments.filter(a => 
+      a.facultyId === user.id || 
+      (currentFaculty && currentFaculty.subjects.includes(a.subjectCode || ''))
+    );
+
+    const pSubmissions = myAssignments.map(a => {
+        const matchingStudents = allStudents.filter(s => 
+          (s.batch === a.classId || s.year.toString() === a.classId) && 
+          (!a.sectionId || s.section === a.sectionId)
+        );
+        const submitted = allSubmissions.filter(s => s.assignmentId === a.id).length;
+        return {
+            assignment: a.title,
+            section: a.sectionId || a.classId,
+            submitted: submitted,
+            total: matchingStudents.length || 1,
+            id: a.id
+        };
+    }).slice(0, 3);
+    setPendingSubmissions(pSubmissions);
+
+    // Calculate marks entry status
+    if (currentFaculty) {
+      const marksNeeded = currentFaculty.subjects.map(subjectCode => {
+        const sections = currentFaculty.sections;
+        return sections.map(section => {
+          const studentsInSection = allStudents.filter(s => s.section === section);
+          const ia1Marks = allMarks.filter(m => m.subjectCode === subjectCode && m.examType === 'ia1');
+          const missing = studentsInSection.length - ia1Marks.length;
+          return {
+            subject: subjectCode,
+            section: section,
+            missing: Math.max(0, missing)
+          };
+        });
+      }).flat().filter(m => m.missing > 0).slice(0, 3);
+      setMarksEntryStatus(marksNeeded);
+    }
+
+    // Top Stats
+    const totalSubjects = currentFaculty ? currentFaculty.subjects.length : new Set(mySchedule.map(s => s.subjectCode)).size;
+    const totalSections = currentFaculty ? currentFaculty.sections.length : new Set(mySchedule.map(s => s.sectionId)).size;
+    const pendingEvals = allSubmissions.filter(s => 
+        myAssignments.find(a => a.id === s.assignmentId) && s.status === 'submitted'
+    ).length;
+    
+    const myResources = allResources.filter(r => r.facultyId === user.id || r.facultyName === user.name);
+
+    setStats({
+        todayClasses: todaysClasses.length,
+        todayHours: todaysClasses.length,
+        subjects: totalSubjects,
+        sections: totalSections,
+        pendingEvaluations: pendingEvals,
+        notesUploaded: myResources.length
+    });
+
+  }, [user]);
+
+  const getTimeFromPeriod = (p: number) => {
+      const times = ['9:00 AM', '9:50 AM', '10:50 AM', '11:40 AM', '1:30 PM', '2:20 PM', '3:20 PM', '4:10 PM'];
+      return times[p - 1] || 'Unknown';
+  };
+
+  const getStudentCountOriginal = (classId: string, sectionId: string, allStudents: any[]) => {
+      // Logic to count students matching class/section
+      // If classId is "4th Year" or "2021-2025", match batch or year
+      return allStudents.filter(s => 
+          (s.batch === classId || s.year.toString() === classId) && 
+          (!sectionId || s.section === sectionId)
+      ).length;
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -61,8 +182,8 @@ export default function FacultyDashboard() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Good Morning, Senthil! 👨‍🏫</h1>
-          <p className="text-muted-foreground">You have 3 classes scheduled for today</p>
+          <h1 className="text-3xl font-bold">Good Morning, {user?.name?.split(' ')[0]}! 👨‍🏫</h1>
+          <p className="text-muted-foreground">You have {stats.todayClasses} classes scheduled for today</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">
@@ -80,23 +201,23 @@ export default function FacultyDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Today's Classes"
-          value="3"
-          subtitle="4 hours total"
+          value={stats.todayClasses}
+          subtitle={`${stats.todayHours} hours total`}
           icon={Clock}
           variant="primary"
           delay={0.1}
         />
         <StatCard
           title="Subjects Handled"
-          value="4"
-          subtitle="Across 6 sections"
+          value={stats.subjects}
+          subtitle={`Across ${stats.sections} sections`}
           icon={BookOpen}
           variant="accent"
           delay={0.2}
         />
         <StatCard
           title="Pending Evaluation"
-          value="12"
+          value={stats.pendingEvaluations}
           subtitle="Submissions to review"
           icon={ClipboardCheck}
           variant="warning"
@@ -104,7 +225,7 @@ export default function FacultyDashboard() {
         />
         <StatCard
           title="Notes Uploaded"
-          value="28"
+          value={stats.notesUploaded}
           subtitle="This semester"
           icon={FileUp}
           variant="success"
@@ -129,7 +250,7 @@ export default function FacultyDashboard() {
             <Button variant="outline" size="sm">Full Timetable</Button>
           </div>
           <div className="space-y-4">
-            {classesData.map((cls, index) => (
+            {classesData.length > 0 ? classesData.map((cls, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
@@ -152,7 +273,9 @@ export default function FacultyDashboard() {
                   <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </div>
               </motion.div>
-            ))}
+            )) : (
+                <div className="text-center py-8 text-muted-foreground">No classes scheduled for today</div>
+            )}
           </div>
         </motion.div>
 
@@ -183,7 +306,7 @@ export default function FacultyDashboard() {
           </div>
           <div className="mt-4 p-3 rounded-xl bg-primary/10">
             <p className="text-sm text-center">
-              <span className="font-semibold text-primary">19 classes</span>
+              <span className="font-semibold text-primary">{weeklyStats.reduce((acc, curr) => acc + curr.classes, 0)} classes</span>
               <span className="text-muted-foreground"> this week</span>
             </p>
           </div>
@@ -197,21 +320,21 @@ export default function FacultyDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="glass-card rounded-2xl p-6"
+          className="lg:col-span-2 glass-card rounded-2xl p-6"
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Pending Evaluations</h3>
             <Button variant="ghost" size="sm">View All</Button>
           </div>
           <div className="space-y-4">
-            {pendingSubmissions.map((item, index) => {
-              const percentage = (item.submitted / item.total) * 100;
+            {pendingSubmissions.length > 0 ? pendingSubmissions.map((item, index) => {
+              const percentage = item.total > 0 ? (item.submitted / item.total) * 100 : 0;
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-sm">{item.assignment}</p>
-                      <p className="text-xs text-muted-foreground">{item.section}</p>
+                      <p className="text-xs text-muted-foreground section-badge">{item.section}</p>
                     </div>
                     <span className="text-sm font-medium">
                       {item.submitted}/{item.total}
@@ -227,52 +350,9 @@ export default function FacultyDashboard() {
                   </div>
                 </div>
               );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Marks Entry Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Marks Entry Status</h3>
-            <Button variant="ghost" size="sm">Enter Marks</Button>
-          </div>
-          <div className="space-y-3">
-            {marksEntryStatus.map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.7 + index * 0.1 }}
-                className="flex items-center justify-between p-3 rounded-xl bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  {item.status === 'completed' ? (
-                    <CheckCircle className="w-5 h-5 text-success" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-warning" />
-                  )}
-                  <div>
-                    <p className="font-medium text-sm">{item.exam} - {item.section}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.percentage}% completed
-                    </p>
-                  </div>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  item.status === 'completed' 
-                    ? 'bg-success/10 text-success' 
-                    : 'bg-warning/10 text-warning'
-                }`}>
-                  {item.status === 'completed' ? 'Done' : 'Pending'}
-                </span>
-              </motion.div>
-            ))}
+            }) : (
+                <div className="text-center py-4 text-muted-foreground">No pending evaluations</div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -312,3 +392,4 @@ export default function FacultyDashboard() {
     </div>
   );
 }
+

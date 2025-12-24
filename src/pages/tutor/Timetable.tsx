@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Calendar as CalendarIcon, 
@@ -15,6 +15,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  getTutors, 
+  getTimetable, 
+  getSyllabus, 
+  getCirculars, 
+  getAssignments,
+  Tutor, 
+  TimetableSlot,
+  Syllabus,
+  Circular,
+  Assignment
+} from '@/lib/data-store';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const timeSlots = [
@@ -26,27 +39,93 @@ const timeSlots = [
   '03:00 - 04:00'
 ];
 
-const schedule = {
-  'Monday': [
-    { subject: 'Data Structures', code: 'CS301', room: 'LH-01', type: 'Lecture', color: 'bg-primary/10 text-primary' },
-    { subject: 'DBMS Lab', code: 'CS304', room: 'Lab-02', type: 'Practical', color: 'bg-accent/10 text-accent' },
-    { subject: 'Practical', code: 'CS304', room: 'Lab-02', type: 'Practical', color: 'bg-accent/10 text-accent' },
-    { subject: 'Lunch Break', type: 'Break', color: 'bg-muted text-muted-foreground' },
-    { subject: 'Mathematics', code: 'MA301', room: 'LH-01', type: 'Lecture', color: 'bg-secondary/10 text-secondary' },
-    { subject: 'OS', code: 'CS302', room: 'LH-03', type: 'Lecture', color: 'bg-success/10 text-success' }
-  ],
-  'Tuesday': [
-    { subject: 'DBMS', code: 'CS303', room: 'LH-02', type: 'Lecture', color: 'bg-warning/10 text-warning' },
-    { subject: 'OS', code: 'CS302', room: 'LH-03', type: 'Lecture', color: 'bg-success/10 text-success' },
-    { subject: 'Java Lab', code: 'CS305', room: 'Lab-01', type: 'Practical', color: 'bg-primary/10 text-primary' },
-    { subject: 'Lunch Break', type: 'Break', color: 'bg-muted text-muted-foreground' },
-    { subject: 'Data Structures', code: 'CS301', room: 'LH-01', type: 'Lecture', color: 'bg-primary/10 text-primary' },
-    { subject: 'Library', type: 'Library', color: 'bg-purple-500/10 text-purple-600' }
-  ]
-};
-
 export default function Timetable() {
-  const [activeDay, setActiveDay] = React.useState('Monday');
+  const { user } = useAuth();
+  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [activeDay, setActiveDay] = useState('Monday');
+  const [schedule, setSchedule] = useState<Record<string, any[]>>({});
+  const [velocity, setVelocity] = useState<any[]>([]);
+  const [pulse, setPulse] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const allTutors = getTutors();
+    const currentTutor = allTutors.find(t => t.id === user.id || t.email === user.email);
+    if (!currentTutor) return;
+    setTutor(currentTutor);
+
+    // 1. Timetable
+    const allTimetable = getTimetable();
+    const mySectionTimetable = allTimetable.filter(t => t.classId === currentTutor.batch && t.sectionId === currentTutor.section);
+
+    const grouped: Record<string, any[]> = {};
+    const subjectCodesList = new Set<string>();
+
+    days.forEach(day => {
+        const daySlots = mySectionTimetable.filter(t => t.day === day).sort((a, b) => a.period - b.period);
+        const slots = Array(6).fill(null).map((_, i) => {
+            const match = daySlots.find(s => s.period === i + 1);
+            if (match) {
+                subjectCodesList.add(match.subjectCode);
+                return {
+                    subject: match.subject,
+                    code: match.subjectCode,
+                    room: match.room || 'LH-01',
+                    type: match.type || 'theory',
+                    faculty: match.facultyName,
+                    color: match.type === 'lab' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
+                };
+            }
+            if (i === 3) return { subject: 'Lunch Break', type: 'Break', color: 'bg-muted text-muted-foreground' };
+            return { subject: 'No Class', type: 'Free', color: 'bg-muted/30 text-muted-foreground' };
+        });
+        grouped[day] = slots;
+    });
+    setSchedule(grouped);
+
+    // 2. Syllabus Velocity
+    const allSyllabus = getSyllabus();
+    const mySubjectsSyllabus = allSyllabus.filter(s => subjectCodesList.has(s.subjectCode));
+    
+    const velocityData = mySubjectsSyllabus.map(s => {
+        const completed = s.units.filter(u => u.status === 'completed').length;
+        const total = s.units.length;
+        const prog = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return {
+            sub: s.subjectName,
+            prog,
+            color: prog > 80 ? 'bg-success' : prog > 50 ? 'bg-primary' : 'bg-warning'
+        };
+    });
+    setVelocity(velocityData.length > 0 ? velocityData : [
+        { sub: 'Syllabus Data Pending', prog: 0, color: 'bg-muted' }
+    ]);
+
+    // 3. Class Pulse (Circulars + Assignments)
+    const allCirculars = getCirculars();
+    const allAssignments = getAssignments();
+    
+    const myAssignments = allAssignments.filter(a => a.classId === currentTutor.batch && a.sectionId === currentTutor.section);
+    const relevantCirculars = allCirculars.filter(c => c.audience === 'students' || c.audience === 'all');
+
+    const pulseData = [
+        ...myAssignments.map(a => ({
+            label: 'Assignment Due',
+            title: a.title,
+            date: a.dueDate,
+            color: 'text-primary'
+        })),
+        ...relevantCirculars.map(c => ({
+            label: 'Circular',
+            title: c.title,
+            date: c.date,
+            color: 'text-accent'
+        }))
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 3);
+    
+    setPulse(pulseData);
+
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -56,31 +135,30 @@ export default function Timetable() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Class Timetable 📅</h1>
-          <p className="text-muted-foreground">Weekly academic schedule for CSE-A (Batch 2021-25)</p>
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase">Class Timetable 📅</h1>
+          <p className="text-muted-foreground font-medium">Academic schedule for Section {tutor?.section} ({tutor?.batch})</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl">
+          <Button variant="outline" className="rounded-xl border-white/10 font-black uppercase text-[10px] tracking-widest italic hover:bg-white/5">
             <Filter className="w-4 h-4 mr-2" />
             Class Selector
           </Button>
-          <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20">
+          <Button variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-6">
             <Download className="w-4 h-4 mr-2" />
             Export PDF
           </Button>
         </div>
       </motion.div>
 
-      {/* Day Selector */}
-      <div className="flex bg-muted/50 p-1.5 rounded-2xl overflow-x-auto gap-2 no-scrollbar">
+      <div className="flex bg-white/5 p-2 rounded-2xl overflow-x-auto gap-2 no-scrollbar border border-white/5">
         {days.map((day) => (
           <Button
             key={day}
             variant={activeDay === day ? 'default' : 'ghost'}
             onClick={() => setActiveDay(day)}
             className={cn(
-              "rounded-xl px-6 transition-all duration-300",
-              activeDay === day ? "shadow-lg shadow-primary/25" : "hover:bg-background/50"
+              "rounded-xl px-8 font-black uppercase text-[10px] tracking-widest transition-all duration-300 italic",
+              activeDay === day ? "shadow-lg shadow-primary/25 bg-primary" : "hover:bg-white/5"
             )}
           >
             {day}
@@ -89,11 +167,10 @@ export default function Timetable() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Schedule Grid */}
         <div className="lg:col-span-2 space-y-4">
-          {timeSlots.map((slot, index) => {
-            const item = schedule[activeDay]?.[index] || { subject: 'No Class Scheduled', type: 'Free', color: 'bg-muted/30 text-muted-foreground' };
+          {(schedule[activeDay] || []).map((item, index) => {
             const isBreak = item.type === 'Break';
+            const isFree = item.type === 'Free';
 
             return (
               <motion.div
@@ -103,59 +180,56 @@ export default function Timetable() {
                 transition={{ delay: index * 0.05 }}
               >
                 <Card className={cn(
-                  "glass-card border-none overflow-hidden transition-all duration-300 group hover:translate-x-2",
-                  isBreak ? "opacity-60 grayscale-[0.5]" : "shadow-md hover:shadow-xl"
+                  "glass-card border-none overflow-hidden transition-all duration-300 group hover:translate-x-2 rounded-2xl",
+                  (isBreak || isFree) ? "opacity-60" : "shadow-xl hover:shadow-2xl bg-white/[0.02]"
                 )}>
-                  <div className="flex items-stretch min-h-[80px]">
+                  <div className="flex items-stretch min-h-[90px]">
                     <div className={cn(
                       "w-2 flex-shrink-0",
-                      isBreak ? "bg-muted-foreground/30" : "bg-gradient-to-b from-primary to-accent"
+                      isBreak || isFree ? "bg-white/10" : "bg-gradient-to-b from-primary to-accent shadow-glow shadow-primary/20"
                     )} />
                     
-                    <div className="flex-1 p-4 grid grid-cols-1 md:grid-cols-4 items-center gap-4">
-                      {/* Time Slot */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+                    <div className="flex-1 p-5 grid grid-cols-1 md:grid-cols-4 items-center gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
                           <Clock className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold">{slot}</p>
-                          <p className="text-xs text-muted-foreground">Session {index + 1}</p>
+                          <p className="text-xs font-black italic">{timeSlots[index]}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Session {index + 1}</p>
                         </div>
                       </div>
 
-                      {/* Subject */}
                       <div className="md:col-span-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-lg font-bold truncate">{item.subject}</h4>
-                          {item.code && <Badge variant="outline" className="text-[10px] uppercase">{item.code}</Badge>}
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-lg font-black italic tracking-tight uppercase group-hover:text-primary transition-colors">{item.subject}</h4>
+                          {item.code && <Badge variant="outline" className="text-[9px] font-mono border-white/10 font-black tracking-widest uppercase">{item.code}</Badge>}
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 mt-2">
                           {item.room && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
+                            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                              <MapPin className="w-3 h-3 text-accent" />
                               {item.room}
                             </span>
                           )}
-                          {item.type !== 'Free' && (
-                            <Badge variant="secondary" className={cn("text-[10px] px-2 py-0 border-none", item.color)}>
+                          {!isBreak && !isFree && (
+                            <Badge variant="secondary" className={cn("text-[8px] font-black uppercase tracking-widest px-3 py-0.5 border-none", item.color)}>
                               {item.type}
                             </Badge>
                           )}
                         </div>
                       </div>
 
-                      {/* Faculty / Status */}
                       <div className="hidden md:flex justify-end">
-                         {item.type !== 'Break' && item.type !== 'Free' ? (
-                           <div className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/10">
+                         {item.faculty ? (
+                           <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 group-hover:border-primary/20 transition-all">
+                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-white/10">
                                <User className="w-4 h-4 text-primary" />
                              </div>
-                             <span className="text-xs font-medium">Faculty Assigned</span>
+                             <span className="text-[9px] font-black uppercase tracking-widest">{item.faculty}</span>
                            </div>
                          ) : (
-                           <span className="text-xs text-muted-foreground italic">Rest Interval</span>
+                           <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground italic opacity-50">{isBreak ? 'Break' : 'Self Study'}</span>
                          )}
                       </div>
                     </div>
@@ -166,51 +240,47 @@ export default function Timetable() {
           })}
         </div>
 
-        {/* Sidebar Info */}
         <div className="space-y-6">
-          <Card className="glass-card p-6 border-none shadow-lg">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary" />
-              Syllabus Tracking
+          <Card className="glass-card p-8 border-none shadow-2xl rounded-3xl bg-white/[0.02] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -z-10" />
+            <h3 className="text-xl font-black italic uppercase tracking-tight mb-8 flex items-center gap-3">
+              <BookOpen className="w-6 h-6 text-primary" />
+              Syllabus Velocity
             </h3>
-            <div className="space-y-4">
-               {[
-                 { sub: 'Data Structures', prog: 75, color: 'bg-primary' },
-                 { sub: 'DBMS', prog: 60, color: 'bg-accent' },
-                 { sub: 'Operating Systems', prog: 85, color: 'bg-success' },
-                 { sub: 'Mathematics III', prog: 40, color: 'bg-warning' }
-               ].map((item, i) => (
-                 <div key={i} className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span>{item.sub}</span>
-                      <span>{item.prog}%</span>
+            <div className="space-y-6">
+               {velocity.map((item, i) => (
+                 <div key={i} className="space-y-3">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                      <span className="text-muted-foreground italic truncate max-w-[150px]">{item.sub}</span>
+                      <span className="text-primary">{item.prog}%</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                        <motion.div
                          initial={{ width: 0 }}
                          animate={{ width: `${item.prog}%` }}
                          transition={{ duration: 1, delay: i * 0.1 }}
-                         className={cn("h-full rounded-full shadow-glow-sm", item.color)}
+                         className={cn("h-full rounded-full shadow-glow", item.color)}
                        />
                     </div>
                  </div>
                ))}
             </div>
-            <Button variant="outline" className="w-full mt-6 rounded-xl">View Full Syllabus</Button>
+            <Button variant="outline" className="w-full mt-8 rounded-xl border-white/10 font-black uppercase text-[10px] tracking-widest italic hover:bg-white/5">Full Syllabus Mapping</Button>
           </Card>
 
-          <Card className="glass-card p-6 border-none shadow-lg bg-gradient-to-br from-success/5 to-primary/5">
-            <h3 className="text-lg font-bold mb-2">Upcoming Events</h3>
-            <p className="text-sm text-muted-foreground mb-4">Quick view of class activities</p>
-            <div className="space-y-3">
-               <div className="p-3 rounded-xl bg-background/50 border border-border/50">
-                  <p className="text-xs font-bold text-primary uppercase">Tomorrow</p>
-                  <p className="text-sm font-semibold mt-1">IA-2 Marks Verification</p>
-               </div>
-               <div className="p-3 rounded-xl bg-background/50 border border-border/50">
-                  <p className="text-xs font-bold text-accent uppercase">Oct 15, 2024</p>
-                  <p className="text-sm font-semibold mt-1">ECA - Symposium</p>
-               </div>
+          <Card className="glass-card p-8 border-none shadow-2xl rounded-3xl bg-gradient-to-br from-success/5 to-primary/5 border border-success/5">
+            <h3 className="text-xl font-black italic uppercase tracking-tight mb-2">Class Pulse</h3>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-6">Upcoming Milestones</p>
+            <div className="space-y-4">
+               {pulse.length > 0 ? pulse.map((item, i) => (
+                 <div key={i} className="p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                    <p className={cn("text-[9px] font-black uppercase tracking-widest", item.color)}>{item.label}</p>
+                    <p className="text-sm font-black italic mt-2 uppercase">{item.title}</p>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1 opacity-50">{item.date}</p>
+                 </div>
+               )) : (
+                 <div className="text-center py-10 opacity-30 italic font-medium uppercase text-[10px] tracking-widest">No upcoming pulse data</div>
+               )}
             </div>
           </Card>
         </div>
@@ -218,3 +288,5 @@ export default function Timetable() {
     </div>
   );
 }
+
+

@@ -9,31 +9,15 @@ import {
   MessageSquare,
   FileText,
   AlertCircle,
-  Filter
+  Filter,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { toast } from '@/components/ui/use-toast';
-import { getData, updateItem, getTutors, Tutor } from '@/lib/data-store';
+import { toast } from 'sonner';
+import { getLeaveRequests, updateLeaveStatus, LeaveRequest, getTutors, Tutor, getStudents } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
-
-const LEAVE_REQUESTS_KEY = 'college_portal_leave_requests';
-
-interface LeaveRequest {
-  id: string;
-  student: string;
-  rollNo: string;
-  batch: string;
-  section: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  photo: string;
-}
 
 export default function LeaveApprovals() {
   const { user } = useAuth();
@@ -52,33 +36,31 @@ export default function LeaveApprovals() {
   }, [user]);
 
   const loadRequests = () => {
-    const data = getData<LeaveRequest>(LEAVE_REQUESTS_KEY);
-    setRequests(data);
+    setRequests(getLeaveRequests().reverse());
     setLoading(false);
   };
 
   const handleAction = (id: string, action: 'approve' | 'reject') => {
-    const newStatus = action === 'approve' ? 'approved' : 'rejected';
-    updateItem<LeaveRequest>(LEAVE_REQUESTS_KEY, id, { status: newStatus });
+    if (!user) return;
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    updateLeaveStatus(id, status, user.name);
     
-    toast({
-      title: action === 'approve' ? "Leave Approved" : "Leave Rejected",
-      description: `Request ${id} has been ${action}d successfully.`,
-      variant: action === 'approve' ? "default" : "destructive",
-    });
-    
+    toast.success(action === 'approve' ? "Leave Approved" : "Leave Rejected");
     loadRequests();
   };
 
   const filteredRequests = requests
     .filter(r => activeTab === 'pending' ? r.status === 'pending' : r.status !== 'pending')
     .filter(r => {
-      // In a real app, we'd also filter by department, but here we filter by batch/section
-      if (!tutorInfo) return true; // fallback for admin or unlinked tutor
-      return r.batch === tutorInfo.batch && r.section === tutorInfo.section;
+      // Filter by tutor's assigned students if tutorInfo is available
+      if (!tutorInfo) return true;
+      const students = getStudents();
+      const applicant = students.find(s => s.id === r.userId);
+      if (!applicant) return true; // fallback
+      return applicant.batch === tutorInfo.batch && applicant.section === tutorInfo.section;
     });
 
-  if (loading) return <div className="p-8 text-center">Loading requests...</div>;
+  if (loading) return <div className="p-8 text-center uppercase tracking-widest text-xs font-bold animate-pulse">Loading requests...</div>;
 
   return (
     <div className="space-y-6">
@@ -88,15 +70,15 @@ export default function LeaveApprovals() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Leave Portal 🏥</h1>
-          <p className="text-muted-foreground">Manage and approve student leave requests</p>
+          <h1 className="text-3xl font-bold italic">Tutor Leave Portal 🏥</h1>
+          <p className="text-muted-foreground font-medium">Manage and approve leave requests for {tutorInfo ? `${tutorInfo.batch} - ${tutorInfo.section}` : 'your classes'}</p>
         </div>
         <div className="flex bg-muted p-1 rounded-xl">
           <Button 
             variant={activeTab === 'pending' ? 'default' : 'ghost'} 
             size="sm"
             onClick={() => setActiveTab('pending')}
-            className="rounded-lg"
+            className="rounded-lg font-bold"
           >
             Pending ({requests.filter(r => r.status === 'pending').length})
           </Button>
@@ -104,7 +86,7 @@ export default function LeaveApprovals() {
             variant={activeTab === 'history' ? 'default' : 'ghost'} 
             size="sm"
             onClick={() => setActiveTab('history')}
-            className="rounded-lg"
+            className="rounded-lg font-bold"
           >
             History
           </Button>
@@ -123,61 +105,74 @@ export default function LeaveApprovals() {
               transition={{ delay: index * 0.1 }}
               className="glass-card rounded-2xl p-6 relative overflow-hidden group"
             >
-              {request.status === 'approved' && (
-                <div className="absolute top-0 right-0 p-4">
-                  <Badge variant="success" className="rounded-full">Approved</Badge>
-                </div>
-              )}
-              
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex items-start gap-4 flex-1">
-                  <Avatar className="w-14 h-14 border-4 border-primary/10 group-hover:border-primary/30 transition-all">
-                    <AvatarImage src={request.photo} />
-                    <AvatarFallback>{request.student.charAt(0)}</AvatarFallback>
+                  <Avatar className="w-16 h-16 border-4 border-primary/10 group-hover:border-primary/30 transition-all rounded-2xl">
+                    <AvatarFallback className="font-bold text-xl">{request.userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      {request.student}
-                      <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
-                        {request.rollNo}
-                      </span>
-                    </h3>
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-xl font-bold">{request.userName}</h3>
+                      <Badge variant="secondary" className="text-[10px] font-black uppercase bg-accent/10 text-accent border-accent/20 tracking-widest">
+                        {request.type}
+                      </Badge>
+                      {request.status !== 'pending' && (
+                          <Badge variant={request.status === 'approved' ? 'success' : 'destructive'} className="uppercase text-[9px] font-black">
+                              {request.status}
+                          </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground mt-2 uppercase tracking-tight">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-primary" />
-                        {request.startDate} to {request.endDate} ({request.days} days)
+                        <span className="text-foreground">{request.startDate}</span> <ChevronRight className="w-3 h-3" /> <span className="text-foreground">{request.endDate}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <AlertCircle className="w-4 h-4 text-accent" />
-                        {request.type}
+                      <div className="flex items-center gap-1.5 text-purple-500">
+                        <User className="w-4 h-4" />
+                        {request.contact}
                       </div>
                     </div>
-                    <div className="mt-3 p-4 rounded-xl bg-muted/50 border border-border/50 italic text-sm relative">
-                      <MessageSquare className="w-4 h-4 absolute -left-2 -top-2 text-primary opacity-50" />
-                      "{request.reason}"
+
+                    <div className="mt-4 p-4 rounded-2xl bg-muted/30 border border-border/50 relative group/reason">
+                      <div className="flex items-center gap-2 mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                        <MessageSquare className="w-3 h-3 text-primary" />
+                        Reason for Leave
+                      </div>
+                      <p className="text-sm leading-relaxed italic text-foreground/80 font-medium">
+                        "{request.reason}"
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {request.status === 'pending' && (
-                  <div className="flex lg:flex-col justify-end gap-2 lg:min-w-[140px]">
+                  <div className="flex lg:flex-col justify-end gap-3 lg:min-w-[160px]">
                     <Button 
-                      variant="success" 
-                      className="flex-1 lg:w-full"
+                      variant="gradient" 
+                      className="flex-1 lg:w-full shadow-glow-sm font-bold uppercase text-xs tracking-widest"
                       onClick={() => handleAction(request.id, 'approve')}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Approve
                     </Button>
-                      <Button 
-                        variant="outline"
-                        className="flex-1 lg:w-full border-destructive/20 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleAction(request.id, 'reject')}
-                      >
+                    <Button 
+                      variant="outline"
+                      className="flex-1 lg:w-full border-destructive/20 text-destructive hover:bg-destructive/10 font-bold uppercase text-xs tracking-widest"
+                      onClick={() => handleAction(request.id, 'reject')}
+                    >
                       <XCircle className="w-4 h-4 mr-2" />
                       Reject
                     </Button>
                   </div>
+                )}
+
+                {request.status !== 'pending' && (
+                    <div className="flex flex-col justify-center items-end text-right lg:min-w-[160px]">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground">Processed By</p>
+                        <p className="font-bold text-sm">{request.processedBy}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{new Date(request.processedDate || '').toLocaleDateString()}</p>
+                    </div>
                 )}
               </div>
             </motion.div>
@@ -188,13 +183,15 @@ export default function LeaveApprovals() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20 glass-card rounded-2xl"
+            className="text-center py-20 glass-card rounded-2xl border-dashed border-2 border-white/5"
           >
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-10 h-10 text-muted-foreground opacity-50" />
+            <div className="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-border/50">
+              <CheckCircle className="w-10 h-10 text-muted-foreground opacity-30" />
             </div>
-            <h3 className="text-xl font-bold">No Pending Requests</h3>
-            <p className="text-muted-foreground">You're all caught up! Great job.</p>
+            <h3 className="text-xl font-bold text-muted-foreground/50 uppercase tracking-widest">No Requests Found</h3>
+            <p className="text-muted-foreground/60 max-w-sm mx-auto text-sm">
+                Classes are healthy! No pending applications for your section.
+            </p>
           </motion.div>
         )}
       </div>

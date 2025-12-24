@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileUp, 
@@ -11,22 +11,103 @@ import {
   CheckCircle2,
   Users,
   MoreVertical,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-const notes = [
-  { id: 1, title: 'Introduction to Linked Lists', subject: 'Data Structures', class: 'CSE-A', type: 'PDF', size: '1.2 MB', date: 'Oct 10, 2024', downloads: 58 },
-  { id: 2, title: 'Normalization Techniques', subject: 'DBMS', class: 'CSE-B', type: 'PPTX', size: '4.5 MB', date: 'Oct 08, 2024', downloads: 42 },
-  { id: 3, title: 'Process Scheduling Algorithms', subject: 'Operating Systems', class: 'CSE-A', type: 'DOCX', size: '850 KB', date: 'Oct 05, 2024', downloads: 110 },
-  { id: 4, title: 'Deadlock Prevention', subject: 'Operating Systems', class: 'CSE-C', type: 'PDF', size: '2.1 MB', date: 'Oct 01, 2024', downloads: 35 },
-];
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getResources, addResource, deleteResource, getFaculty, Resource, Faculty } from '@/lib/data-store';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export default function NotesUpload() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [faculty, setFaculty] = useState<Faculty | null>(null);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Form State
+  const [newResource, setNewResource] = useState({
+    title: '',
+    subjectCode: '',
+    classId: '',
+    type: 'Note' as 'Note' | 'QP' | 'Manual',
+    fileType: 'PDF'
+  });
+
+  useEffect(() => {
+    if (user) {
+      const allFaculty = getFaculty();
+      const current = allFaculty.find(f => f.id === user.id || f.email === user.email);
+      if (current) {
+        setFaculty(current);
+        if (current.subjects.length > 0) {
+            setNewResource(prev => ({ ...prev, subjectCode: current.subjects[0], classId: current.sections[0] || '' }));
+        }
+      }
+    }
+  }, [user]);
+
+  const loadResources = () => {
+    if (!user) return;
+    const all = getResources();
+    // Filter for this faculty if needed, or show all they uploaded
+    const myResources = all.filter(r => r.facultyId === user.id || r.facultyName === user.name);
+    setResources(myResources);
+  };
+
+  useEffect(() => {
+    loadResources();
+  }, [user]);
+
+  const handleUpload = () => {
+    if (!newResource.title || !newResource.subjectCode) {
+        toast.error('Please fill in all fields');
+        return;
+    }
+
+    setIsUploading(true);
+    setTimeout(() => {
+        addResource({
+            title: newResource.title,
+            subject: newResource.subjectCode, // Use code as name for now or resolve
+            subjectCode: newResource.subjectCode,
+            classId: newResource.classId,
+            type: newResource.type,
+            fileType: newResource.fileType,
+            fileSize: '1.5 MB', // Mock size
+            facultyId: user?.id || '',
+            facultyName: user?.name || ''
+        });
+        toast.success('Resource uploaded successfully');
+        setIsUploading(false);
+        setIsUploadOpen(false);
+        setNewResource({ 
+          title: '', 
+          subjectCode: faculty?.subjects[0] || '', 
+          classId: faculty?.sections[0] || '', 
+          type: 'Note', 
+          fileType: 'PDF' 
+        });
+        loadResources();
+    }, 1500);
+  };
+
+  const handleDelete = (id: string) => {
+    if (deleteResource(id)) {
+        toast.success('Resource deleted');
+        loadResources();
+    }
+  };
+
+  const totalDownloads = resources.reduce((acc, curr) => acc + curr.downloads, 0);
 
   return (
     <div className="space-y-8">
@@ -39,10 +120,69 @@ export default function NotesUpload() {
           <h1 className="text-3xl font-black tracking-tight italic bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Notes Library & Upload</h1>
           <p className="text-muted-foreground mt-1 font-medium">Distribute course materials and question banks</p>
         </div>
-        <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20 scale-105">
-           <FileUp className="w-4 h-4 mr-2" />
-           Upload New Material
-        </Button>
+        
+        <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+            <DialogTrigger asChild>
+                <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20 scale-105">
+                    <FileUp className="w-4 h-4 mr-2" />
+                    Upload New Material
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload Learning Resource</DialogTitle>
+                    <DialogDescription>Add notes, question papers or manuals for your students.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Title</Label>
+                        <Input value={newResource.title} onChange={e => setNewResource({...newResource, title: e.target.value})} placeholder="e.g. Unit 1: Introduction" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Subject</Label>
+                            <Select value={newResource.subjectCode} onValueChange={v => setNewResource({...newResource, subjectCode: v})}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {faculty?.subjects.map(sub => (
+                                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Class / Section</Label>
+                            <Select value={newResource.classId} onValueChange={v => setNewResource({...newResource, classId: v})}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {faculty?.sections.map(sec => (
+                                        <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                            <Label>Resource Type</Label>
+                            <Select value={newResource.type} onValueChange={(v: any) => setNewResource({...newResource, type: v})}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Note">Lecture Notes</SelectItem>
+                                    <SelectItem value="QP">Question Paper</SelectItem>
+                                    <SelectItem value="Manual">Lab Manual</SelectItem>
+                                </SelectContent>
+                            </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsUploadOpen(false)}>Cancel</Button>
+                    <Button onClick={handleUpload} disabled={isUploading}>
+                        {isUploading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {isUploading ? 'Uploading...' : 'Confirm Upload'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -54,7 +194,7 @@ export default function NotesUpload() {
                      <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                     <p className="text-xl font-black">28</p>
+                     <p className="text-xl font-black">{resources.length}</p>
                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Files</p>
                   </div>
                </div>
@@ -63,7 +203,7 @@ export default function NotesUpload() {
                      <Download className="w-5 h-5" />
                   </div>
                   <div>
-                     <p className="text-xl font-black">1.4k</p>
+                     <p className="text-xl font-black">{totalDownloads >= 1000 ? `${(totalDownloads/1000).toFixed(1)}k` : totalDownloads}</p>
                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Downloads</p>
                   </div>
                </div>
@@ -71,10 +211,10 @@ export default function NotesUpload() {
                   <p className="text-[10px] font-black uppercase text-primary mb-3 tracking-widest">Storage Status</p>
                   <div className="flex justify-between text-xs font-bold mb-2">
                      <span>Used</span>
-                     <span>45%</span>
+                     <span>0.2%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                     <div className="h-full bg-gradient-to-r from-primary to-accent w-[45%]" />
+                     <div className="h-full bg-gradient-to-r from-primary to-accent w-[2%]" />
                   </div>
                </div>
             </div>
@@ -96,7 +236,7 @@ export default function NotesUpload() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                <AnimatePresence>
-                  {notes.filter(n => n.title.toLowerCase().includes(searchTerm.toLowerCase())).map((note, idx) => (
+                  {resources.filter(n => n.title.toLowerCase().includes(searchTerm.toLowerCase())).map((note, idx) => (
                      <motion.div
                         key={note.id}
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -108,20 +248,20 @@ export default function NotesUpload() {
                            <div className="flex gap-4">
                               <div className="w-14 h-14 rounded-2xl bg-muted/50 flex flex-col items-center justify-center text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                                  <FileText className="w-6 h-6" />
-                                 <span className="text-[8px] font-black leading-none mt-1 uppercase">{note.type}</span>
+                                 <span className="text-[8px] font-black leading-none mt-1 uppercase">{note.fileType}</span>
                               </div>
                               <div className="flex-1 min-w-0">
                                  <div className="flex items-center justify-between mb-1">
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-white/10">{note.subject}</Badge>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-white/10">{note.subjectCode}</Badge>
                                     <div className="flex gap-1">
-                                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg"><Download className="w-4 h-4" /></Button>
-                                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg text-destructive/50 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" disabled><Download className="w-4 h-4" /></Button>
+                                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg text-destructive/50 hover:text-destructive" onClick={() => handleDelete(note.id)}><Trash2 className="w-4 h-4" /></Button>
                                     </div>
                                  </div>
                                  <h4 className="font-bold text-sm truncate mb-3">{note.title}</h4>
                                  <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
-                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Users className="w-3 h-3" /> {note.class}</span>
-                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Clock className="w-3 h-3" /> {note.date}</span>
+                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Users className="w-3 h-3" /> {note.classId}</span>
+                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Clock className="w-3 h-3" /> {new Date(note.createdAt).toLocaleDateString()}</span>
                                     <span className="ml-auto text-primary px-2 py-0.5 rounded-full bg-primary/10">{note.downloads} dl</span>
                                  </div>
                               </div>
@@ -131,9 +271,16 @@ export default function NotesUpload() {
                   ))}
                </AnimatePresence>
 
+               {resources.length === 0 && (
+                   <div className="lg:col-span-2 text-center py-10 text-muted-foreground border-2 border-dashed border-white/5 rounded-2xl">
+                       No resources uploaded yet.
+                   </div>
+               )}
+
                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
+                  onClick={() => setIsUploadOpen(true)}
                   className="rounded-2xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-8 group cursor-pointer hover:border-primary/30 transition-all hover:bg-primary/5"
                >
                   <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">

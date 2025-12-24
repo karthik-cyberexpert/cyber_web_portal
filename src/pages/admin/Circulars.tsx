@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, Plus, Edit2, Trash2, Pin, Send, Eye,
@@ -27,87 +27,78 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-interface Circular {
-  id: string;
-  title: string;
-  content: string;
-  category: 'announcement' | 'event' | 'exam' | 'holiday' | 'urgent';
-  audience: string[];
-  publishedAt: string;
-  expiresAt: string;
-  isPinned: boolean;
-  status: 'draft' | 'published' | 'expired';
-  views: number;
-  attachments: number;
-}
-
-const circulars: Circular[] = [
-  { id: '1', title: 'Internal Assessment 2 Schedule', content: 'IA2 examinations for all 4th year students will be held from March 25-30, 2024. Detailed timetable attached.', category: 'exam', audience: ['4th Year'], publishedAt: '2024-03-18', expiresAt: '2024-03-30', isPinned: true, status: 'published', views: 245, attachments: 1 },
-  { id: '2', title: 'Technical Symposium - TechVista 2024', content: 'Annual technical symposium TechVista 2024 will be held on April 5-6. All students are encouraged to participate.', category: 'event', audience: ['All Students'], publishedAt: '2024-03-15', expiresAt: '2024-04-06', isPinned: true, status: 'published', views: 512, attachments: 2 },
-  { id: '3', title: 'Library Timing Changes', content: 'Library will remain open from 8 AM to 10 PM during exam period. Weekend hours: 9 AM to 6 PM.', category: 'announcement', audience: ['All Students', 'All Faculty'], publishedAt: '2024-03-14', expiresAt: '2024-04-30', isPinned: false, status: 'published', views: 189, attachments: 0 },
-  { id: '4', title: 'Holi Holiday Notice', content: 'The institution will remain closed on March 25, 2024 on account of Holi. Classes will resume on March 26.', category: 'holiday', audience: ['All Students', 'All Faculty', 'All Staff'], publishedAt: '2024-03-20', expiresAt: '2024-03-26', isPinned: false, status: 'published', views: 320, attachments: 0 },
-  { id: '5', title: 'URGENT: Lab Server Maintenance', content: 'Computer Lab servers will undergo maintenance on March 22, 2024 from 6 PM to 10 PM. Plan accordingly.', category: 'urgent', audience: ['All Students', 'CS Faculty'], publishedAt: '2024-03-21', expiresAt: '2024-03-22', isPinned: true, status: 'published', views: 156, attachments: 0 },
-  { id: '6', title: 'Placement Drive - Infosys', content: 'Infosys will be conducting campus placement drive on April 10, 2024. Eligible students please register.', category: 'event', audience: ['4th Year', '3rd Year'], publishedAt: '', expiresAt: '2024-04-10', isPinned: false, status: 'draft', views: 0, attachments: 1 },
-];
+import { getCirculars, saveCirculars, addCircular, Circular } from '@/lib/data-store';
+import { toast } from 'sonner';
 
 const getCategoryIcon = (category: string) => {
-  switch (category) {
+  switch (category.toLowerCase()) {
     case 'urgent': return <AlertCircle className="w-4 h-4" />;
-    case 'exam': return <FileText className="w-4 h-4" />;
-    case 'event': return <Megaphone className="w-4 h-4" />;
-    case 'holiday': return <Calendar className="w-4 h-4" />;
+    case 'examination': return <FileText className="w-4 h-4" />;
+    case 'events': return <Megaphone className="w-4 h-4" />;
+    case 'academic': return <Calendar className="w-4 h-4" />;
     default: return <Info className="w-4 h-4" />;
   }
 };
 
 const getCategoryColor = (category: string) => {
-  switch (category) {
+  switch (category.toLowerCase()) {
     case 'urgent': return 'bg-red-500/20 text-red-400 border-red-500/30';
-    case 'exam': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-    case 'event': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-    case 'holiday': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    case 'examination': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+    case 'events': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+    case 'academic': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
     default: return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
   }
 };
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'published': return 'bg-emerald-500/20 text-emerald-400';
-    case 'draft': return 'bg-gray-500/20 text-gray-400';
-    case 'expired': return 'bg-red-500/20 text-red-400';
-    default: return 'bg-muted text-muted-foreground';
-  }
-};
-
 export default function Circulars() {
+  const [circulars, setCirculars] = useState<Circular[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newCircular, setNewCircular] = useState({
+  const [newCircular, setNewCircular] = useState<Omit<Circular, 'id' | 'createdAt'>>({
     title: '',
-    content: '',
-    category: 'announcement',
-    audience: [] as string[],
-    isPinned: false,
-    expiresAt: '',
+    description: '',
+    category: 'Academic',
+    priority: 'low',
+    audience: 'all',
+    date: new Date().toISOString().split('T')[0]
   });
 
-  const stats = {
-    total: circulars.length,
-    published: circulars.filter(c => c.status === 'published').length,
-    pinned: circulars.filter(c => c.isPinned).length,
-    drafts: circulars.filter(c => c.status === 'draft').length,
+  useEffect(() => {
+    setCirculars(getCirculars());
+  }, []);
+
+  const handlePublish = () => {
+    if (!newCircular.title || !newCircular.description) {
+        toast.error("Please fill in all fields");
+        return;
+    }
+    addCircular(newCircular);
+    setCirculars(getCirculars());
+    setIsAddOpen(false);
+    setNewCircular({
+        title: '',
+        description: '',
+        category: 'Academic',
+        priority: 'low',
+        audience: 'all',
+        date: new Date().toISOString().split('T')[0]
+    });
+    toast.success("Circular published successfully!");
+  };
+
+  const handleDelete = (id: string) => {
+    const all = getCirculars().filter(c => c.id !== id);
+    saveCirculars(all);
+    setCirculars(all);
+    toast.success("Circular deleted");
   };
 
   const filteredCirculars = circulars.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || c.category === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || c.category.toLowerCase() === categoryFilter.toLowerCase();
     return matchesSearch && matchesCategory;
   });
-
-  const pinnedCirculars = filteredCirculars.filter(c => c.isPinned);
-  const unpinnedCirculars = filteredCirculars.filter(c => !c.isPinned);
 
   return (
     <div className="space-y-6">
@@ -140,12 +131,12 @@ export default function Circulars() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Content</Label>
+                <Label>Description</Label>
                 <Textarea 
-                  placeholder="Enter circular content..."
+                  placeholder="Enter circular description..."
                   rows={4}
-                  value={newCircular.content}
-                  onChange={(e) => setNewCircular({ ...newCircular, content: e.target.value })}
+                  value={newCircular.description}
+                  onChange={(e) => setNewCircular({ ...newCircular, description: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -159,36 +150,59 @@ export default function Circulars() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="announcement">Announcement</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="exam">Exam</SelectItem>
-                      <SelectItem value="holiday">Holiday</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="Academic">Academic</SelectItem>
+                      <SelectItem value="Examination">Examination</SelectItem>
+                      <SelectItem value="Events">Events</SelectItem>
+                      <SelectItem value="Administrative">Administrative</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Expires On</Label>
-                  <Input 
-                    type="date"
-                    value={newCircular.expiresAt}
-                    onChange={(e) => setNewCircular({ ...newCircular, expiresAt: e.target.value })}
-                  />
+                  <Label>Priority</Label>
+                  <Select 
+                    value={newCircular.priority} 
+                    onValueChange={(value: any) => setNewCircular({ ...newCircular, priority: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                <div>
-                  <Label>Pin this circular</Label>
-                  <p className="text-xs text-muted-foreground">Pinned circulars appear at the top</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Audience</Label>
+                  <Select 
+                    value={newCircular.audience} 
+                    onValueChange={(value: any) => setNewCircular({ ...newCircular, audience: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Everyone</SelectItem>
+                      <SelectItem value="students">Students Only</SelectItem>
+                      <SelectItem value="faculty">Faculty Only</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Switch 
-                  checked={newCircular.isPinned}
-                  onCheckedChange={(checked) => setNewCircular({ ...newCircular, isPinned: checked })}
-                />
+                <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input 
+                        type="date"
+                        value={newCircular.date}
+                        onChange={(e) => setNewCircular({ ...newCircular, date: e.target.value })}
+                    />
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Save as Draft</Button>
-                <Button className="gap-2">
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button className="gap-2" onClick={handlePublish}>
                   <Send className="w-4 h-4" />
                   Publish
                 </Button>
@@ -198,13 +212,13 @@ export default function Circulars() {
         </Dialog>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Circulars', value: stats.total, icon: Bell, color: 'from-blue-500 to-cyan-500' },
-          { label: 'Published', value: stats.published, icon: CheckCircle2, color: 'from-emerald-500 to-teal-500' },
-          { label: 'Pinned', value: stats.pinned, icon: Pin, color: 'from-amber-500 to-orange-500' },
-          { label: 'Drafts', value: stats.drafts, icon: FileText, color: 'from-purple-500 to-pink-500' },
+          { label: 'Total Active', value: circulars.length, icon: Bell, color: 'from-blue-500 to-cyan-500' },
+          { label: 'High Priority', value: circulars.filter(c => c.priority === 'high').length, icon: AlertCircle, color: 'from-red-500 to-pink-500' },
+          { label: 'Events', value: circulars.filter(c => c.category.toLowerCase() === 'events').length, icon: Megaphone, color: 'from-amber-500 to-orange-500' },
+          { label: 'Academic', value: circulars.filter(c => c.category.toLowerCase() === 'academic').length, icon: Calendar, color: 'from-emerald-500 to-teal-500' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -217,7 +231,7 @@ export default function Circulars() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                    <p className="text-2xl font-bold mt-1 uppercase">{stat.value}</p>
                   </div>
                   <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}>
                     <stat.icon className="w-5 h-5 text-white" />
@@ -247,145 +261,64 @@ export default function Circulars() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="announcement">Announcement</SelectItem>
-            <SelectItem value="event">Event</SelectItem>
-            <SelectItem value="exam">Exam</SelectItem>
-            <SelectItem value="holiday">Holiday</SelectItem>
-            <SelectItem value="urgent">Urgent</SelectItem>
+            <SelectItem value="academic">Academic</SelectItem>
+            <SelectItem value="examination">Examination</SelectItem>
+            <SelectItem value="events">Events</SelectItem>
+            <SelectItem value="administrative">Administrative</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Circulars List */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">All ({filteredCirculars.length})</TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
-          <TabsTrigger value="drafts">Drafts</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4 mt-4">
-          {/* Pinned Section */}
-          {pinnedCirculars.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <Pin className="w-4 h-4" />
-                Pinned
-              </h3>
-              <AnimatePresence>
-                {pinnedCirculars.map((circular, index) => (
-                  <CircularCard key={circular.id} circular={circular} index={index} />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {/* Other Circulars */}
-          {unpinnedCirculars.length > 0 && (
-            <div className="space-y-3">
-              {pinnedCirculars.length > 0 && (
-                <h3 className="text-sm font-semibold text-muted-foreground">Recent</h3>
-              )}
-              <AnimatePresence>
-                {unpinnedCirculars.map((circular, index) => (
-                  <CircularCard key={circular.id} circular={circular} index={index} />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="published">
-          <div className="space-y-3 mt-4">
-            {filteredCirculars.filter(c => c.status === 'published').map((circular, index) => (
-              <CircularCard key={circular.id} circular={circular} index={index} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="drafts">
-          <div className="space-y-3 mt-4">
-            {filteredCirculars.filter(c => c.status === 'draft').length === 0 ? (
-              <Card className="glass-card border-white/10">
-                <CardContent className="p-8 text-center">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No drafts found</p>
+      <div className="space-y-4">
+        {filteredCirculars.length > 0 ? filteredCirculars.map((circular, index) => (
+        <motion.div
+            key={circular.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+        >
+            <Card className="glass-card border-white/10 hover:border-white/20 transition-all">
+                <CardContent className="p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1">
+                            <div className={`p-3 rounded-xl ${getCategoryColor(circular.category).split(' ')[0]}`}>
+                                {getCategoryIcon(circular.category)}
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold">{circular.title}</h3>
+                                    <Badge className={getCategoryColor(circular.category)}>
+                                        {circular.category}
+                                    </Badge>
+                                    <Badge variant="outline" className="border-white/10">
+                                        Audience: {circular.audience}
+                                    </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-2">{circular.description}</p>
+                                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground font-bold uppercase tracking-widest">
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        {circular.date}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="hover:bg-destructive/20 text-destructive" onClick={() => handleDelete(circular.id)}>
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
                 </CardContent>
-              </Card>
-            ) : (
-              filteredCirculars.filter(c => c.status === 'draft').map((circular, index) => (
-                <CircularCard key={circular.id} circular={circular} index={index} />
-              ))
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+            </Card>
+        </motion.div>
+        )) : (
+            <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-white/5">
+                <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">No circulars found matching criteria.</p>
+            </div>
+        )}
+      </div>
     </div>
-  );
-}
-
-function CircularCard({ circular, index }: { circular: Circular; index: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ delay: index * 0.05 }}
-    >
-      <Card className={`glass-card border-white/10 hover:border-white/20 transition-all ${circular.isPinned ? 'ring-1 ring-amber-500/30' : ''}`}>
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-            <div className="flex items-start gap-4 flex-1">
-              <div className={`p-3 rounded-xl ${getCategoryColor(circular.category).split(' ')[0]}`}>
-                {getCategoryIcon(circular.category)}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {circular.isPinned && <Pin className="w-4 h-4 text-amber-400" />}
-                  <h3 className="font-semibold">{circular.title}</h3>
-                  <Badge className={getCategoryColor(circular.category)}>
-                    {circular.category.charAt(0).toUpperCase() + circular.category.slice(1)}
-                  </Badge>
-                  <Badge className={getStatusBadge(circular.status)}>
-                    {circular.status.charAt(0).toUpperCase() + circular.status.slice(1)}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{circular.content}</p>
-                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {circular.audience.join(', ')}
-                  </span>
-                  {circular.publishedAt && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Published: {circular.publishedAt}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    {circular.views} views
-                  </span>
-                  {circular.attachments > 0 && (
-                    <span className="flex items-center gap-1">
-                      <FileText className="w-3 h-3" />
-                      {circular.attachments} attachment{circular.attachments > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="hover:bg-primary/20">
-                <Edit2 className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-destructive/20 text-destructive">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
   );
 }

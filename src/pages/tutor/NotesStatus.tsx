@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
@@ -17,55 +17,44 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-
-const subjectNotes = [
-  {
-    id: 1,
-    subject: 'Data Structures',
-    code: 'CS301',
-    faculty: 'Dr. Ramesh Kumar',
-    totalUnits: 5,
-    completedUnits: 4,
-    lastUpdate: '2 hours ago',
-    status: 'In Progress',
-    color: 'primary'
-  },
-  {
-    id: 2,
-    subject: 'DBMS',
-    code: 'CS303',
-    faculty: 'Ms. Priya Dharshini',
-    totalUnits: 5,
-    completedUnits: 5,
-    lastUpdate: 'Yesterday',
-    status: 'Completed',
-    color: 'success'
-  },
-  {
-    id: 3,
-    subject: 'Operating Systems',
-    code: 'CS302',
-    faculty: 'Mr. Vigneshwar',
-    totalUnits: 5,
-    completedUnits: 2,
-    lastUpdate: '3 days ago',
-    status: 'Delayed',
-    color: 'destructive'
-  },
-  {
-    id: 4,
-    subject: 'Discrete Mathematics',
-    code: 'MA301',
-    faculty: 'Dr. Anbazhagan',
-    totalUnits: 5,
-    completedUnits: 3,
-    lastUpdate: '1 day ago',
-    status: 'In Progress',
-    color: 'primary'
-  }
-];
+import { getResources, getSyllabus, Resource, Syllabus } from '@/lib/data-store';
 
 export default function NotesStatus() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [subjectNotes, setSubjectNotes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const allResources = getResources();
+    const allSyllabus = getSyllabus();
+
+    // Grouping resources by subject and matching with syllabus units
+    const stats = allSyllabus.map(syl => {
+        const relatedResources = allResources.filter(r => r.subjectCode === syl.subjectCode && r.type === 'Note');
+        
+        // Basic logic: if units are defined, count units with at least one note
+        // For now, let's just count total notes per subject vs a target (e.g. 5 units)
+        const completedUnits = Math.min(relatedResources.length, 5); // Mock unit mapping
+        
+        return {
+            id: syl.id,
+            subject: syl.subjectName,
+            code: syl.subjectCode,
+            faculty: 'Assigned Faculty',
+            totalUnits: 5,
+            completedUnits: completedUnits,
+            lastUpdate: relatedResources.length > 0 ? new Date(relatedResources[0].createdAt).toLocaleDateString() : 'N/A',
+            status: completedUnits >= 5 ? 'Completed' : completedUnits > 0 ? 'In Progress' : 'Pending'
+        };
+    });
+
+    setSubjectNotes(stats);
+  }, []);
+
+  const filteredNotes = subjectNotes.filter(n => 
+    n.subject.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    n.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -80,7 +69,12 @@ export default function NotesStatus() {
         <div className="flex gap-3">
            <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-              <Input placeholder="Search subject..." className="pl-10 w-[240px] rounded-xl glass-card bg-background/50" />
+              <Input 
+                placeholder="Search subject..." 
+                className="pl-10 w-[240px] rounded-xl glass-card bg-background/50" 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
            </div>
            <Button variant="outline" className="rounded-xl">
              <Filter className="w-4 h-4 mr-2" />
@@ -92,9 +86,9 @@ export default function NotesStatus() {
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Avg. Completion', value: '72%', icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Pending Units', value: '18 Units', icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
-          { label: 'Subjects Delayed', value: '1 Subject', icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10' }
+          { label: 'Avg. Completion', value: subjectNotes.length > 0 ? `${Math.round((subjectNotes.reduce((a,b) => a + (b.completedUnits/b.totalUnits), 0) / subjectNotes.length) * 100)}%` : '0%', icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Pending Units', value: `${subjectNotes.reduce((a,b) => a + (b.totalUnits - b.completedUnits), 0)} Units`, icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: 'Active Subjects', value: subjectNotes.length.toString(), icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' }
         ].map((stat, i) => (
           <motion.div
             key={i}
@@ -116,7 +110,7 @@ export default function NotesStatus() {
 
       {/* Notes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {subjectNotes.map((note, index) => {
+        {filteredNotes.map((note, index) => {
           const percentage = (note.completedUnits / note.totalUnits) * 100;
           return (
             <motion.div
@@ -135,7 +129,7 @@ export default function NotesStatus() {
                     <Badge 
                       variant="secondary" 
                       className={cn(
-                        "px-3 py-1 rounded-lg border-none flex items-center gap-1.5",
+                        "px-3 py-1 rounded-lg border-none flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]",
                         note.status === 'Completed' ? 'bg-success/20 text-success' : 
                         note.status === 'Delayed' ? 'bg-destructive/10 text-destructive shadow-glow-sm shadow-destructive/20' : 
                         'bg-primary/10 text-primary'
@@ -190,6 +184,11 @@ export default function NotesStatus() {
             </motion.div>
           );
         })}
+        {filteredNotes.length === 0 && (
+            <div className="col-span-2 text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-white/5">
+                <p className="text-muted-foreground">No subjects or syllabus records found.</p>
+            </div>
+        )}
       </div>
     </div>
   );

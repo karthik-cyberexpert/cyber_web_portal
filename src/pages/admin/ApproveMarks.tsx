@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle2, XCircle, Clock, AlertTriangle, 
+import {
+  CheckCircle2, XCircle, Clock, AlertTriangle,
   Search, Filter, Eye, ThumbsUp, ThumbsDown,
   TrendingUp, Users, BookOpen, BarChart3
 } from 'lucide-react';
@@ -33,14 +33,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
+import { getMarks, getStudents, getFaculty, updateMarkStatus, MarkEntry, Student, Faculty } from '@/lib/data-store';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
+
 interface MarksSubmission {
-  id: string;
+  id: string; // Group ID: `${subjectCode}-${examType}-${section}`
   subject: string;
   subjectCode: string;
   faculty: string;
   class: string;
   section: string;
-  examType: 'IA1' | 'IA2' | 'IA3' | 'Assignment' | 'External';
+  examType: 'IA1' | 'IA2' | 'IA3' | 'Assignment' | 'External' | string;
   submittedAt: string;
   verifiedBy: string;
   verifiedAt: string;
@@ -48,17 +52,8 @@ interface MarksSubmission {
   studentCount: number;
   avgScore: number;
   maxScore: number;
+  rawMarks: MarkEntry[];
 }
-
-const submissions: MarksSubmission[] = [
-  { id: '1', subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', class: '4th Year', section: 'A', examType: 'IA1', submittedAt: '2024-03-15', verifiedBy: 'Dr. Priya Sharma', verifiedAt: '2024-03-16', status: 'verified', studentCount: 60, avgScore: 18.5, maxScore: 25 },
-  { id: '2', subject: 'Database Systems', subjectCode: 'CS302', faculty: 'Dr. Priya Sharma', class: '4th Year', section: 'A', examType: 'IA1', submittedAt: '2024-03-15', verifiedBy: 'Dr. Rajesh Kumar', verifiedAt: '2024-03-16', status: 'verified', studentCount: 60, avgScore: 19.2, maxScore: 25 },
-  { id: '3', subject: 'Operating Systems', subjectCode: 'CS303', faculty: 'Prof. Anand K', class: '4th Year', section: 'B', examType: 'IA1', submittedAt: '2024-03-14', verifiedBy: 'Dr. Meena Iyer', verifiedAt: '2024-03-15', status: 'verified', studentCount: 60, avgScore: 17.8, maxScore: 25 },
-  { id: '4', subject: 'Computer Networks', subjectCode: 'CS304', faculty: 'Dr. Meena Iyer', class: '4th Year', section: 'B', examType: 'IA2', submittedAt: '2024-03-18', verifiedBy: '', verifiedAt: '', status: 'pending', studentCount: 60, avgScore: 20.1, maxScore: 25 },
-  { id: '5', subject: 'Software Engineering', subjectCode: 'CS305', faculty: 'Prof. Suresh B', class: '4th Year', section: 'C', examType: 'Assignment', submittedAt: '2024-03-17', verifiedBy: 'Prof. Anand K', verifiedAt: '2024-03-18', status: 'approved', studentCount: 60, avgScore: 8.5, maxScore: 10 },
-  { id: '6', subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', class: '3rd Year', section: 'A', examType: 'IA2', submittedAt: '2024-03-19', verifiedBy: '', verifiedAt: '', status: 'pending', studentCount: 60, avgScore: 16.9, maxScore: 25 },
-  { id: '7', subject: 'Machine Learning', subjectCode: 'CS401', faculty: 'Dr. Lakshmi N', class: '4th Year', section: 'A', examType: 'External', submittedAt: '2024-03-10', verifiedBy: 'Dr. Rajesh Kumar', verifiedAt: '2024-03-12', status: 'rejected', studentCount: 60, avgScore: 45.2, maxScore: 100 },
-];
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -94,6 +89,64 @@ export default function ApproveMarks() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedSubmission, setSelectedSubmission] = useState<MarksSubmission | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [submissions, setSubmissions] = useState<MarksSubmission[]>([]);
+
+  const refreshData = () => {
+    const marks = getMarks();
+    const students = getStudents();
+    const facultyList = getFaculty();
+
+    // Group marks into "Submissions"
+    // Key: subjectCode-examType-section
+    const groups: Record<string, any> = {};
+
+    marks.forEach(mark => {
+        const student = students.find(s => s.id === mark.studentId);
+        if (!student) return;
+
+        const key = `${mark.subjectCode}-${mark.examType}-${student.section}`;
+        if (!groups[key]) {
+            const faculty = facultyList.find(f => f.id === mark.submittedBy);
+            groups[key] = {
+                id: key,
+                subject: mark.subjectCode, // Fallback if name not available, or we could fetch from syllabus
+                subjectCode: mark.subjectCode,
+                faculty: faculty?.name || 'Unknown Faculty',
+                class: student.batch,
+                section: student.section,
+                examType: mark.examType,
+                submittedAt: (mark.createdAt || mark.date || new Date().toISOString()).split('T')[0],
+                verifiedBy: mark.verifiedBy || '',
+                verifiedAt: (mark.updatedAt || mark.date || new Date().toISOString()).split('T')[0],
+                status: mark.status, // We assume all marks in a group have same status
+                studentCount: 0,
+                totalScore: 0,
+                maxScore: mark.maxMarks,
+                rawMarks: []
+            };
+        }
+
+        groups[key].studentCount++;
+        groups[key].totalScore += mark.marks;
+        groups[key].rawMarks.push(mark);
+
+        // Final status should be the "highest" state if mixed, but usually they move together
+        // For ApproveMarks, we care about 'verified' (waiting for admin) or 'approved'
+        if (mark.status === 'verified') groups[key].status = 'verified';
+        else if (mark.status === 'submitted' && groups[key].status !== 'verified') groups[key].status = 'pending';
+    });
+
+    const processed = Object.values(groups).map((g: any) => ({
+        ...g,
+        avgScore: g.studentCount > 0 ? parseFloat((g.totalScore / g.studentCount).toFixed(1)) : 0
+    }));
+
+    setSubmissions(processed);
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const stats = {
     pending: submissions.filter(s => s.status === 'pending').length,
@@ -103,7 +156,7 @@ export default function ApproveMarks() {
   };
 
   const filteredSubmissions = submissions.filter(sub => {
-    const matchesSearch = 
+    const matchesSearch =
       sub.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.faculty.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
@@ -112,13 +165,27 @@ export default function ApproveMarks() {
   });
 
   const handleApprove = (id: string) => {
-    console.log('Approving:', id);
-    // In real app, update the submission status
+    const submission = submissions.find(s => s.id === id);
+    if (!submission) return;
+
+    submission.rawMarks.forEach(mark => {
+        updateMarkStatus(mark.id, 'approved', 'Admin');
+    });
+
+    toast.success(`Approved marks for ${submission.subjectCode} - Section ${submission.section}`);
+    refreshData();
   };
 
   const handleReject = (id: string) => {
-    console.log('Rejecting:', id);
-    // In real app, update the submission status
+    const submission = submissions.find(s => s.id === id);
+    if (!submission) return;
+
+    submission.rawMarks.forEach(mark => {
+        updateMarkStatus(mark.id, 'submitted', 'Admin'); // Sends back to tutor or faculty
+    });
+
+    toast.error(`Rejected marks for ${submission.subjectCode} - Section ${submission.section}`);
+    refreshData();
   };
 
   return (
@@ -409,22 +476,42 @@ export default function ApproveMarks() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-32 flex items-end justify-around gap-2">
-                    {[15, 25, 35, 45, 30, 20, 10, 5].map((height, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height * 2}%` }}
-                        transition={{ delay: i * 0.1 }}
-                        className="w-8 bg-gradient-to-t from-primary to-accent rounded-t"
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-around mt-2 text-xs text-muted-foreground">
-                    {['0-5', '6-10', '11-15', '16-18', '19-20', '21-22', '23-24', '25'].map((range) => (
-                      <span key={range}>{range}</span>
-                    ))}
-                  </div>
+                  {(() => {
+                    const bins = [0, 0, 0, 0, 0];
+                    selectedSubmission.rawMarks.forEach(m => {
+                      const percentage = (m.marks / m.maxMarks) * 100;
+                      if (percentage <= 20) bins[0]++;
+                      else if (percentage <= 40) bins[1]++;
+                      else if (percentage <= 60) bins[2]++;
+                      else if (percentage <= 80) bins[3]++;
+                      else bins[4]++;
+                    });
+                    const maxBin = Math.max(...bins, 1);
+                    return (
+                      <>
+                        <div className="h-32 flex items-end justify-around gap-2">
+                          {bins.map((count, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ height: 0 }}
+                              animate={{ height: `${(count / maxBin) * 100}%` }}
+                              transition={{ delay: i * 0.1 }}
+                              className="w-12 bg-gradient-to-t from-primary to-accent rounded-t relative group"
+                            >
+                              <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-[10px] bg-popover px-1 rounded border">
+                                {count} students
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                        <div className="flex justify-around mt-2 text-[10px] text-muted-foreground uppercase tracking-wider">
+                          {['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'].map((range) => (
+                            <span key={range}>{range}</span>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>

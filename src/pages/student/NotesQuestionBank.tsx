@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -8,25 +8,43 @@ import {
   FileCode, 
   HelpCircle,
   ExternalLink,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getResources, getStudents, Resource } from '@/lib/data-store';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NotesQuestionBank() {
-  const subjects = [
-    { name: "Data Structures", code: "CS301", notes: 12, qps: 5 },
-    { name: "DBMS", code: "CS302", notes: 8, qps: 4 },
-    { name: "Operating Systems", code: "CS303", notes: 15, qps: 6 },
-    { name: "Computer Networks", code: "CS304", notes: 10, qps: 4 },
-  ];
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [activeTab, setActiveTab ] = useState('all');
 
-  const recentResources = [
-    { title: "Binary Search Trees - Implementation", type: "Note", subject: "DS", date: "2h ago", size: "2.4 MB" },
-    { title: "Normalization Forms - Full Guide", type: "QP", subject: "DBMS", date: "Yesterday", size: "1.1 MB" },
-    { title: "Process Synchronization Notes", type: "Note", subject: "OS", date: "2 days ago", size: "3.2 MB" },
-  ];
+  useEffect(() => {
+    const allResources = getResources();
+    setResources(allResources);
+  }, []);
+
+  const filteredResources = resources.filter(res => {
+    const matchesSearch = res.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          res.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          res.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Unique Subjects for Sidebar
+  const subjects = resources.reduce((acc: any[], curr) => {
+    if (!acc.find(s => s.code === curr.subjectCode)) {
+      acc.push({ name: curr.subject, code: curr.subjectCode, count: 1 });
+    } else {
+      const idx = acc.findIndex(s => s.code === curr.subjectCode);
+      acc[idx].count += 1;
+    }
+    return acc;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -46,6 +64,8 @@ export default function NotesQuestionBank() {
         <Input 
           placeholder="Search for subjects, topics, or question papers..." 
           className="pl-12 h-14 bg-muted/50 border-transparent focus:bg-card focus:border-primary/20 rounded-2xl text-lg transition-all shadow-sm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -78,24 +98,27 @@ export default function NotesQuestionBank() {
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <h3 className="font-bold">My Subjects</h3>
+              <h3 className="font-bold">By Subjects</h3>
             </div>
             <div className="space-y-3">
               {subjects.map((sub, idx) => (
                 <div key={idx} className="flex items-center justify-between group cursor-pointer hover:text-primary transition-colors">
                   <span className="text-sm font-medium">{sub.name}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                    {sub.notes}
+                    {sub.count}
                   </span>
                 </div>
               ))}
+              {subjects.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No subjects found.</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="bg-muted/50 p-1 rounded-xl mb-6">
               <TabsTrigger value="all" className="rounded-lg">All Resources</TabsTrigger>
               <TabsTrigger value="recent" className="rounded-lg">Recently Added</TabsTrigger>
@@ -104,12 +127,12 @@ export default function NotesQuestionBank() {
 
             <TabsContent value="all" className="outline-none">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {recentResources.map((res, idx) => (
+                {filteredResources.map((res, idx) => (
                   <motion.div
-                    key={idx}
+                    key={res.id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
+                    transition={{ delay: idx * 0.05 }}
                     className="p-5 glass-card rounded-2xl group hover:border-primary/20 transition-all cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-4">
@@ -128,18 +151,24 @@ export default function NotesQuestionBank() {
                       </div>
                     </div>
 
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{res.subject} • {res.type}</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{res.subjectCode} • {res.type}</p>
                     <h4 className="font-bold text-lg mb-4 group-hover:text-primary transition-colors">{res.title}</h4>
 
                     <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase">
-                      <span>{res.size}</span>
-                      <span className="flex items-center gap-1">
+                      <span>{res.fileSize} ({res.fileType})</span>
+                      <span className="flex items-center gap-1 text-[8px]">
                         <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-                        {res.date}
+                        {new Date(res.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </motion.div>
                 ))}
+                {filteredResources.length === 0 && (
+                    <div className="col-span-2 py-20 text-center flex flex-col items-center gap-3 bg-muted/20 rounded-2xl border-2 border-dashed border-white/5">
+                        <AlertCircle className="w-10 h-10 opacity-20" />
+                        <p className="text-muted-foreground font-medium">No resources found matching your criteria.</p>
+                    </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -148,7 +177,7 @@ export default function NotesQuestionBank() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.2 }}
             className="rounded-2xl bg-gradient-to-r from-accent/20 to-primary/20 p-8 text-center space-y-4 border border-white/10"
           >
             <h3 className="text-xl font-bold">Can't find what you're looking for?</h3>
@@ -156,8 +185,8 @@ export default function NotesQuestionBank() {
               Request resources from your faculty or check the physical library catalog for offline reference.
             </p>
             <div className="flex justify-center gap-3">
-              <Button variant="default" className="rounded-xl px-8">Request Material</Button>
-              <Button variant="outline" className="rounded-xl px-8">Library Portal</Button>
+              <Button variant="default" className="rounded-xl px-8" disabled>Request Material</Button>
+              <Button variant="outline" className="rounded-xl px-8" disabled>Library Portal</Button>
             </div>
           </motion.div>
         </div>

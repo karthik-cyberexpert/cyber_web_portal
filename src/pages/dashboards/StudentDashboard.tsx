@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { StatCard, GlassStatCard, ProgressCard } from '@/components/dashboard/StatCards';
 import { 
@@ -12,7 +12,8 @@ import {
   Target,
   Award,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,42 +28,88 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-
-const attendanceData = [
-  { month: 'Aug', value: 92 },
-  { month: 'Sep', value: 88 },
-  { month: 'Oct', value: 95 },
-  { month: 'Nov', value: 90 },
-  { month: 'Dec', value: 93 },
-];
-
-const marksData = [
-  { name: 'IA1', marks: 85 },
-  { name: 'IA2', marks: 78 },
-  { name: 'IA3', marks: 92 },
-  { name: 'Assignment', marks: 88 },
-];
-
-const subjectDistribution = [
-  { name: 'Data Structures', value: 35, color: '#6366f1' },
-  { name: 'DBMS', value: 25, color: '#14b8a6' },
-  { name: 'OS', value: 20, color: '#f59e0b' },
-  { name: 'Networks', value: 20, color: '#ec4899' },
-];
-
-const upcomingItems = [
-  { title: 'Data Structures Assignment', type: 'assignment', due: '2 days', icon: FileText },
-  { title: 'DBMS Quiz', type: 'quiz', due: 'Tomorrow', icon: Clock },
-  { title: 'OS Mid Exam', type: 'exam', due: '5 days', icon: Target },
-];
-
-const recentNotes = [
-  { subject: 'Data Structures', topic: 'Binary Trees', faculty: 'Dr. Ramesh' },
-  { subject: 'DBMS', topic: 'Normalization', faculty: 'Prof. Lakshmi' },
-  { subject: 'OS', topic: 'Process Scheduling', faculty: 'Mr. Senthil' },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { getStudentMarks, getStudents, getAssignments, getSubmissions, Assignment, Submission, Student } from '@/lib/data-store';
 
 export default function StudentDashboard() {
+  const { user } = useAuth();
+  const [studentStats, setStudentStats] = useState({
+    attendance: 0,
+    internalAverage: 0,
+    pendingTasks: 0,
+    ecaPoints: 0
+  });
+  
+  const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
+  const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
+  const [subjectDist, setSubjectDist] = useState<any[]>([]);
+  const [recentNotes, setRecentNotes] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      loadStats();
+    }
+  }, [user]);
+
+  const loadStats = () => {
+    // 1. Get Student Details
+    const allStudents = getStudents();
+    const me = allStudents.find(s => s.id === user?.id || s.email === user?.email);
+    
+    // 2. Get Marks & Tasks
+    const myMarks = user ? getStudentMarks(user.id) : [];
+    const allAssignments = getAssignments();
+    const allSubmissions = getSubmissions();
+    
+    // Filter assignments for student's class/section
+    const myAssignments = allAssignments.filter(a => 
+      me && (a.classId === me.batch || a.classId === me.year.toString()) && (a.sectionId === me.section || !a.sectionId)
+    );
+    
+    // Find pending assignments (not submitted yet)
+    const mySubmissions = allSubmissions.filter(s => s.studentId === (me?.id || user?.id));
+    const pending = myAssignments.filter(a => !mySubmissions.find(s => s.assignmentId === a.id));
+
+    let avgMarks = 0;
+    if (myMarks.length > 0) {
+      const totalObtained = myMarks.reduce((acc, curr) => acc + curr.marks, 0);
+      const totalMax = myMarks.reduce((acc, curr) => acc + curr.maxMarks, 0);
+      if (totalMax > 0) {
+        avgMarks = (totalObtained / totalMax) * 100;
+      }
+    }
+
+    setStudentStats({
+      attendance: me ? me.attendance : 0,
+      internalAverage: Number(avgMarks.toFixed(1)),
+      pendingTasks: pending.length,
+      ecaPoints: 0 // Resetting dummy data
+    });
+
+    // Populate upcoming tasks from pending assignments
+    setUpcomingTasks(pending.slice(0, 3).map(a => ({
+      title: a.title,
+      type: 'assignment',
+      due: a.dueDate,
+      icon: FileText
+    })));
+
+    // Reset others to empty arrays as they were dummy data
+    setAttendanceTrend([]);
+    setSubjectDist([]);
+    setRecentNotes([]);
+  };
+
+  if (!user || user.role !== 'student') {
+     return (
+       <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+         <AlertCircle className="w-12 h-12 mb-4" />
+         <h2 className="text-2xl font-bold">Access Restricted</h2>
+         <p>This dashboard is only for Students.</p>
+       </div>
+     );
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -72,7 +119,7 @@ export default function StudentDashboard() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, Arun! 👋</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
           <p className="text-muted-foreground">Here's your academic overview for today</p>
         </div>
         <Button variant="gradient" className="w-fit">
@@ -85,16 +132,15 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Attendance"
-          value="92%"
+          value={`${studentStats.attendance}%`}
           subtitle="This semester"
           icon={TrendingUp}
-          trend={{ value: 3, isPositive: true }}
           variant="primary"
           delay={0.1}
         />
         <StatCard
           title="Internal Average"
-          value="85.5"
+          value={studentStats.internalAverage}
           subtitle="Out of 100"
           icon={ClipboardCheck}
           variant="accent"
@@ -102,7 +148,7 @@ export default function StudentDashboard() {
         />
         <StatCard
           title="Pending Tasks"
-          value="4"
+          value={studentStats.pendingTasks}
           subtitle="Assignments & Quizzes"
           icon={BookOpen}
           variant="warning"
@@ -110,7 +156,7 @@ export default function StudentDashboard() {
         />
         <StatCard
           title="ECA Points"
-          value="150"
+          value={studentStats.ecaPoints}
           subtitle="This year"
           icon={Trophy}
           variant="success"
@@ -132,36 +178,17 @@ export default function StudentDashboard() {
               <h3 className="text-lg font-semibold">Attendance Trend</h3>
               <p className="text-sm text-muted-foreground">Monthly attendance percentage</p>
             </div>
-            <Button variant="outline" size="sm">View Details</Button>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attendanceData}>
-                <defs>
-                  <linearGradient id="attendanceGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis domain={[70, 100]} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={3}
-                  fill="url(#attendanceGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-64 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl">
+            {attendanceTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={attendanceTrend}>
+                    {/* ... chart config ... */}
+                </AreaChart>
+                </ResponsiveContainer>
+            ) : (
+                <p className="text-muted-foreground text-sm font-medium">No attendance data available yet.</p>
+            )}
           </div>
         </motion.div>
 
@@ -173,36 +200,16 @@ export default function StudentDashboard() {
           className="glass-card rounded-2xl p-6"
         >
           <h3 className="text-lg font-semibold mb-4">Subject Distribution</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={subjectDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {subjectDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {subjectDistribution.map((subject, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: subject.color }}
-                />
-                <span className="text-xs text-muted-foreground truncate">{subject.name}</span>
-              </div>
-            ))}
+          <div className="h-48 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl">
+             {subjectDist.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                    {/* ... chart config ... */}
+                    </PieChart>
+                </ResponsiveContainer>
+             ) : (
+                <p className="text-muted-foreground text-sm font-medium">No marking data yet.</p>
+             )}
           </div>
         </motion.div>
       </div>
@@ -213,13 +220,13 @@ export default function StudentDashboard() {
         <div className="space-y-4">
           <ProgressCard
             title="Resume Completion"
-            value={75}
+            value={0}
             color="primary"
             delay={0.5}
           />
           <ProgressCard
             title="Course Progress"
-            value={68}
+            value={0}
             color="accent"
             delay={0.6}
           />
@@ -237,7 +244,7 @@ export default function StudentDashboard() {
             <Button variant="ghost" size="sm">View All</Button>
           </div>
           <div className="space-y-3">
-            {upcomingItems.map((item, index) => {
+            {upcomingTasks.length > 0 ? upcomingTasks.map((item, index) => {
               const Icon = item.icon;
               return (
                 <motion.div
@@ -261,7 +268,9 @@ export default function StudentDashboard() {
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </motion.div>
               );
-            })}
+            }) : (
+                <p className="text-muted-foreground text-sm text-center py-10">No upcoming tasks.</p>
+            )}
           </div>
         </motion.div>
 
@@ -277,7 +286,7 @@ export default function StudentDashboard() {
             <Button variant="ghost" size="sm">View All</Button>
           </div>
           <div className="space-y-3">
-            {recentNotes.map((note, index) => (
+            {recentNotes.length > 0 ? recentNotes.map((note, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
@@ -293,7 +302,9 @@ export default function StudentDashboard() {
                   <p className="text-xs text-muted-foreground">{note.subject} • {note.faculty}</p>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+                <p className="text-muted-foreground text-sm text-center py-10">No notes uploaded.</p>
+            )}
           </div>
         </motion.div>
       </div>

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileText, Download, Eye, TrendingUp, Users, 
-  BookOpen, Calendar, BarChart3, PieChart, Filter
+  BookOpen, Calendar, BarChart3, PieChart, Filter,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,59 +27,47 @@ import {
   PieChart as RePieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Legend,
 } from 'recharts';
-
-const uploadStats = [
-  { subject: 'Data Structures', uploaded: 45, total: 50, faculty: 'Dr. Rajesh K' },
-  { subject: 'Database Systems', uploaded: 38, total: 45, faculty: 'Dr. Priya S' },
-  { subject: 'Operating Systems', uploaded: 42, total: 48, faculty: 'Prof. Anand K' },
-  { subject: 'Computer Networks', uploaded: 35, total: 42, faculty: 'Dr. Meena I' },
-  { subject: 'Software Engineering', uploaded: 28, total: 35, faculty: 'Prof. Suresh B' },
-];
-
-const monthlyUploads = [
-  { month: 'Jan', notes: 45, questions: 20 },
-  { month: 'Feb', notes: 52, questions: 25 },
-  { month: 'Mar', notes: 68, questions: 32 },
-  { month: 'Apr', notes: 75, questions: 40 },
-  { month: 'May', notes: 60, questions: 28 },
-  { month: 'Jun', notes: 48, questions: 22 },
-];
-
-const categoryData = [
-  { name: 'Unit Notes', value: 45, color: '#3b82f6' },
-  { name: 'Question Banks', value: 25, color: '#8b5cf6' },
-  { name: 'Reference Materials', value: 15, color: '#10b981' },
-  { name: 'Previous Papers', value: 10, color: '#f59e0b' },
-  { name: 'Lab Manuals', value: 5, color: '#ec4899' },
-];
-
-const recentUploads = [
-  { id: 1, title: 'Unit 3 - Trees & Graphs', subject: 'Data Structures', faculty: 'Dr. Rajesh K', date: '2024-03-20', downloads: 156, type: 'PDF' },
-  { id: 2, title: 'IA2 Question Bank', subject: 'Database Systems', faculty: 'Dr. Priya S', date: '2024-03-19', downloads: 234, type: 'PDF' },
-  { id: 3, title: 'Process Scheduling Notes', subject: 'Operating Systems', faculty: 'Prof. Anand K', date: '2024-03-18', downloads: 189, type: 'PDF' },
-  { id: 4, title: 'TCP/IP Protocol Stack', subject: 'Computer Networks', faculty: 'Dr. Meena I', date: '2024-03-17', downloads: 145, type: 'PPT' },
-  { id: 5, title: 'SDLC Models Comparison', subject: 'Software Engineering', faculty: 'Prof. Suresh B', date: '2024-03-16', downloads: 98, type: 'PDF' },
-];
-
-const facultyPerformance = [
-  { name: 'Dr. Rajesh K', uploads: 45, downloads: 2340, rating: 4.8 },
-  { name: 'Dr. Priya S', uploads: 38, downloads: 1890, rating: 4.6 },
-  { name: 'Prof. Anand K', uploads: 42, downloads: 2100, rating: 4.7 },
-  { name: 'Dr. Meena I', uploads: 35, downloads: 1650, rating: 4.5 },
-  { name: 'Prof. Suresh B', uploads: 28, downloads: 1200, rating: 4.3 },
-];
+import { getResources, Resource } from '@/lib/data-store';
 
 export default function NotesAnalytics() {
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [selectedSemester, setSelectedSemester] = useState('all');
+  const [resources, setResources] = useState<Resource[]>([]);
 
-  const totalNotes = uploadStats.reduce((sum, s) => sum + s.uploaded, 0);
-  const totalRequired = uploadStats.reduce((sum, s) => sum + s.total, 0);
-  const completionRate = Math.round((totalNotes / totalRequired) * 100);
+  useEffect(() => {
+    setResources(getResources());
+  }, []);
+
+  const totalNotes = resources.filter(r => r.type === 'Note').length;
+  const totalQPs = resources.filter(r => r.type === 'QP').length;
+  const totalManuals = resources.filter(r => r.type === 'Manual').length;
+  const totalDownloads = resources.reduce((acc, curr) => acc + curr.downloads, 0);
+
+  const subjectStats = resources.reduce((acc: any[], curr) => {
+    const existing = acc.find(s => s.subjectCode === curr.subjectCode);
+    if (!existing) {
+        acc.push({ subject: curr.subject, subjectCode: curr.subjectCode, uploaded: 1, total: 5, faculty: curr.facultyName });
+    } else {
+        existing.uploaded += 1;
+    }
+    return acc;
+  }, []);
+
+  const totalSubjectUnits = subjectStats.length * 5;
+  const totalUploadedUnits = subjectStats.reduce((acc, s) => acc + s.uploaded, 0);
+  const completionRate = totalSubjectUnits > 0 ? Math.round((totalUploadedUnits / totalSubjectUnits) * 100) : 0;
+
+  // Category Data
+  const categoryData = [
+    { name: 'Lecture Notes', value: totalNotes, color: '#3b82f6' },
+    { name: 'Question Banks', value: totalQPs, color: '#8b5cf6' },
+    { name: 'Lab Manuals', value: totalManuals, color: '#ec4899' },
+  ].filter(c => c.value > 0);
+
+  // Mock Fallback if empty
+  const hasData = resources.length > 0;
 
   return (
     <div className="space-y-6">
@@ -97,25 +86,6 @@ export default function NotesAnalytics() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              <SelectItem value="2021-2025">2021-2025</SelectItem>
-              <SelectItem value="2022-2026">2022-2026</SelectItem>
-              <SelectItem value="2023-2027">2023-2027</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="Semester" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Semesters</SelectItem>
-              <SelectItem value="1">Semester 1</SelectItem>
-              <SelectItem value="2">Semester 2</SelectItem>
-              <SelectItem value="3">Semester 3</SelectItem>
-              <SelectItem value="4">Semester 4</SelectItem>
-              <SelectItem value="5">Semester 5</SelectItem>
-              <SelectItem value="6">Semester 6</SelectItem>
-              <SelectItem value="7">Semester 7</SelectItem>
-              <SelectItem value="8">Semester 8</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -124,10 +94,10 @@ export default function NotesAnalytics() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Notes', value: '188', icon: FileText, color: 'from-blue-500 to-cyan-500', change: '+12%' },
-          { label: 'Total Downloads', value: '9.2K', icon: Download, color: 'from-purple-500 to-pink-500', change: '+23%' },
-          { label: 'Active Viewers', value: '342', icon: Eye, color: 'from-emerald-500 to-teal-500', change: '+8%' },
-          { label: 'Completion Rate', value: `${completionRate}%`, icon: TrendingUp, color: 'from-orange-500 to-amber-500', change: '+5%' },
+          { label: 'Total Resources', value: resources.length, icon: FileText, color: 'from-blue-500 to-cyan-500', change: 'Live' },
+          { label: 'Total Downloads', value: totalDownloads, icon: Download, color: 'from-purple-500 to-pink-500', change: 'Live' },
+          { label: 'Active Subjects', value: subjectStats.length, icon: BookOpen, color: 'from-emerald-500 to-teal-500', change: 'Live' },
+          { label: 'Completion Rate', value: `${completionRate}%`, icon: TrendingUp, color: 'from-orange-500 to-amber-500', change: 'System-wide' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -140,8 +110,8 @@ export default function NotesAnalytics() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                    <p className="text-xs text-emerald-400 mt-1">{stat.change}</p>
+                    <p className="text-2xl font-bold mt-1 uppercase">{stat.value}</p>
+                    <p className="text-xs text-primary mt-1 uppercase">{stat.change}</p>
                   </div>
                   <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}>
                     <stat.icon className="w-5 h-5 text-white" />
@@ -155,7 +125,7 @@ export default function NotesAnalytics() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Trends */}
+        {/* Monthly Trends - Mocked as we don't have enough history yet */}
         <Card className="glass-card border-white/10">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -164,23 +134,14 @@ export default function NotesAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyUploads}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }} 
-                />
-                <Legend />
-                <Bar dataKey="notes" name="Notes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="questions" name="Question Banks" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {hasData ? (
+                 <p className="py-20 text-center text-muted-foreground italic">Insufficient historical data to display trends.</p>
+            ) : (
+                <div className="py-20 text-center flex flex-col items-center gap-2">
+                    <AlertCircle className="w-8 h-8 opacity-20" />
+                    <p className="text-muted-foreground">No resources in database.</p>
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -193,35 +154,39 @@ export default function NotesAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center gap-8">
-              <ResponsiveContainer width={200} height={200}>
-                <RePieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+            {categoryData.length > 0 ? (
+                <div className="flex items-center justify-center gap-8">
+                <ResponsiveContainer width={200} height={200}>
+                    <RePieChart>
+                    <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                    >
+                        {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                    </RePieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2">
+                    {categoryData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-sm">{item.name}</span>
+                        <span className="text-sm font-bold">({item.value})</span>
+                    </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </RePieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                {categoryData.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm">{item.name}</span>
-                    <span className="text-xs text-muted-foreground">({item.value}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                </div>
+                </div>
+            ) : (
+                <p className="py-20 text-center text-muted-foreground italic">No category data available.</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -231,16 +196,16 @@ export default function NotesAnalytics() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />
-            Subject-wise Upload Progress
+            Subject-wise Resources
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {uploadStats.map((subject, index) => {
-              const percentage = Math.round((subject.uploaded / subject.total) * 100);
+            {subjectStats.map((subject, index) => {
+              const percentage = Math.min(Math.round((subject.uploaded / 5) * 100), 100);
               return (
                 <motion.div
-                  key={subject.subject}
+                  key={subject.subjectCode}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -253,7 +218,7 @@ export default function NotesAnalytics() {
                     </div>
                     <div className="text-sm">
                       <span className="text-primary font-medium">{subject.uploaded}</span>
-                      <span className="text-muted-foreground">/{subject.total}</span>
+                      <span className="text-muted-foreground">/5 Units</span>
                       <Badge className="ml-2" variant={percentage >= 90 ? 'default' : percentage >= 70 ? 'secondary' : 'outline'}>
                         {percentage}%
                       </Badge>
@@ -263,101 +228,12 @@ export default function NotesAnalytics() {
                 </motion.div>
               );
             })}
+            {subjectStats.length === 0 && (
+                <p className="text-center py-10 text-muted-foreground uppercase text-xs font-bold tracking-widest">No subject resources tracked yet.</p>
+            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Tabs for Details */}
-      <Tabs defaultValue="recent" className="w-full">
-        <TabsList>
-          <TabsTrigger value="recent">Recent Uploads</TabsTrigger>
-          <TabsTrigger value="faculty">Faculty Performance</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="recent">
-          <Card className="glass-card border-white/10">
-            <CardContent className="p-0">
-              <div className="divide-y divide-white/5">
-                {recentUploads.map((upload, index) => (
-                  <motion.div
-                    key={upload.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-4 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
-                          <FileText className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{upload.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {upload.subject} • {upload.faculty}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="outline">{upload.type}</Badge>
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Download className="w-4 h-4" />
-                          {upload.downloads}
-                        </div>
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Calendar className="w-4 h-4" />
-                          {upload.date}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="faculty">
-          <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {facultyPerformance.map((faculty, index) => (
-                  <motion.div
-                    key={faculty.name}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10"
-                  >
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
-                        {faculty.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{faculty.name}</h4>
-                        <div className="flex items-center gap-1 text-amber-400">
-                          {'★'.repeat(Math.floor(faculty.rating))}
-                          <span className="text-xs text-muted-foreground ml-1">{faculty.rating}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="p-2 rounded-lg bg-white/5">
-                        <p className="text-xs text-muted-foreground">Uploads</p>
-                        <p className="font-bold text-primary">{faculty.uploads}</p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-white/5">
-                        <p className="text-xs text-muted-foreground">Downloads</p>
-                        <p className="font-bold text-accent">{faculty.downloads}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

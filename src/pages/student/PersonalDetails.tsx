@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -15,64 +15,91 @@ import {
   ShieldCheck,
   Heart,
   Droplets,
-  Link
+  Link,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { getStudents, Student } from '@/lib/data-store';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 export default function PersonalDetails() {
+  const { user } = useAuth();
+  const [student, setStudent] = useState<Student | null>(null);
+
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      const allStudents = getStudents();
+      const currentStudent = allStudents.find(s => s.id === user.id || s.email === user.email);
+      if (currentStudent) {
+        setStudent(currentStudent);
+      }
+    }
+  }, [user]);
+
+  if (!student) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 text-left">
+        <AlertCircle className="w-12 h-12 text-muted-foreground/50" />
+        <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Awaiting profile data...</p>
+      </div>
+    );
+  }
+
   const infoGroups = [
     {
-      title: "Basic Information",
+      title: "Identity & Core",
       items: [
-        { label: "Full Name", value: "Arun Kumar", icon: User },
-        { label: "Student ID", value: "STU2024001", icon: IdCard },
-        { label: "Email", value: "arun.kumar@university.edu", icon: Mail },
-        { label: "Phone", value: "+91 98765 43210", icon: Phone },
+        { label: "Full Name", value: student.name, icon: User },
+        { label: "Student ID", value: student.rollNumber, icon: IdCard },
+        { label: "Email Address", value: student.email, icon: Mail },
+        { label: "Phone Number", value: student.phone, icon: Phone },
       ]
     },
     {
-      title: "Contact & Identity",
+      title: "Biological & Demographics",
       items: [
-        { label: "Date of Birth", value: "15 May 2003", icon: Calendar },
-        { label: "Gender", value: "Male", icon: User },
-        { label: "Blood Group", value: "O+ Positive", icon: Droplets },
-        { label: "Nationality", value: "Indian", icon: Globe },
-        { label: "Address", value: "123 Academic Lane, Knowledge City", icon: MapPin },
+        { label: "Date of Birth", value: student.dateOfBirth, icon: Calendar },
+        { label: "Gender", value: student.gender, icon: User },
+        { label: "Blood Group", value: student.bloodGroup, icon: Droplets },
+        { label: "Nationality", value: student.nationality, icon: Globe },
+        { label: "Residential Address", value: student.address, icon: MapPin },
       ]
     },
     {
-      title: "Family & Guardians",
+      title: "Support Network",
       items: [
-        { label: "Father's Name", value: "V. Kalai Selvan", icon: User },
-        { label: "Guardian Phone", value: "+91 91234 56789", icon: Phone },
-        { label: "Relationship", value: "Father", icon: Heart },
+        { label: "Guardian Name", value: student.guardianName, icon: User },
+        { label: "Guardian Contact", value: student.guardianPhone, icon: Phone },
+        { label: "Support Status", value: "Verified contact", icon: ShieldCheck, color: "text-success" },
       ]
     },
     {
-      title: "Digital Presence",
+      title: "Professional Footprint",
       items: [
-        { label: "LinkedIn", value: "linkedin.com/in/arunkumar", icon: Link },
-        { label: "GitHub", value: "github.com/arunkumar-dev", icon: Globe },
+        { label: "LinkedIn Profile", value: student.linkedin || "Not added", icon: Link },
+        { label: "GitHub Profile", value: student.github || "Not added", icon: Globe },
+        { label: "Portfolio URL", value: "portfolio.edu/student", icon: Sparkles },
       ]
     }
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-3xl font-bold">Personal Profile</h1>
-          <p className="text-muted-foreground">Manage your personal information and credentials</p>
+          <h1 className="text-3xl font-bold italic">Identity Matrix 🧬</h1>
+          <p className="text-muted-foreground font-medium">Manage your personal information and verified credentials</p>
         </div>
-        <Button variant="gradient" className="shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+        <Button variant="gradient" className="shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest">
           <Sparkles className="w-4 h-4 mr-2" />
-          Edit Profile
+          Edit Registry
         </Button>
       </motion.div>
 
@@ -81,54 +108,54 @@ export default function PersonalDetails() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="lg:col-span-1 glass-card rounded-2xl p-8 flex flex-col items-center text-center space-y-6 border-primary/20 relative overflow-hidden"
+          className="lg:col-span-1 glass-card rounded-3xl p-8 flex flex-col items-center text-center space-y-6 border-primary/20 relative overflow-hidden"
         >
-          <div className="absolute top-4 right-4">
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-bold">
-              ACTIVE
+          <div className="absolute top-6 right-6">
+            <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-black text-[9px] uppercase tracking-widest px-3 py-1">
+              {student.status.toUpperCase()}
             </Badge>
           </div>
           
           <div className="relative group">
-            <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-primary/20 bg-muted flex items-center justify-center p-1 group-hover:border-primary/50 transition-all duration-500">
+            <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-primary/20 bg-muted flex items-center justify-center p-1 group-hover:border-primary/50 transition-all duration-500 shadow-2xl">
               <img 
-                src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=400&fit=crop" 
-                alt="Arun Kumar" 
-                className="w-full h-full rounded-full object-cover" 
+                src={student.avatar} 
+                alt={student.name} 
+                className="w-full h-full rounded-[2.2rem] object-cover" 
               />
             </div>
-            <button className="absolute bottom-2 right-2 p-3 bg-primary text-white rounded-xl shadow-xl shadow-primary/30 hover:scale-110 transition-transform active:scale-95 group-hover:rotate-6">
+            <button className="absolute -bottom-2 -right-2 p-3 bg-primary text-white rounded-2xl shadow-xl shadow-primary/30 hover:scale-110 transition-transform active:scale-95 group-hover:rotate-6 border-2 border-background">
               <Camera className="w-5 h-5" />
             </button>
           </div>
           
           <div>
-            <h2 className="text-2xl font-black tracking-tight">Arun Kumar</h2>
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">B.E. Computer Science • Year 3</p>
+            <h2 className="text-2xl font-black tracking-tight italic">{student.name}</h2>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 slashed-zero">{student.class} • Year {student.year}</p>
           </div>
 
           <div className="w-full space-y-3 px-4">
-            <div className="flex justify-between text-xs font-black uppercase tracking-tighter">
-              <span className="text-muted-foreground">Profile Integrity</span>
-              <span className="text-primary">85% Complete</span>
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+              <span className="text-muted-foreground">Digital Trust Score</span>
+              <span className="text-primary">94%</span>
             </div>
-            <Progress value={85} className="h-2 rounded-full" />
+            <Progress value={94} className="h-2 rounded-full shadow-inner" />
           </div>
 
           <div className="grid grid-cols-2 gap-3 w-full pt-4">
-            <div className="bg-muted/30 p-3 rounded-xl border border-white/5">
-              <p className="text-lg font-black text-primary leading-none">8.82</p>
-              <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">GPA AVG</p>
+            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
+              <p className="text-xl font-black text-primary font-mono leading-none slashed-zero">{student.cgpa.toFixed(2)}</p>
+              <p className="text-[9px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Global GPA</p>
             </div>
-            <div className="bg-muted/30 p-3 rounded-xl border border-white/5">
-              <p className="text-lg font-black text-accent leading-none">92%</p>
-              <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Attendance</p>
+            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-accent/20 transition-all">
+              <p className="text-xl font-black text-accent font-mono leading-none slashed-zero">{student.attendance}%</p>
+              <p className="text-[9px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Attendance</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-success bg-success/10 px-4 py-2 rounded-xl border border-success/20 w-full justify-center">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Verified Digital Profile
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-success bg-success/10 px-5 py-3 rounded-2xl border border-success/20 w-full justify-center tracking-widest">
+            <ShieldCheck className="w-4 h-4" />
+            Blockchain Verified Profile
           </div>
         </motion.div>
 
@@ -140,22 +167,22 @@ export default function PersonalDetails() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 * gIdx }}
-              className="glass-card rounded-2xl p-6"
+              className="glass-card rounded-3xl p-8 shadow-xl border-white/5"
             >
-              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-primary rounded-full" />
+              <h3 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-3 italic">
+                <div className="w-2 h-2 bg-primary rounded-full shadow-glow-sm" />
                 {group.title}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
                 {group.items.map((item, iIdx) => (
-                  <div key={iIdx} className="group">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        <item.icon className="w-5 h-5" />
+                  <div key={iIdx} className="group flex flex-col items-start text-left">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all shadow-inner border border-white/5">
+                        <item.icon className={cn("w-5 h-5", item.color)} />
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-semibold">{item.value}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-muted-foreground mb-1 font-black uppercase tracking-widest leading-none">{item.label}</p>
+                        <p className="text-sm font-bold italic truncate group-hover:text-primary transition-colors">{item.value}</p>
                       </div>
                     </div>
                   </div>

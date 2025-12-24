@@ -1,178 +1,112 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  Bell, 
-  Search, 
-  Plus, 
-  Pin, 
+  Megaphone, 
   Calendar, 
-  Filter, 
-  ArrowRight,
-  Clock,
+  Tag, 
+  Download, 
   ChevronRight,
-  Megaphone,
-  Info
+  Search,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-const circulars = [
-  {
-    id: 1,
-    title: 'Semester End Examination Guidelines',
-    content: 'Please find the updated guidelines for the upcoming semester end examinations. Faculty members are requested to submit question banks by Oct 20.',
-    date: 'Oct 14, 2024',
-    category: 'Exam',
-    priority: 'high',
-    pinned: true,
-    author: 'Principal Office'
-  },
-  {
-    id: 2,
-    title: 'New Research Grant Opportunities',
-    content: 'The department is pleased to announce new research grant opportunities for senior faculty members specializing in AI and IoT.',
-    date: 'Oct 12, 2024',
-    category: 'Research',
-    priority: 'medium',
-    pinned: false,
-    author: 'R&D Cell'
-  },
-  {
-    id: 3,
-    title: 'Faculty Development Program - Cloud Ops',
-    content: 'A 3-day FDP on Cloud Operations and DevOps will be held from Oct 28-30. Mandatory for CSE and IT faculty.',
-    date: 'Oct 10, 2024',
-    category: 'FDP',
-    priority: 'medium',
-    pinned: false,
-    author: 'HOD - CSE'
-  }
-];
+import { getCirculars, Circular } from '@/lib/data-store';
 
 export default function Circulars() {
+  const [circulars, setCirculars] = useState<Circular[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    const all = getCirculars();
+    // Filter for faculty audience
+    setCirculars(all.filter(c => c.audience === 'all' || c.audience === 'faculty'));
+  }, []);
+
+  const getPriorityStyles = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'medium': return 'bg-warning/10 text-warning border-warning/20';
+      default: return 'bg-primary/10 text-primary border-primary/20';
+    }
+  };
+
+  const filteredCirculars = circulars.filter(c => 
+    c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-black tracking-tight italic">Circulars & Notices 📢</h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">Official announcements from the department and institution</p>
+          <h1 className="text-3xl font-bold italic">Faculty Notices 📋</h1>
+          <p className="text-muted-foreground font-medium">Academic and administrative circulars for teaching staff</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl border-white/10">Archive</Button>
-          <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20">Subscribe Alerts</Button>
-        </div>
-      </motion.div>
-
-      {/* Featured Notification */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/20 via-primary/5 to-accent/20 p-10 border border-primary/10 shadow-2xl"
-      >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
-           <div className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center text-white shadow-glow shadow-primary/40 rotate-3">
-              <Megaphone className="w-12 h-12" />
-           </div>
-           <div className="flex-1 text-center md:text-left">
-              <Badge className="bg-primary/20 text-primary border-none text-[10px] font-black tracking-widest uppercase mb-3 px-3 py-1">System Alert</Badge>
-              <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter italic">LMS Maintenance Scheduled</h2>
-              <p className="text-muted-foreground font-medium max-w-xl">The Learning Management System will be offline for scheduled maintenance on Sunday, Oct 20th from 02:00 AM to 06:00 AM. Faculty are requested to schedule their quizzes accordingly.</p>
-           </div>
-           <Button className="rounded-2xl h-14 px-10 font-bold group">View Details <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" /></Button>
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search circulars..." 
+            className="pl-9 bg-muted/50 border-transparent rounded-xl focus:bg-card transition-all"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-         <div className="lg:col-span-1 space-y-6">
-            <Card className="glass-card p-6 border-none shadow-xl">
-               <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-6">Categories</h3>
-               <div className="space-y-2">
-                  {['All Notices', 'Academic', 'Examinations', 'Events', 'Research', 'Administrative'].map((cat, idx) => (
-                    <Button key={idx} variant="ghost" className={`w-full justify-between font-bold rounded-xl ${idx === 0 ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                       {cat}
-                       {idx === 0 && <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center">12</span>}
-                    </Button>
-                  ))}
-               </div>
-            </Card>
-
-            <Card className="glass-card p-6 border-none shadow-xl bg-gradient-to-br from-secondary/5 to-transparent">
-               <h3 className="text-xs font-black uppercase tracking-widest text-secondary mb-4">Quick Search</h3>
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                     placeholder="Search..." 
-                     className="pl-10 rounded-xl bg-white/5 border-white/10"
-                     value={searchTerm}
-                     onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-               </div>
-            </Card>
-         </div>
-
-         <div className="lg:col-span-3 space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              <AnimatePresence>
-                 {circulars.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase())).map((item, idx) => (
-                    <motion.div
-                       key={item.id}
-                       initial={{ opacity: 0, x: 20 }}
-                       animate={{ opacity: 1, x: 0 }}
-                       transition={{ delay: idx * 0.1 }}
-                    >
-                       <Card className="glass-card border-none p-6 group hover:shadow-2xl transition-all relative overflow-hidden">
-                          {item.pinned && (
-                             <div className="absolute top-0 right-0 p-4">
-                                <Pin className="w-4 h-4 text-primary animate-pulse" />
-                             </div>
-                          )}
-                          <div className="flex gap-6 items-start">
-                             <div className="hidden md:flex flex-col items-center justify-center w-20 h-20 rounded-3xl bg-muted/30 text-muted-foreground group-hover:bg-primary/5 transition-colors">
-                                <Calendar className="w-6 h-6 mb-1" />
-                                <span className="text-[9px] font-black uppercase leading-tight text-center">{item.date.split(',')[0]}</span>
-                             </div>
-                             <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                   <Badge variant="outline" className="text-[9px] font-black bg-primary/5 text-primary border-primary/20">{item.category}</Badge>
-                                   <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 tracking-widest">By {item.author}</span>
-                                </div>
-                                <h4 className="text-xl font-black mb-2 group-hover:text-primary transition-colors tracking-tight">{item.title}</h4>
-                                <p className="text-sm font-medium text-muted-foreground line-clamp-2 mb-4 leading-relaxed">{item.content}</p>
-                                <div className="flex items-center justify-between">
-                                   <div className="flex gap-4 items-center text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">
-                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> 2 hours ago</span>
-                                      <span className="flex items-center gap-1 font-bold text-primary underline decoration-primary/20 cursor-pointer">Read Full Notice</span>
-                                   </div>
-                                   <Button variant="ghost" size="sm" className="rounded-xl hover:bg-primary/10 hover:text-primary">
-                                      Archive <ArrowRight className="w-4 h-4 ml-2" />
-                                   </Button>
-                                </div>
-                             </div>
-                          </div>
-                       </Card>
-                    </motion.div>
-                 ))}
-              </AnimatePresence>
+      <div className="grid grid-cols-1 gap-4">
+        {filteredCirculars.length > 0 ? filteredCirculars.map((notice, idx) => (
+          <motion.div
+            key={notice.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="p-6 glass-card rounded-2xl border-transparent hover:border-primary/20 transition-all cursor-pointer bg-primary/[0.01]"
+          >
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className={`text-[10px] font-black uppercase border-0 px-2 py-0.5 rounded-lg ${getPriorityStyles(notice.priority)}`}>
+                    {notice.priority} Priority
+                  </Badge>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <Tag className="w-3 h-3 text-primary" />
+                    {notice.category}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold group-hover:text-primary transition-colors leading-tight">
+                  {notice.title}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-xl whitespace-nowrap tracking-widest border border-white/5">
+                <Calendar className="w-3.5 h-3.5 text-primary" />
+                {notice.date}
+              </div>
             </div>
 
-            <motion.div
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               className="p-8 rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer hover:border-primary/20"
-            >
-               <h4 className="font-black uppercase tracking-tight mb-2">Caught up!</h4>
-               <p className="text-sm font-medium text-muted-foreground italic">You've read all the important circulars for today.</p>
-            </motion.div>
-         </div>
+            <p className="text-sm text-muted-foreground mb-6 pr-4 font-medium leading-relaxed">{notice.description}</p>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+              <Button variant="ghost" size="sm" className="rounded-xl h-9 text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/10" disabled={!notice.attachment}>
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+              <Button variant="ghost" size="sm" className="rounded-xl h-9 text-xs font-black uppercase tracking-widest transition-all">
+                Mark as Read
+              </Button>
+            </div>
+          </motion.div>
+        )) : (
+            <div className="text-center py-20 bg-muted/20 border-2 border-dashed border-white/5 rounded-2xl">
+                <Megaphone className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">No circulars found for faculty.</p>
+            </div>
+        )}
       </div>
     </div>
   );

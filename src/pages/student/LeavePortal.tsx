@@ -17,29 +17,66 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getStudents, Student } from '@/lib/data-store';
+import { getStudents, Student, getLeaveRequests, addLeaveRequest, LeaveRequest } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export default function LeavePortal() {
   const { user } = useAuth();
   const [showApply, setShowApply] = useState(false);
   const [studentData, setStudentData] = useState<Student | null>(null);
+  const [leaveHistory, setLeaveHistory] = useState<LeaveRequest[]>([]);
+  const [formData, setFormData] = useState({
+    type: 'Sick Leave',
+    startDate: '',
+    endDate: '',
+    reason: '',
+    contact: ''
+  });
 
   useEffect(() => {
     if (user) {
       const students = getStudents();
       const current = students.find(s => s.email === user.email);
       if (current) setStudentData(current);
+      
+      const allLeaves = getLeaveRequests();
+      setLeaveHistory(allLeaves.filter(l => l.userId === user.id).reverse());
     }
   }, [user]);
 
-  const isGraduated = studentData?.status === 'Graduated';
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !studentData) return;
 
-  const leaveHistory = [
-    { id: 1, type: "Sick Leave", from: "Oct 10", to: "Oct 12", reason: "Viral fever", status: "approved", approvedBy: "Tutor - Mrs. Anitha" },
-    { id: 2, type: "On Duty", from: "Oct 22", to: "Oct 22", reason: "Workshop at IIT Madras", status: "pending", approvedBy: null },
-    { id: 3, type: "Permission", from: "Oct 15", to: "Oct 15", reason: "Family event", status: "rejected", approvedBy: "HOD - Dr. Rajan" },
-  ];
+    if (!formData.startDate || !formData.endDate || !formData.reason) {
+        toast.error("Please fill in all required fields");
+        return;
+    }
+
+    addLeaveRequest({
+        userId: user.id,
+        userName: studentData.name,
+        type: formData.type,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        reason: formData.reason,
+        contact: formData.contact
+    });
+
+    toast.success("Application submitted successfully!");
+    setShowApply(false);
+    setLeaveHistory(getLeaveRequests().filter(l => l.userId === user.id).reverse());
+    setFormData({
+        type: 'Sick Leave',
+        startDate: '',
+        endDate: '',
+        reason: '',
+        contact: ''
+    });
+  };
+
+  const isGraduated = studentData?.status === 'Graduated';
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -56,6 +93,12 @@ export default function LeavePortal() {
       default: return 'bg-warning/10 text-warning border-warning/20';
     }
   };
+
+  const leaveBalance = [
+    { label: "Sick Leave", used: leaveHistory.filter(l => l.type === 'Sick Leave' && l.status === 'approved').length, total: 10, color: "bg-primary" },
+    { label: "Casual Leave", used: leaveHistory.filter(l => l.type === 'Casual Leave' && l.status === 'approved').length, total: 8, color: "bg-accent" },
+    { label: "On Duty", used: leaveHistory.filter(l => l.type.includes('On Duty') && l.status === 'approved').length, total: 15, color: "bg-success" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -113,11 +156,15 @@ export default function LeavePortal() {
                 <FileText className="w-5 h-5 text-primary" />
                 New Leave Application
               </h2>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Type of Request</Label>
-                    <select className="w-full h-11 bg-muted/50 rounded-xl px-4 border-transparent focus:border-primary/20 focus:ring-0 transition-all text-sm font-medium outline-none">
+                    <select 
+                        value={formData.type}
+                        onChange={e => setFormData({...formData, type: e.target.value})}
+                        className="w-full h-11 bg-muted/50 rounded-xl px-4 border-transparent focus:border-primary/20 focus:ring-0 transition-all text-sm font-medium outline-none"
+                    >
                       <option>Sick Leave</option>
                       <option>Casual Leave</option>
                       <option>On Duty (Academic)</option>
@@ -126,24 +173,44 @@ export default function LeavePortal() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Emergency Contact</Label>
-                    <Input placeholder="+91 98765 43210" className="h-11 bg-muted/50 border-transparent rounded-xl" />
+                    <Input 
+                        placeholder="+91 98765 43210" 
+                        value={formData.contact}
+                        onChange={e => setFormData({...formData, contact: e.target.value})}
+                        className="h-11 bg-muted/50 border-transparent rounded-xl" 
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">From Date</Label>
-                    <Input type="date" className="h-11 bg-muted/50 border-transparent rounded-xl" />
+                    <Input 
+                        type="date" 
+                        value={formData.startDate}
+                        onChange={e => setFormData({...formData, startDate: e.target.value})}
+                        className="h-11 bg-muted/50 border-transparent rounded-xl" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">To Date</Label>
-                    <Input type="date" className="h-11 bg-muted/50 border-transparent rounded-xl" />
+                    <Input 
+                        type="date" 
+                        value={formData.endDate}
+                        onChange={e => setFormData({...formData, endDate: e.target.value})}
+                        className="h-11 bg-muted/50 border-transparent rounded-xl" 
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Reason for Leave</Label>
-                  <Textarea placeholder="Explain your reason clearly..." className="min-h-[120px] bg-muted/50 border-transparent rounded-xl focus:bg-card transition-all" />
+                  <Textarea 
+                    placeholder="Explain your reason clearly..." 
+                    value={formData.reason}
+                    onChange={e => setFormData({...formData, reason: e.target.value})}
+                    className="min-h-[120px] bg-muted/50 border-transparent rounded-xl focus:bg-card transition-all" 
+                  />
                 </div>
 
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3">
@@ -153,7 +220,7 @@ export default function LeavePortal() {
                   </p>
                 </div>
 
-                <Button className="w-full h-12 rounded-xl text-lg font-bold shadow-xl shadow-primary/20">
+                <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold shadow-xl shadow-primary/20">
                   Submit Application
                 </Button>
               </form>
@@ -168,11 +235,7 @@ export default function LeavePortal() {
               <div className="glass-card rounded-2xl p-6 bg-gradient-to-br from-primary/5 to-accent/5">
                 <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6">Leave Balance</h3>
                 <div className="space-y-6">
-                  {[
-                    { label: "Sick Leave", used: 2, total: 10, color: "bg-primary" },
-                    { label: "Casual Leave", used: 3, total: 8, color: "bg-accent" },
-                    { label: "On Duty", used: 5, total: 15, color: "bg-success" },
-                  ].map((item, idx) => (
+                  {leaveBalance.map((item, idx) => (
                     <div key={idx} className="space-y-2">
                       <div className="flex justify-between text-sm font-bold">
                         <span>{item.label}</span>
@@ -229,7 +292,7 @@ export default function LeavePortal() {
                       </div>
                       <div>
                         <h4 className="font-bold text-sm tracking-tight">{leave.type}</h4>
-                        <p className="text-xs text-muted-foreground font-medium">{leave.from} - {leave.to}</p>
+                        <p className="text-xs text-muted-foreground font-medium">{leave.startDate} - {leave.endDate}</p>
                       </div>
                     </div>
                     <Badge variant="outline" className={`rounded-lg font-black uppercase text-[10px] border-0 ${getStatusBadge(leave.status)}`}>
@@ -239,15 +302,20 @@ export default function LeavePortal() {
                   
                   <div className="flex items-center justify-between pt-3 border-t border-white/5">
                     <p className="text-xs text-muted-foreground font-medium italic">"{leave.reason}"</p>
-                    {leave.approvedBy && (
+                    {leave.processedBy && (
                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
                         <UserCheck className="w-3 h-3" />
-                        {leave.approvedBy}
+                        {leave.processedBy}
                       </div>
                     )}
                   </div>
                 </div>
               ))}
+              {leaveHistory.length === 0 && (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl">
+                    <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">No application history found.</p>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

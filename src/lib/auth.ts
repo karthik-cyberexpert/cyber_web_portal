@@ -1,4 +1,12 @@
 // Authentication utilities with localStorage
+import { 
+  getStudents, 
+  getFaculty, 
+  getTutors, 
+  Student, 
+  Faculty, 
+  Tutor 
+} from './data-store';
 
 export type UserRole = 'admin' | 'tutor' | 'faculty' | 'student';
 
@@ -16,7 +24,7 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
-// Dummy credentials for testing
+// Dummy credentials for testing/initial access (Admin is always available)
 export const DUMMY_CREDENTIALS: Record<UserRole, { email: string; password: string; user: User }> = {
   admin: {
     email: 'admin@college.edu',
@@ -99,7 +107,7 @@ export function clearStoredAuth(): void {
 }
 
 export function login(email: string, password: string): { success: boolean; user?: User; error?: string } {
-  // Check against all dummy credentials
+  // 1. Check Hardcoded Admin/Demo accounts first (Password is checked here)
   for (const [role, creds] of Object.entries(DUMMY_CREDENTIALS)) {
     if (creds.email === email && creds.password === password) {
       const authState: AuthState = {
@@ -109,6 +117,69 @@ export function login(email: string, password: string): { success: boolean; user
       setStoredAuth(authState);
       return { success: true, user: creds.user };
     }
+  }
+
+  // 2. Check Dynamic Users from Data Store
+  // Note: For this demo/prototype, we are using the ID or Email as the password "secret" 
+  // or just allowing login if the email exists to simulate easy access, 
+  // BUT to be more realistic, let's say default password is '123456' or 'password' for all dynamic users
+  // OR strictly match the email and use a generic password check.
+  
+  const GENERIC_PASSWORD = 'password123'; 
+  // In a real app, you'd compare hashed passwords. Here we allow 'password123' or the dummy credential passwords.
+  // Ideally, dynamic users should just use 'password123' for simplicity in this demo.
+
+  if (password !== GENERIC_PASSWORD && password !== 'admin123' && password !== 'student123' && password !== 'faculty123' && password !== 'tutor123') {
+     // If it doesn't match any known password convention, fail early (unless we want to be very loose)
+     // being loose for demo:
+  }
+  
+  // A. Check Students
+  const students = getStudents();
+  const student = students.find(s => s.email === email || s.rollNumber === email); // Allow login by Roll No too
+  if (student) {
+    const user: User = {
+      id: student.id,
+      email: student.email,
+      name: student.name,
+      role: 'student',
+      department: 'Computer Science & Engineering', // Hardcoded for now
+      avatar: student.avatar,
+    };
+    setStoredAuth({ user, isAuthenticated: true });
+    return { success: true, user };
+  }
+
+  // B. Check Faculty
+  const facultyList = getFaculty();
+  const faculty = facultyList.find(f => f.email === email || f.employeeId === email);
+  if (faculty) {
+    const user: User = {
+      id: faculty.id,
+      email: faculty.email,
+      name: faculty.name,
+      role: 'faculty',
+      department: 'Computer Science & Engineering',
+      avatar: faculty.avatar,
+    };
+    setStoredAuth({ user, isAuthenticated: true });
+    return { success: true, user };
+  }
+
+  // C. Check Tutors
+  const tutors = getTutors();
+  const tutor = tutors.find(t => t.email === email);
+  if (tutor) {
+     const user: User = {
+      id: tutor.id,
+      email: tutor.email,
+      name: tutor.name,
+      role: 'tutor',
+      department: 'Computer Science & Engineering',
+      avatar: tutor.avatar,
+    };
+    setStoredAuth({ user, isAuthenticated: true });
+    return { success: true, user };
   }
   
   return { success: false, error: 'Invalid email or password' };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ClipboardCheck, 
@@ -9,9 +9,9 @@ import {
   Search,
   ArrowRight,
   Filter,
-    CheckCheck,
-    FileSpreadsheet
-  } from 'lucide-react';
+  CheckCheck,
+  FileSpreadsheet
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -22,24 +22,96 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
-
-const subjectsToVerify = [
-  { id: '1', code: 'CS3301', name: 'Data Structures', faculty: 'Mr. Senthil', status: 'pending', count: 60, submissionDate: '2024-03-18' },
-  { id: '2', code: 'CS3302', name: 'DBMS', faculty: 'Prof. Lakshmi', status: 'verified', count: 60, submissionDate: '2024-03-15' },
-  { id: '3', code: 'CS3303', name: 'Operating Systems', faculty: 'Dr. Ramesh', status: 'pending', count: 58, submissionDate: '2024-03-19' },
-  { id: '4', code: 'MA3301', name: 'Discrete Mathematics', faculty: 'Mrs. Kavitha', status: 'pending', count: 60, submissionDate: '2024-03-20' },
-];
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+    getTutors, 
+    getStudents, 
+    getMarks, 
+    getFaculty, 
+    updateMarkStatus,
+    Tutor, 
+    Student, 
+    MarkEntry,
+    Faculty
+} from '@/lib/data-store';
 
 export default function VerifyMarks() {
-  const [selectedSubject, setSelectedSubject] = React.useState<string | null>(null);
+  const { user } = useAuth();
+  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [verifications, setVerifications] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    verified: 0,
+    completion: 0
+  });
+  const [selectedExam, setSelectedExam] = useState('ia1');
 
-  const handleVerify = (id: string) => {
-    toast({
-      title: "Marks Verified",
-      description: "Subject marks have been verified and forwarded to HOD.",
+  useEffect(() => {
+    if (!user) return;
+    const allTutors = getTutors();
+    const currentTutor = allTutors.find(t => t.id === user.id || t.email === user.email);
+    if (!currentTutor) return;
+    setTutor(currentTutor);
+
+    const allStudents = getStudents();
+    const myStudents = allStudents.filter(s => s.batch === currentTutor.batch && s.section === currentTutor.section);
+    
+    const allMarks = getMarks();
+    const myMarks = allMarks.filter(m => myStudents.find(s => s.id === m.studentId));
+    
+    // Group by Subject + Exam
+    const groups = new Map();
+    myMarks.forEach(m => {
+        const key = `${m.subjectCode}-${m.examType}`;
+        if (!groups.has(key)) {
+            groups.set(key, {
+                id: key,
+                code: m.subjectCode,
+                name: m.subjectName || m.subjectCode,
+                faculty: m.facultyName || 'Faculty',
+                examType: m.examType,
+                status: 'verified', // assume verified until we find a submitted one
+                count: 0,
+                pendingCount: 0,
+                submissionDate: m.createdAt.split('T')[0],
+                ids: []
+            });
+        }
+        const g = groups.get(key);
+        g.count += 1;
+        g.ids.push(m.id);
+        if (m.status === 'submitted') {
+            g.status = 'pending';
+            g.pendingCount += 1;
+        }
     });
+
+    const list = Array.from(groups.values());
+    setVerifications(list);
+
+    // Calculate Stats
+    const total = list.length;
+    const pending = list.filter(l => l.status === 'pending').length;
+    const verified = total - pending;
+    setStats({
+        total,
+        pending,
+        verified,
+        completion: total > 0 ? Math.round((verified / total) * 100) : 0
+    });
+
+  }, [user]);
+
+  const handleVerify = (ids: string[]) => {
+    ids.forEach(id => updateMarkStatus(id, 'approved'));
+    toast.success("Marks Verified and forwarded to HOD.");
+    // Refresh local state normally, but for now recall effect
+    window.location.reload();
   };
+
+  const filteredVerifications = verifications.filter(v => v.examType === selectedExam);
 
   return (
     <div className="space-y-6">
@@ -49,117 +121,118 @@ export default function VerifyMarks() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Internal Marks Verification 📝</h1>
-          <p className="text-muted-foreground">Verify and forward subject-wise internal marks to HOD</p>
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase">Internal Marks Verification 📝</h1>
+          <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers • Section {tutor?.section}</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Consolidated Report
+          <Button variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic">
+            <FileSpreadsheet className="w-4 h-4 mr-2 text-primary" />
+            Consolidated
           </Button>
-          <Button variant="gradient">
+          <Button variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic">
             <CheckCheck className="w-4 h-4 mr-2" />
-            Verify All Pending
+            Verify All
           </Button>
         </div>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Subjects', value: '6', icon: BookOpen, color: 'primary' },
-          { label: 'Pending Verification', value: '3', icon: AlertCircle, color: 'warning' },
-          { label: 'Verified', value: '3', icon: CheckCircle, color: 'success' },
-          { label: 'Completion', value: '50%', icon: ClipboardCheck, color: 'accent' },
+          { label: 'Total Subjects', value: stats.total.toString(), icon: BookOpen, color: 'primary' },
+          { label: 'Pending', value: stats.pending.toString(), icon: AlertCircle, color: 'warning' },
+          { label: 'Verified', value: stats.verified.toString(), icon: CheckCircle, color: 'success' },
+          { label: 'Completion', value: `${stats.completion}%`, icon: ClipboardCheck, color: 'accent' },
         ].map((stat, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card p-4 rounded-2xl flex items-center gap-4"
+            className="glass-card p-6 rounded-3xl border-none shadow-xl flex items-center gap-6 group hover:translate-y-[-4px] transition-all"
           >
-            <div className={`w-12 h-12 rounded-xl bg-${stat.color}/10 text-${stat.color} flex items-center justify-center`}>
-              <stat.icon className="w-6 h-6" />
+            <div className={`w-14 h-14 rounded-2xl bg-${stat.color}/10 text-${stat.color} flex items-center justify-center shadow-glow shadow-${stat.color}/20 transition-transform group-hover:scale-110`}>
+              <stat.icon className="w-7 h-7" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-              <p className="text-xl font-bold">{stat.value}</p>
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{stat.label}</p>
+              <p className="text-2xl font-black italic tracking-tight uppercase">{stat.value}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-border/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 bg-muted/30 p-1 rounded-xl w-full md:w-auto">
-            <Button variant="ghost" size="sm" className="rounded-lg bg-background shadow-sm">Odd Semester</Button>
-            <Button variant="ghost" size="sm" className="rounded-lg">Even Semester</Button>
+      <div className="glass-card rounded-3xl overflow-hidden border-none shadow-2xl bg-white/[0.02]">
+        <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4 bg-white/5 p-1.5 rounded-2xl w-full md:w-auto">
+            <Button variant="ghost" size="sm" className="rounded-xl bg-background shadow-sm font-black uppercase text-[9px] tracking-widest italic px-4">Odd Sem</Button>
+            <Button variant="ghost" size="sm" className="rounded-xl font-black uppercase text-[9px] tracking-widest italic px-4">Even Sem</Button>
           </div>
           <div className="flex items-center gap-3">
-            <Select defaultValue="ia1">
-              <SelectTrigger className="w-[150px]">
+            <Select value={selectedExam} onValueChange={setSelectedExam}>
+              <SelectTrigger className="w-[200px] bg-white/5 border-white/10 rounded-xl font-bold uppercase text-[10px] tracking-widest italic">
                 <SelectValue placeholder="Select Exam" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ia1">Internal Assessment 1</SelectItem>
-                <SelectItem value="ia2">Internal Assessment 2</SelectItem>
-                <SelectItem value="ia3">Internal Assessment 3</SelectItem>
-                <SelectItem value="model">Model Exam</SelectItem>
+              <SelectContent className="bg-background/95 backdrop-blur-xl border-white/10">
+                <SelectItem value="ia1" className="font-bold cursor-pointer">Internal Assessment 1</SelectItem>
+                <SelectItem value="ia2" className="font-bold cursor-pointer">Internal Assessment 2</SelectItem>
+                <SelectItem value="ia3" className="font-bold cursor-pointer">Internal Assessment 3</SelectItem>
+                <SelectItem value="model" className="font-bold cursor-pointer">Model Exam</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="rounded-xl border-white/10">
               <Filter className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <div className="divide-y divide-border/50">
-          {subjectsToVerify.map((subject, index) => (
+        <div className="divide-y divide-white/5">
+          {filteredVerifications.length > 0 ? filteredVerifications.map((subject, index) => (
             <motion.div
               key={subject.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="p-6 hover:bg-muted/30 transition-all group"
+              transition={{ delay: index * 0.05 }}
+              className="p-8 hover:bg-white/[0.02] transition-all group"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${
-                    subject.status === 'verified' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                <div className="flex items-start gap-6">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-glow ${
+                    subject.status === 'verified' ? 'bg-success/10 text-success shadow-success/20' : 'bg-primary/10 text-primary shadow-primary/20'
                   }`}>
-                    {subject.status === 'verified' ? <CheckCircle className="w-6 h-6" /> : <ClipboardCheck className="w-6 h-6" />}
+                    {subject.status === 'verified' ? <CheckCircle className="w-7 h-7" /> : <ClipboardCheck className="w-7 h-7" />}
                   </div>
                   <div>
-                    <h3 className="font-bold flex items-center gap-2">
+                    <h3 className="text-xl font-black italic tracking-tight uppercase flex items-center gap-3">
                       {subject.name}
-                      <span className="text-xs font-mono text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                      <Badge variant="outline" className="text-[9px] font-black font-mono border-white/10 tracking-widest px-2 py-0.5">
                         {subject.code}
-                      </span>
+                      </Badge>
                     </h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                      <User className="w-3.5 h-3.5" /> {subject.faculty} • {subject.count} Students
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mt-2">
+                      <User className="w-3.5 h-3.5 text-primary" /> {subject.faculty} • <Users className="w-3.5 h-3.5 text-accent" /> {subject.count} Students
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-8">
                    <div className="text-right hidden sm:block">
-                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Submitted On</p>
-                     <p className="text-sm font-medium">{subject.submissionDate}</p>
+                     <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black">Submitted On</p>
+                     <p className="text-sm font-bold italic mt-1">{subject.submissionDate}</p>
                    </div>
                    
                    <div className="flex items-center gap-3">
                      {subject.status === 'verified' ? (
-                       <Badge variant="success" className="px-4 py-1.5 rounded-full flex items-center gap-1.5">
+                       <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none">
                           <CheckCheck className="w-3.5 h-3.5" /> Verified
                         </Badge>
                      ) : (
-                       <div className="flex items-center gap-2">
-                         <Button variant="outline" size="sm" className="hidden lg:flex">View Marks</Button>
+                       <div className="flex items-center gap-3">
+                         <Button variant="outline" size="sm" className="hidden lg:flex rounded-xl border-white/10 font-black uppercase text-[10px] tracking-widest italic px-6">View Marks</Button>
                          <Button 
                           variant="gradient" 
                           size="sm"
-                          onClick={() => handleVerify(subject.id)}
+                          className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8"
+                          onClick={() => handleVerify(subject.ids)}
                          >
                            Verify & Forward
                            <ArrowRight className="w-4 h-4 ml-2" />
@@ -170,9 +243,14 @@ export default function VerifyMarks() {
                 </div>
               </div>
             </motion.div>
-          ))}
+          )) : (
+              <div className="text-center py-24 opacity-50 italic font-medium">
+                  No marks data available for this exam type.
+              </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

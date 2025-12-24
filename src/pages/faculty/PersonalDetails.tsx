@@ -16,25 +16,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getFaculty, Faculty } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function PersonalDetails() {
   const { user } = useAuth();
+  const [faculty, setFaculty] = React.useState<Faculty | null>(null);
 
-  const facultyInfo = {
-    staffId: 'FAC8829',
-    designation: 'Senior Professor',
-    department: 'Computer Science and Engineering',
-    joiningDate: 'September 10, 2015',
-    specialization: 'Cloud Computing & Cyber Security',
-    office: 'Block C, Room 405',
-    address: '15/8, Green Meadows Apartments, Adyar, Chennai - 600020',
-    education: [
-      { degree: 'Ph.D in Cybersecurity', institution: 'IIT Madras', year: '2014' },
-      { degree: 'M.Tech in IT', institution: 'NIT Trichy', year: '2008' },
-      { degree: 'B.E in CS', institution: 'CEG, Guindy', year: '2006' }
-    ]
-  };
+  React.useEffect(() => {
+    if (user && user.role === 'faculty') {
+      const allFaculty = getFaculty();
+      const current = allFaculty.find(f => f.id === user.id || f.email === user.email);
+      if (current) setFaculty(current);
+    }
+  }, [user]);
+
+  if (!faculty) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <GraduationCap className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
+        <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Accessing faculty records...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -77,15 +81,15 @@ export default function PersonalDetails() {
             <div className="pt-20 pb-8 px-8 text-center">
               <h2 className="text-2xl font-black tracking-tight">{user?.name}</h2>
               <p className="text-primary font-bold uppercase text-xs tracking-widest mt-1 mb-6">
-                {facultyInfo.designation}
+                {faculty.designation}
               </p>
               
               <div className="flex justify-center gap-3 mb-8">
-                <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">
-                  {facultyInfo.staffId}
+                <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary uppercase font-black tracking-widest text-[10px] px-3">
+                  {faculty.employeeId}
                 </Badge>
-                <Badge variant="outline" className="bg-emerald-500/5 border-emerald-500/20 text-emerald-500">
-                  Senior Rank
+                <Badge variant="outline" className="bg-emerald-500/5 border-emerald-500/20 text-emerald-500 uppercase font-black tracking-widest text-[10px] px-3">
+                  {faculty.status}
                 </Badge>
               </div>
 
@@ -96,7 +100,7 @@ export default function PersonalDetails() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Email Address</p>
-                    <p className="text-sm font-bold truncate">{user?.email}</p>
+                    <p className="text-sm font-bold truncate">{faculty.email}</p>
                   </div>
                 </div>
 
@@ -106,7 +110,7 @@ export default function PersonalDetails() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Contact Number</p>
-                    <p className="text-sm font-bold">+91 99401 55620</p>
+                    <p className="text-sm font-bold">{faculty.phone}</p>
                   </div>
                 </div>
 
@@ -116,7 +120,7 @@ export default function PersonalDetails() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Work Location</p>
-                    <p className="text-sm font-bold">{facultyInfo.office}</p>
+                    <p className="text-sm font-bold">{faculty.office}</p>
                   </div>
                 </div>
               </div>
@@ -139,22 +143,22 @@ export default function PersonalDetails() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-1 p-4 rounded-xl bg-white/5 border border-white/5">
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Primary Department</p>
-                    <p className="text-base font-bold text-foreground">{facultyInfo.department}</p>
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Primary Specialization</p>
+                    <p className="text-base font-bold text-foreground">{faculty.specialization}</p>
                   </div>
                   <div className="space-y-1 p-4 rounded-xl bg-white/5 border border-white/5">
                     <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Experience</p>
-                    <p className="text-base font-bold text-foreground">9+ Years Academic Experience</p>
+                    <p className="text-base font-bold text-foreground">{faculty.experience} Years Academic Experience</p>
                   </div>
                   <div className="space-y-1 p-4 rounded-xl bg-white/5 border border-white/5">
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Focus Area</p>
-                    <p className="text-base font-bold text-foreground">{facultyInfo.specialization}</p>
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Date of Joining</p>
+                    <p className="text-base font-bold text-foreground">{faculty.dateOfJoining}</p>
                   </div>
                   <div className="space-y-1 p-4 rounded-xl bg-white/5 border border-white/5">
                     <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Status</p>
                     <div className="flex items-center gap-2 text-emerald-500 font-bold">
                       <ShieldCheck className="w-5 h-5" />
-                      Senior Regular Faculty
+                      {faculty.status} Faculty
                     </div>
                   </div>
                 </div>
@@ -173,7 +177,7 @@ export default function PersonalDetails() {
                 Academic Qualifications
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {facultyInfo.education.map((edu, idx) => (
+                {faculty.education.map((edu, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-muted/40 border border-white/5 hover:border-accent/30 transition-all group">
                     <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent mb-3 group-hover:scale-110 transition-transform">
                       {idx === 0 ? <ShieldCheck className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
@@ -197,8 +201,8 @@ export default function PersonalDetails() {
                  <Building2 className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="font-black text-sm uppercase tracking-widest text-muted-foreground">Office Address</h4>
-                <p className="text-sm font-bold leading-relaxed max-w-md">{facultyInfo.address}</p>
+                <h4 className="font-black text-sm uppercase tracking-widest text-muted-foreground">Registered Address</h4>
+                <p className="text-sm font-bold leading-relaxed max-w-md">{faculty.address}</p>
               </div>
             </Card>
           </motion.div>

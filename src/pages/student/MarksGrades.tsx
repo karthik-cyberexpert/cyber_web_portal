@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
@@ -7,7 +7,8 @@ import {
   TrendingUp,
   ChevronDown,
   ArrowUpRight,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlassStatCard } from '@/components/dashboard/StatCards';
@@ -28,34 +29,116 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { getStudentMarks, MarkEntry } from '@/lib/data-store';
 
 export default function MarksGrades() {
+  const { user } = useAuth();
+  const [marksData, setMarksData] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    gpa: 0,
+    rank: "N/A",
+    totalPoints: 0
+  });
+
+  const [previousGrades, setPreviousGrades] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      loadMarks();
+    }
+  }, [user]);
+
+  const loadMarks = () => {
+    if (!user) return;
+    const rawMarks = getStudentMarks(user.id);
+    
+    // Group marks by subject
+    const subjects: Record<string, any> = {};
+    
+    rawMarks.forEach(mark => {
+      if (!subjects[mark.subjectCode]) {
+        subjects[mark.subjectCode] = {
+            subject: mark.subjectCode, // Use code as name fallback
+            code: mark.subjectCode,
+            ia1: '-',
+            ia2: '-',
+            ia3: '-',
+            assignment: '-',
+            total: 0,
+            external: 'Pending'
+          };
+      }
+      
+      if (mark.examType === 'ia1') subjects[mark.subjectCode].ia1 = mark.marks;
+      if (mark.examType === 'ia2') subjects[mark.subjectCode].ia2 = mark.marks;
+      if (mark.examType === 'model') subjects[mark.subjectCode].ia3 = mark.marks;
+    });
+
+    // Calculate totals and GPA for current semester
+    let totalObtained = 0;
+    let totalMax = 0;
+    
+    Object.values(subjects).forEach(sub => {
+      let subTotal = 0;
+      let count = 0;
+      if (typeof sub.ia1 === 'number') { subTotal += sub.ia1; count++; }
+      if (typeof sub.ia2 === 'number') { subTotal += sub.ia2; count++; }
+      if (typeof sub.ia3 === 'number') { subTotal += sub.ia3; count++; }
+      
+      sub.total = subTotal; 
+      
+      // Calculate contribution to GPA
+      totalObtained += subTotal;
+      totalMax += 300; // Assuming 3 assessments of 100 each for simplicity or similar logic
+
+      // Simple grade logic based on percentage of internal marks available
+      const percentage = (subTotal / 300) * 100;
+      if (percentage >= 90) sub.external = 'O';
+      else if (percentage >= 80) sub.external = 'A+';
+      else if (percentage >= 70) sub.external = 'A';
+      else if (percentage >= 60) sub.external = 'B+';
+      else if (percentage >= 50) sub.external = 'B';
+      else if (percentage > 0) sub.external = 'C';
+      else sub.external = 'Pending';
+    });
+
+    const currentGpa = totalMax > 0 ? (totalObtained / totalMax) * 10 : 0;
+
+    setMarksData(Object.values(subjects));
+    setStats({
+        gpa: Number(currentGpa.toFixed(2)),
+        rank: "N/A", // Calculation requires comparing with all students in the batch
+        totalPoints: Number(currentGpa.toFixed(2))
+    });
+
+    // Clear previous grades as they were dummy
+    setPreviousGrades([]);
+  };
+
+
   const getGradeColor = (grade: string) => {
     switch (grade) {
-      case 'A+': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/50';
-      case 'A': return 'bg-green-500/20 text-green-600 border-green-500/50';
-      case 'B+': return 'bg-teal-500/20 text-teal-600 border-teal-500/50';
-      case 'B': return 'bg-blue-500/20 text-blue-600 border-blue-500/50';
-      case 'C': return 'bg-amber-500/20 text-amber-600 border-amber-500/50';
-      case 'D': return 'bg-orange-500/20 text-orange-600 border-orange-500/50';
+      case 'O': return 'bg-yellow-500/20 text-yellow-600 border-yellow-500/50';
+      case 'A+': return 'bg-green-500/20 text-green-600 border-green-500/50';
+      case 'A': return 'bg-teal-500/20 text-teal-600 border-teal-500/50';
+      case 'B+': return 'bg-blue-500/20 text-blue-600 border-blue-500/50';
+      case 'B': return 'bg-amber-500/20 text-amber-600 border-amber-500/50';
+      case 'C': return 'bg-orange-500/20 text-orange-600 border-orange-500/50';
       case 'U': return 'bg-destructive/20 text-destructive border-destructive/50';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
-  const internalMarks = [
-    { subject: "Data Structures", code: "CS301", ia1: 22, ia2: 24, ia3: 21, assignment: 10, total: 77, external: 'A+' },
-    { subject: "DBMS", code: "CS302", ia1: 18, ia2: 20, ia3: 19, assignment: 9, total: 66, external: 'A' },
-    { subject: "Operating Systems", code: "CS303", ia1: 25, ia2: 23, ia3: 24, assignment: 10, total: 82, external: 'B+' },
-    { subject: "Networks", code: "CS304", ia1: 20, ia2: 21, ia3: 18, assignment: 8, total: 67, external: 'B' },
-  ];
-
-  const grades = [
-    { sem: "Semester 4", gpa: 9.12, status: "Outstanding", credits: 24, rank: "3rd" },
-    { sem: "Semester 3", gpa: 8.85, status: "Excellent", credits: 21, rank: "5th" },
-    { sem: "Semester 2", gpa: 8.56, status: "Very Good", credits: 22, rank: "12th" },
-    { sem: "Semester 1", gpa: 8.80, status: "Excellent", credits: 24, rank: "8th" },
-  ];
+  if (!user || user.role !== 'student') {
+     return (
+       <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+         <AlertCircle className="w-12 h-12 mb-4" />
+         <h2 className="text-2xl font-bold">Access Restricted</h2>
+         <p>This page is only for Students.</p>
+       </div>
+     );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,7 +164,7 @@ export default function MarksGrades() {
                 <SelectItem value="sem5">Semester 5</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="gradient" size="sm">
+            <Button variant="gradient" size="sm" disabled>
               Download Grade Sheet
             </Button>
           </div>
@@ -89,25 +172,25 @@ export default function MarksGrades() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <GlassStatCard
-          title="Last Semester GPA"
-          value="9.12"
+          title="Current Semester GPA"
+          value={stats.gpa === 0 ? "0.00" : stats.gpa.toString()}
           icon={TrendingUp}
-          color="primary"
+          iconColor="text-primary"
           delay={0.1}
         />
         <GlassStatCard
           title="Class Rank"
-          value="03 / 64"
+          value={stats.rank}
           icon={Award}
-          color="accent"
+          iconColor="text-accent"
           delay={0.2}
         />
         <GlassStatCard
-          title="Total Points"
-          value="8.82"
-          subtitle="Cumulative GPA"
+          title="Cumulative GPA"
+          value={stats.totalPoints === 0 ? "0.00" : stats.totalPoints.toString()}
+          subtitle="All Semesters"
           icon={BarChart3}
-          color="success"
+          iconColor="text-success"
           delay={0.3}
         />
       </div>
@@ -122,8 +205,8 @@ export default function MarksGrades() {
         >
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-primary/5">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary" />
-              Internal Assessment - Semester 5
+              < BookOpen className="w-5 h-5 text-primary" />
+              Assessment Details
             </h3>
             <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">In Progress</span>
           </div>
@@ -134,14 +217,14 @@ export default function MarksGrades() {
                     <TableHead className="font-bold text-muted-foreground pl-6">Subject</TableHead>
                     <TableHead className="font-bold text-muted-foreground text-center">IA-1</TableHead>
                     <TableHead className="font-bold text-muted-foreground text-center">IA-2</TableHead>
-                    <TableHead className="font-bold text-muted-foreground text-center">IA-3</TableHead>
+                    <TableHead className="font-bold text-muted-foreground text-center">Model</TableHead>
                     <TableHead className="font-bold text-muted-foreground text-center">Assgn.</TableHead>
-                    <TableHead className="font-bold text-muted-foreground text-center">External</TableHead>
+                    <TableHead className="font-bold text-muted-foreground text-center">Grade</TableHead>
                     <TableHead className="font-bold text-primary text-right pr-6">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {internalMarks.map((item, idx) => (
+                  {marksData.length > 0 ? marksData.map((item, idx) => (
                     <TableRow key={idx} className="group border-white/5 hover:bg-white/5 transition-colors">
                       <TableCell className="pl-6">
                         <p className="font-bold text-sm tracking-tight">{item.subject}</p>
@@ -157,10 +240,19 @@ export default function MarksGrades() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right pr-6">
-                        <span className="font-black text-primary font-mono">{item.total}/100</span>
+                        <span className="font-black text-primary font-mono">{item.total}</span>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-20 text-muted-foreground italic">
+                        <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="w-8 h-8 opacity-20" />
+                            <p>No assessment records or marks released yet for this semester.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
             </Table>
           </div>
@@ -175,10 +267,10 @@ export default function MarksGrades() {
         >
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <Award className="w-5 h-5 text-accent" />
-            Previous Grades
+            Previous History
           </h3>
           <div className="space-y-4">
-            {grades.map((grade, idx) => (
+            {previousGrades.length > 0 ? previousGrades.map((grade, idx) => (
               <div 
                 key={idx}
                 className="p-4 rounded-xl bg-muted/30 border border-transparent hover:border-accent/20 transition-all cursor-default group"
@@ -201,9 +293,13 @@ export default function MarksGrades() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl">
+                    <p className="text-sm text-muted-foreground font-medium">No previous records found.</p>
+                </div>
+            )}
           </div>
-          <Button variant="outline" className="w-full mt-6 rounded-xl group">
+          <Button variant="outline" className="w-full mt-6 rounded-xl group" disabled>
             Detailed Performance Report
             <ChevronDown className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
           </Button>

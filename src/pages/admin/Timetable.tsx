@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Calendar, Clock, Plus, Edit2, Download, Upload, 
-  Sparkles, BookOpen, User, Building
+  Sparkles, BookOpen, User, Building, Save, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,17 +15,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-interface TimetableSlot {
-  id: string;
-  day: string;
-  period: number;
-  subject: string;
-  subjectCode: string;
-  faculty: string;
-  room: string;
-  type: 'theory' | 'lab' | 'tutorial' | 'free';
-}
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { getTimetable, saveTimetable, TimetableSlot, addTimetableSlot, deleteTimetableSlot, getFaculty } from '@/lib/data-store';
+import { toast } from 'sonner';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const periods = [
@@ -37,53 +31,6 @@ const periods = [
   { num: 6, time: '2:20 - 3:10' },
   { num: 7, time: '3:20 - 4:10' },
   { num: 8, time: '4:10 - 5:00' },
-];
-
-const sampleTimetable: TimetableSlot[] = [
-  { id: '1', day: 'Monday', period: 1, subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', room: 'CS-101', type: 'theory' },
-  { id: '2', day: 'Monday', period: 2, subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', room: 'CS-101', type: 'theory' },
-  { id: '3', day: 'Monday', period: 3, subject: 'Database Systems', subjectCode: 'CS302', faculty: 'Dr. Priya Sharma', room: 'CS-102', type: 'theory' },
-  { id: '4', day: 'Monday', period: 4, subject: 'Database Systems', subjectCode: 'CS302', faculty: 'Dr. Priya Sharma', room: 'CS-102', type: 'theory' },
-  { id: '5', day: 'Monday', period: 5, subject: 'DS Lab', subjectCode: 'CS301L', faculty: 'Dr. Rajesh Kumar', room: 'Lab-1', type: 'lab' },
-  { id: '6', day: 'Monday', period: 6, subject: 'DS Lab', subjectCode: 'CS301L', faculty: 'Dr. Rajesh Kumar', room: 'Lab-1', type: 'lab' },
-  { id: '7', day: 'Monday', period: 7, subject: 'Operating Systems', subjectCode: 'CS303', faculty: 'Prof. Anand K', room: 'CS-103', type: 'theory' },
-  { id: '8', day: 'Monday', period: 8, subject: 'Tutorial', subjectCode: 'TUT', faculty: 'Tutor', room: 'CS-101', type: 'tutorial' },
-  
-  { id: '9', day: 'Tuesday', period: 1, subject: 'Computer Networks', subjectCode: 'CS304', faculty: 'Dr. Meena Iyer', room: 'CS-104', type: 'theory' },
-  { id: '10', day: 'Tuesday', period: 2, subject: 'Computer Networks', subjectCode: 'CS304', faculty: 'Dr. Meena Iyer', room: 'CS-104', type: 'theory' },
-  { id: '11', day: 'Tuesday', period: 3, subject: 'Software Engineering', subjectCode: 'CS305', faculty: 'Prof. Suresh B', room: 'CS-105', type: 'theory' },
-  { id: '12', day: 'Tuesday', period: 4, subject: 'Software Engineering', subjectCode: 'CS305', faculty: 'Prof. Suresh B', room: 'CS-105', type: 'theory' },
-  { id: '13', day: 'Tuesday', period: 5, subject: 'Free', subjectCode: '', faculty: '', room: '', type: 'free' },
-  { id: '14', day: 'Tuesday', period: 6, subject: 'DBMS Lab', subjectCode: 'CS302L', faculty: 'Dr. Priya Sharma', room: 'Lab-2', type: 'lab' },
-  { id: '15', day: 'Tuesday', period: 7, subject: 'DBMS Lab', subjectCode: 'CS302L', faculty: 'Dr. Priya Sharma', room: 'Lab-2', type: 'lab' },
-  { id: '16', day: 'Tuesday', period: 8, subject: 'DBMS Lab', subjectCode: 'CS302L', faculty: 'Dr. Priya Sharma', room: 'Lab-2', type: 'lab' },
-
-  { id: '17', day: 'Wednesday', period: 1, subject: 'Operating Systems', subjectCode: 'CS303', faculty: 'Prof. Anand K', room: 'CS-103', type: 'theory' },
-  { id: '18', day: 'Wednesday', period: 2, subject: 'Operating Systems', subjectCode: 'CS303', faculty: 'Prof. Anand K', room: 'CS-103', type: 'theory' },
-  { id: '19', day: 'Wednesday', period: 3, subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', room: 'CS-101', type: 'theory' },
-  { id: '20', day: 'Wednesday', period: 4, subject: 'Computer Networks', subjectCode: 'CS304', faculty: 'Dr. Meena Iyer', room: 'CS-104', type: 'theory' },
-  { id: '21', day: 'Wednesday', period: 5, subject: 'CN Lab', subjectCode: 'CS304L', faculty: 'Dr. Meena Iyer', room: 'Lab-3', type: 'lab' },
-  { id: '22', day: 'Wednesday', period: 6, subject: 'CN Lab', subjectCode: 'CS304L', faculty: 'Dr. Meena Iyer', room: 'Lab-3', type: 'lab' },
-  { id: '23', day: 'Wednesday', period: 7, subject: 'Free', subjectCode: '', faculty: '', room: '', type: 'free' },
-  { id: '24', day: 'Wednesday', period: 8, subject: 'Free', subjectCode: '', faculty: '', room: '', type: 'free' },
-
-  { id: '25', day: 'Thursday', period: 1, subject: 'Database Systems', subjectCode: 'CS302', faculty: 'Dr. Priya Sharma', room: 'CS-102', type: 'theory' },
-  { id: '26', day: 'Thursday', period: 2, subject: 'Software Engineering', subjectCode: 'CS305', faculty: 'Prof. Suresh B', room: 'CS-105', type: 'theory' },
-  { id: '27', day: 'Thursday', period: 3, subject: 'Operating Systems', subjectCode: 'CS303', faculty: 'Prof. Anand K', room: 'CS-103', type: 'theory' },
-  { id: '28', day: 'Thursday', period: 4, subject: 'Tutorial', subjectCode: 'TUT', faculty: 'Tutor', room: 'CS-101', type: 'tutorial' },
-  { id: '29', day: 'Thursday', period: 5, subject: 'OS Lab', subjectCode: 'CS303L', faculty: 'Prof. Anand K', room: 'Lab-1', type: 'lab' },
-  { id: '30', day: 'Thursday', period: 6, subject: 'OS Lab', subjectCode: 'CS303L', faculty: 'Prof. Anand K', room: 'Lab-1', type: 'lab' },
-  { id: '31', day: 'Thursday', period: 7, subject: 'OS Lab', subjectCode: 'CS303L', faculty: 'Prof. Anand K', room: 'Lab-1', type: 'lab' },
-  { id: '32', day: 'Thursday', period: 8, subject: 'Free', subjectCode: '', faculty: '', room: '', type: 'free' },
-
-  { id: '33', day: 'Friday', period: 1, subject: 'Computer Networks', subjectCode: 'CS304', faculty: 'Dr. Meena Iyer', room: 'CS-104', type: 'theory' },
-  { id: '34', day: 'Friday', period: 2, subject: 'Data Structures', subjectCode: 'CS301', faculty: 'Dr. Rajesh Kumar', room: 'CS-101', type: 'theory' },
-  { id: '35', day: 'Friday', period: 3, subject: 'Database Systems', subjectCode: 'CS302', faculty: 'Dr. Priya Sharma', room: 'CS-102', type: 'theory' },
-  { id: '36', day: 'Friday', period: 4, subject: 'Software Engineering', subjectCode: 'CS305', faculty: 'Prof. Suresh B', room: 'CS-105', type: 'theory' },
-  { id: '37', day: 'Friday', period: 5, subject: 'Project Work', subjectCode: 'CS306', faculty: 'All Faculty', room: 'Lab-4', type: 'lab' },
-  { id: '38', day: 'Friday', period: 6, subject: 'Project Work', subjectCode: 'CS306', faculty: 'All Faculty', room: 'Lab-4', type: 'lab' },
-  { id: '39', day: 'Friday', period: 7, subject: 'Sports/Library', subjectCode: '', faculty: '', room: '', type: 'free' },
-  { id: '40', day: 'Friday', period: 8, subject: 'Sports/Library', subjectCode: '', faculty: '', room: '', type: 'free' },
 ];
 
 const getSlotColor = (type: string) => {
@@ -100,10 +47,95 @@ export default function Timetable() {
   const [selectedBatch, setSelectedBatch] = useState('2021-2025');
   const [selectedClass, setSelectedClass] = useState('4');
   const [selectedSection, setSelectedSection] = useState('A');
-  const [timetable] = useState<TimetableSlot[]>(sampleTimetable);
+  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+  const [facultyList, setFacultyList] = useState<any[]>([]);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<Partial<TimetableSlot> | null>(null);
+
+  useEffect(() => {
+    loadData();
+    const faculty = getFaculty();
+    setFacultyList(faculty);
+  }, []);
+
+  const loadData = () => {
+    const data = getTimetable();
+    setTimetable(data);
+  };
+
+  const currentTimetable = timetable.filter(
+    t => t.classId === selectedBatch && t.sectionId === selectedSection // simplistic mapping. matching batch to classId
+  );
 
   const getSlot = (day: string, period: number) => {
-    return timetable.find(slot => slot.day === day && slot.period === period);
+    return currentTimetable.find(slot => slot.day === day && slot.period === period);
+  };
+
+  const handleCellClick = (day: string, period: number) => {
+    const existing = getSlot(day, period);
+    if (existing) {
+      setEditingSlot(existing);
+    } else {
+      setEditingSlot({
+        day,
+        period,
+        classId: selectedBatch,
+        sectionId: selectedSection,
+        type: 'theory',
+        subject: '',
+        subjectCode: '',
+        facultyId: '',
+        facultyName: '',
+        room: ''
+      });
+    }
+    setIsEditOpen(true);
+  };
+
+  const saveSlot = () => {
+    if (!editingSlot) return;
+
+    const allSlots = getTimetable();
+    
+    // Remove existing if any (since we might be updating)
+    const filtered = allSlots.filter(
+      s => !(s.classId === selectedBatch && s.sectionId === selectedSection && s.day === editingSlot.day && s.period === editingSlot.period)
+    );
+
+    // Add new ONLY if subject is not empty (allow deleting by clearing subject)
+    if (editingSlot.subject) {
+        // Find faculty name
+        const faculty = facultyList.find(f => f.id === editingSlot.facultyId);
+        const slotToSave: TimetableSlot = {
+            id: editingSlot.id || `slot-${Date.now()}`,
+            day: editingSlot.day!,
+            period: editingSlot.period!,
+            classId: selectedBatch,
+            sectionId: selectedSection,
+            subject: editingSlot.subject!,
+            subjectCode: editingSlot.subjectCode || 'SUB',
+            facultyId: editingSlot.facultyId || '',
+            facultyName: faculty ? faculty.name : (editingSlot.facultyName || 'Unknown'),
+            room: editingSlot.room || 'TBD',
+            type: (editingSlot.type as any) || 'theory'
+        };
+        filtered.push(slotToSave);
+    }
+    
+    saveTimetable(filtered);
+    setTimetable(filtered);
+    setIsEditOpen(false);
+    toast.success('Timetable updated successfully');
+  };
+
+  const deleteSlot = () => {
+     if(editingSlot && editingSlot.id) {
+         deleteTimetableSlot(editingSlot.id);
+         loadData();
+         setIsEditOpen(false);
+         toast.success('Slot cleared');
+     }
   };
 
   return (
@@ -129,10 +161,6 @@ export default function Timetable() {
             <Sparkles className="w-4 h-4" />
             AI Generate
           </Button>
-          <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90">
-            <Plus className="w-4 h-4" />
-            Manual Edit
-          </Button>
         </div>
       </div>
 
@@ -140,31 +168,9 @@ export default function Timetable() {
       <Card className="glass-card border-white/10">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4">
-            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Batch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2021-2025">2021-2025</SelectItem>
-                <SelectItem value="2022-2026">2022-2026</SelectItem>
-                <SelectItem value="2023-2027">2023-2027</SelectItem>
-                <SelectItem value="2024-2028">2024-2028</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1st Year</SelectItem>
-                <SelectItem value="2">2nd Year</SelectItem>
-                <SelectItem value="3">3rd Year</SelectItem>
-                <SelectItem value="4">4th Year</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={selectedSection} onValueChange={setSelectedSection}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Section" />
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Select Section" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="A">Section A</SelectItem>
@@ -208,7 +214,7 @@ export default function Timetable() {
             <CardHeader className="border-b border-white/10">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                Weekly Schedule - {selectedBatch} | Year {selectedClass} | Section {selectedSection}
+                Schedule Management - Section {selectedSection}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -237,8 +243,12 @@ export default function Timetable() {
                         {days.map((day) => {
                           const slot = getSlot(day, period.num);
                           return (
-                            <td key={`${day}-${period.num}`} className="p-1">
-                              {slot && (
+                            <td 
+                                key={`${day}-${period.num}`} 
+                                className="p-1"
+                                onClick={() => handleCellClick(day, period.num)}
+                            >
+                              {slot ? (
                                 <motion.div
                                   whileHover={{ scale: 1.02 }}
                                   className={`p-2 rounded-lg border transition-all cursor-pointer ${getSlotColor(slot.type)}`}
@@ -251,10 +261,10 @@ export default function Timetable() {
                                       {slot.subjectCode}
                                     </div>
                                   )}
-                                  {slot.faculty && (
+                                  {slot.facultyName && (
                                     <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                                       <User className="w-3 h-3" />
-                                      {slot.faculty.split(' ')[0]}
+                                      {slot.facultyName.split(' ')[0]}
                                     </div>
                                   )}
                                   {slot.room && (
@@ -264,6 +274,10 @@ export default function Timetable() {
                                     </div>
                                   )}
                                 </motion.div>
+                              ) : (
+                                <div className="h-full min-h-[80px] rounded-lg border border-dashed border-white/10 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center opacity-0 hover:opacity-100">
+                                    <Plus className="w-4 h-4 text-muted-foreground" />
+                                </div>
                               )}
                             </td>
                           );
@@ -292,13 +306,14 @@ export default function Timetable() {
                       <motion.div
                         key={period.num}
                         whileHover={{ x: 4 }}
-                        className={`p-3 rounded-lg border ${getSlotColor(slot.type)}`}
+                        className={`p-3 rounded-lg border ${getSlotColor(slot.type)} cursor-pointer`}
+                        onClick={() => handleCellClick(day, period.num)}
                       >
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="font-medium">{slot.subject}</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {slot.faculty && <span>{slot.faculty}</span>}
+                              {slot.facultyName && <span>{slot.facultyName}</span>}
                               {slot.room && <span> • {slot.room}</span>}
                             </div>
                           </div>
@@ -309,6 +324,9 @@ export default function Timetable() {
                       </motion.div>
                     );
                   })}
+                  {periods.every(p => !getSlot(day, p.num)) && (
+                      <div className="text-center text-sm text-muted-foreground py-4">No classes</div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -316,7 +334,7 @@ export default function Timetable() {
         </TabsContent>
       </Tabs>
 
-      {/* Subject Summary */}
+      {/* Subject Summary - Could be calculated from timetable */}
       <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -326,29 +344,128 @@ export default function Timetable() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[
-              { code: 'CS301', name: 'Data Structures', hours: 5, faculty: 'Dr. Rajesh K' },
-              { code: 'CS302', name: 'Database Systems', hours: 5, faculty: 'Dr. Priya S' },
-              { code: 'CS303', name: 'Operating Systems', hours: 6, faculty: 'Prof. Anand K' },
-              { code: 'CS304', name: 'Computer Networks', hours: 6, faculty: 'Dr. Meena I' },
-              { code: 'CS305', name: 'Software Engg.', hours: 4, faculty: 'Prof. Suresh B' },
-            ].map((subject, index) => (
-              <motion.div
-                key={subject.code}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="p-4 rounded-xl bg-white/5 border border-white/10"
-              >
-                <Badge className="mb-2">{subject.code}</Badge>
-                <div className="font-medium text-sm">{subject.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">{subject.faculty}</div>
-                <div className="text-xs text-primary mt-2">{subject.hours} hrs/week</div>
-              </motion.div>
-            ))}
+             {/* Dynamic Summary */}
+             {Array.from(new Set(currentTimetable.map(t => t.subjectCode))).map((code, index) => {
+                 const subjectSlots = currentTimetable.filter(t => t.subjectCode === code);
+                 if (subjectSlots.length === 0) return null;
+                 const subject = subjectSlots[0];
+                 return (
+                  <motion.div
+                    key={code}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="p-4 rounded-xl bg-white/5 border border-white/10"
+                  >
+                    <Badge className="mb-2">{code}</Badge>
+                    <div className="font-medium text-sm">{subject.subject}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{subject.facultyName}</div>
+                    <div className="text-xs text-primary mt-2">{subjectSlots.length} hrs/week</div>
+                  </motion.div>
+                 );
+             })}
+             {currentTimetable.length === 0 && <div className="text-muted-foreground text-sm col-span-5 text-center">No subjects scheduled</div>}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="glass-card border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Edit Timetable Slot</DialogTitle>
+          </DialogHeader>
+          {editingSlot && (
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Day</Label>
+                        <Input value={editingSlot.day} disabled className="bg-white/5 border-white/10" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Period</Label>
+                        <Input value={`Period ${editingSlot.period}`} disabled className="bg-white/5 border-white/10" />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Subject Name</Label>
+                    <Input 
+                        value={editingSlot.subject} 
+                        onChange={(e) => setEditingSlot({...editingSlot, subject: e.target.value})}
+                        className="bg-white/5 border-white/10"
+                        placeholder="e.g. Data Structures"
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label>Subject Code</Label>
+                        <Input 
+                            value={editingSlot.subjectCode} 
+                            onChange={(e) => setEditingSlot({...editingSlot, subjectCode: e.target.value})}
+                            className="bg-white/5 border-white/10"
+                            placeholder="e.g. CS301"
+                        />
+                     </div>
+                     <div className="space-y-2">
+                        <Label>Room</Label>
+                        <Input 
+                            value={editingSlot.room} 
+                            onChange={(e) => setEditingSlot({...editingSlot, room: e.target.value})}
+                            className="bg-white/5 border-white/10"
+                            placeholder="e.g. LH-101"
+                        />
+                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Faculty</Label>
+                    <Select 
+                        value={editingSlot.facultyId} 
+                        onValueChange={(val) => {
+                            const f = facultyList.find(fac => fac.id === val);
+                            setEditingSlot({...editingSlot, facultyId: val, facultyName: f?.name || ''});
+                        }}
+                    >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                            <SelectValue placeholder="Select Faculty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {facultyList.map(f => (
+                                <SelectItem key={f.id} value={f.id}>{f.name} ({f.department || 'Dept'})</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select 
+                        value={editingSlot.type} 
+                        onValueChange={(val: any) => setEditingSlot({...editingSlot, type: val})}
+                    >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                            <SelectValue placeholder="Select Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="theory">Theory</SelectItem>
+                            <SelectItem value="lab">Lab</SelectItem>
+                            <SelectItem value="tutorial">Tutorial</SelectItem>
+                            <SelectItem value="free">Free/Break</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+          )}
+          <DialogFooter>
+            {editingSlot?.id && (
+                 <Button variant="destructive" onClick={deleteSlot} className="mr-auto">Clear Slot</Button>
+            )}
+            <Button variant="ghost" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveSlot} className="bg-primary text-primary-foreground">Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
