@@ -83,8 +83,8 @@ export default function LoginPage() {
                 <GraduationCap className="w-10 h-10" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Department of CSE</h2>
-                <p className="text-white/80 text-sm">Tamil Nadu Engineering College</p>
+                <h2 className="text-xl font-bold">Your Institution</h2>
+                <p className="text-white/80 text-sm">Academic Management System</p>
               </div>
             </motion.div>
           </div>
@@ -96,11 +96,11 @@ export default function LoginPage() {
               transition={{ delay: 0.4 }}
               className="text-5xl font-bold mb-6 leading-tight"
             >
-              Empowering
-              <br />
               Academic
               <br />
-              Excellence
+              Management
+              <br />
+              System
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 30 }}
@@ -108,8 +108,8 @@ export default function LoginPage() {
               transition={{ delay: 0.5 }}
               className="text-xl text-white/90 max-w-md"
             >
-              Your gateway to comprehensive academic management, 
-              seamless collaboration, and student success.
+              Manage your academic institution efficiently 
+              with our comprehensive management system.
             </motion.p>
           </div>
 
@@ -129,7 +129,7 @@ export default function LoginPage() {
               ))}
             </div>
             <p className="text-white/80">
-              <span className="font-semibold text-white">500+</span> Active Users
+              <span className="font-semibold text-white">Active Users</span>
             </p>
           </motion.div>
         </div>
@@ -182,8 +182,8 @@ export default function LoginPage() {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Department of CSE</h2>
-              <p className="text-muted-foreground text-sm">TN Engineering College</p>
+              <h2 className="text-lg font-bold">Your Institution</h2>
+              <p className="text-muted-foreground text-sm">Academic Management System</p>
             </div>
           </div>
 
@@ -326,7 +326,7 @@ export default function LoginPage() {
               className="mt-6 p-4 rounded-xl bg-info/10 border border-info/20"
             >
               <p className="text-sm text-center">
-                <span className="font-medium text-info">Demo Mode:</span>{' '}
+                <span className="font-medium text-info">System Access:</span>{' '}
                 <span className="text-muted-foreground">
                   Credentials auto-filled for {getRoleDisplayName(selectedRole)}
                 </span>

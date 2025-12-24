@@ -24,7 +24,7 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
-// Dummy credentials for testing/initial access (Admin is always available)
+// Default credentials for initial system access (should be replaced with real users)
 export const DUMMY_CREDENTIALS: Record<UserRole, { email: string; password: string; user: User }> = {
   admin: {
     email: 'admin@college.edu',

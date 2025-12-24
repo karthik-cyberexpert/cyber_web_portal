@@ -130,7 +130,7 @@ export default function AdminDashboard() {
         ...facultyArr.map(f => ({ type: 'faculty', action: 'New Faculty Joined', target: `${f.name} • ${f.designation}`, time: f.createdAt })),
         ...circularsArr.map(c => ({ type: 'circular', action: 'Notice Posted', target: c.title, time: c.createdAt })),
         ...leavesArr.filter(l => l.status !== 'pending').map(l => ({ 
-            type: 'marks', 
+            type: 'leave', 
             action: `Leave ${l.status}`, 
             target: `${l.userName} (${l.type})`, 
             time: l.processedDate || l.createdAt 
@@ -160,9 +160,16 @@ export default function AdminDashboard() {
 
   }, []);
 
-  // Calculate Semester Progress for the primary active batch (2021-2025)
+  // Calculate Semester Progress based on actual active batch
   const calculateSemesterProgress = () => {
-    const startYear = 2021;
+    const students = getStudents();
+    
+    // Determine the most common batch or use the most recent batch
+    const batches = [...new Set(students.map(s => s.batch))];
+    const currentBatch = batches.length > 0 ? batches[0] : 'Active Batch';
+    
+    // Extract start year from batch name (assuming format like '2021-2025')
+    const startYear = parseInt(currentBatch.split('-')[0]) || new Date().getFullYear() - 1;
     const now = new Date();
     const semesters = [];
     
@@ -205,7 +212,7 @@ export default function AdminDashboard() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold font-display">Welcome, Admin! 🎓</h1>
+          <h1 className="text-3xl font-bold font-display">Welcome Back, Admin! 🎓</h1>
           <p className="text-muted-foreground">Manage your institution efficiently</p>
         </div>
         <div className="flex gap-3">
@@ -215,7 +222,7 @@ export default function AdminDashboard() {
           </Button>
           <Button variant="gradient" onClick={() => navigate('/admin/settings')}>
             <Settings className="w-4 h-4 mr-2" />
-            Department Settings
+            System Settings
           </Button>
         </div>
       </motion.div>
@@ -234,7 +241,7 @@ export default function AdminDashboard() {
         <StatCard
           title="Faculty Members"
           value={stats.faculty}
-          subtitle="Department staff"
+          subtitle="Institution staff"
           icon={Users}
           variant="accent"
           delay={0.2}
@@ -271,7 +278,7 @@ export default function AdminDashboard() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold">Department Overview</h3>
+              <h3 className="text-lg font-semibold">Institution Overview</h3>
               <p className="text-sm text-muted-foreground">Student & Faculty trends</p>
             </div>
             <Button variant="outline" size="sm">Export Report</Button>
@@ -406,7 +413,8 @@ export default function AdminDashboard() {
                 circular: Bell,
                 faculty: Users,
                 marks: ClipboardCheck,
-                student: GraduationCap
+                student: GraduationCap,
+                leave: ExternalLink
               };
               const Icon = icons[activity.type] || Bell;
               
@@ -435,7 +443,7 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* Semester Progress (Primary active batch 2021-2025) */}
+      {/* Semester Progress (Active Batch) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -443,7 +451,7 @@ export default function AdminDashboard() {
         className="glass-card rounded-2xl p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Semester Progress (2021-2025 Batch)</h3>
+          <h3 className="text-lg font-semibold">Semester Progress ({getStudents().length > 0 ? getStudents()[0].batch : 'Active Batch'})</h3>
           <Button variant="outline" size="sm" onClick={() => navigate('/admin/settings')}>Configure Dates</Button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">

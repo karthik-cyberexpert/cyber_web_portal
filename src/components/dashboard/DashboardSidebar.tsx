@@ -140,7 +140,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
                 className="overflow-hidden"
               >
                 <p className="font-bold text-sidebar-foreground text-sm">CSE Department</p>
-                <p className="text-xs text-sidebar-foreground/60">TN Engineering</p>
+                <p className="text-xs text-sidebar-foreground/60">Your Institution</p>
               </motion.div>
             )}
           </AnimatePresence>

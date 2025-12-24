@@ -210,12 +210,51 @@ export function initializeStorage() {
   //   ]);
   // }
 
+  // Perform one-time purge of previously seeded dummy data
+  purgeDummyData();
+  
   // checkGraduationLogic();
 }
 
-// Generate mock students - REMOVED
+// Helper to clean up persistent dummy data from local storage
+function purgeDummyData() {
+  const students = getData<Student>(STUDENTS_KEY);
+  if (students.length === 30 && students.some(s => s.name === 'Arun Prasath')) {
+    console.log('Purging dummy students...');
+    saveStudents([]);
+  }
 
-// Generate mock faculty - REMOVED
+  const faculty = getData<Faculty>(FACULTY_KEY);
+  if (faculty.length === 15 && faculty.some(f => f.name === 'Dr. Rajesh Kumar')) {
+    console.log('Purging dummy faculty...');
+    saveFaculty([]);
+  }
+
+  const tutors = getData(TUTORS_KEY);
+  // Tutors might be 8 or 0 depending on previous partial cleanups
+  if (tutors.length === 8 && tutors.some((t: any) => t.name === 'Prof. Lakshmi Devi')) {
+    console.log('Purging dummy tutors...');
+    saveTutors([]);
+  }
+
+  const BATCHES_KEY = 'college_portal_batches';
+  const batches = getData<any>(BATCHES_KEY);
+  if (batches.length === 5 && batches.some((b: any) => b.name === '2021-2025')) {
+    console.log('Purging dummy batches...');
+    saveData(BATCHES_KEY, []);
+  }
+
+  const LEAVE_REQUESTS_KEY = 'college_portal_leave_requests';
+  const leaves = getData<any>(LEAVE_REQUESTS_KEY);
+  if (leaves.length === 2 && leaves.some((l: any) => l.student === 'Arun Prasath')) {
+    console.log('Purging dummy leave requests...');
+    saveData(LEAVE_REQUESTS_KEY, []);
+  }
+}
+
+// Student generation functions removed to prevent dummy data
+
+// Faculty generation functions removed to prevent dummy data
 
 // Graduation Logic
 export function checkGraduationLogic() {
@@ -245,13 +284,7 @@ export function checkGraduationLogic() {
 export function getStudents(): Student[] {
   try {
     const stored = localStorage.getItem(STUDENTS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return [];
+    return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
@@ -293,13 +326,7 @@ export function deleteStudent(id: string): boolean {
 export function getFaculty(): Faculty[] {
   try {
     const stored = localStorage.getItem(FACULTY_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return [];
+    return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
@@ -338,7 +365,7 @@ export function deleteFaculty(id: string): boolean {
   return true;
 }
 
-// Generate mock tutors - REMOVED
+// Tutor generation functions removed to prevent dummy data
 
 export function getTutors(): Tutor[] {
   try {

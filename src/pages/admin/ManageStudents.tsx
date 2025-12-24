@@ -124,7 +124,7 @@ export default function ManageStudents() {
       email: '',
       phone: '',
       rollNumber: '',
-      batch: '2024-2028',
+      batch: batches.length > 0 ? batches[0] : '2024-2028',
       year: 1,
       semester: 1,
       section: 'A',
@@ -531,10 +531,17 @@ export default function ManageStudents() {
                   {/* Fallback if store is empty */}
                   {getData<any>(BATCHES_KEY).length === 0 && (
                     <>
-                      <SelectItem value="2021-2025">2021-2025</SelectItem>
-                      <SelectItem value="2022-2026">2022-2026</SelectItem>
-                      <SelectItem value="2023-2027">2023-2027</SelectItem>
-                      <SelectItem value="2024-2028">2024-2028</SelectItem>
+                      {batches.map(batch => (
+                        <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+                      ))}
+                      {batches.length === 0 && (
+                        <>
+                          <SelectItem value="2021-2025">2021-2025</SelectItem>
+                          <SelectItem value="2022-2026">2022-2026</SelectItem>
+                          <SelectItem value="2023-2027">2023-2027</SelectItem>
+                          <SelectItem value="2024-2028">2024-2028</SelectItem>
+                        </>
+                      )}
                     </>
                   )}
                 </SelectContent>
