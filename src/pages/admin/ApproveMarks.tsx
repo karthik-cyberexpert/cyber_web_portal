@@ -38,13 +38,15 @@ import { toast } from 'sonner';
 import { useEffect } from 'react';
 
 interface MarksSubmission {
-  id: string; // Group ID: `${subjectCode}-${examType}-${section}`
+  id: string;
   subject: string;
   subjectCode: string;
   faculty: string;
-  class: string;
+  batch: string;
+  year: number;
+  semester: number;
   section: string;
-  examType: 'IA1' | 'IA2' | 'IA3' | 'Assignment' | 'External' | string;
+  examType: string;
   submittedAt: string;
   verifiedBy: string;
   verifiedAt: string;
@@ -86,7 +88,11 @@ const getExamTypeBadge = (type: string) => {
 
 export default function ApproveMarks() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
+
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [batchFilter, setBatchFilter] = useState<string>('all');
+  const [examFilter, setExamFilter] = useState<string>('all');
   const [selectedSubmission, setSelectedSubmission] = useState<MarksSubmission | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [submissions, setSubmissions] = useState<MarksSubmission[]>([]);
@@ -96,8 +102,6 @@ export default function ApproveMarks() {
     const students = getStudents();
     const facultyList = getFaculty();
 
-    // Group marks into "Submissions"
-    // Key: subjectCode-examType-section
     const groups: Record<string, any> = {};
 
     marks.forEach(mark => {
@@ -109,16 +113,18 @@ export default function ApproveMarks() {
             const faculty = facultyList.find(f => f.id === mark.submittedBy);
             groups[key] = {
                 id: key,
-                subject: mark.subjectCode, // Fallback if name not available, or we could fetch from syllabus
+                subject: mark.subjectCode, 
                 subjectCode: mark.subjectCode,
                 faculty: faculty?.name || 'Unknown Faculty',
-                class: student.batch,
+                batch: student.batch,
+                year: student.year,
+                semester: student.semester,
                 section: student.section,
                 examType: mark.examType,
                 submittedAt: (mark.createdAt || mark.date || new Date().toISOString()).split('T')[0],
                 verifiedBy: mark.verifiedBy || '',
                 verifiedAt: (mark.updatedAt || mark.date || new Date().toISOString()).split('T')[0],
-                status: mark.status, // We assume all marks in a group have same status
+                status: mark.status,
                 studentCount: 0,
                 totalScore: 0,
                 maxScore: mark.maxMarks,
@@ -130,8 +136,6 @@ export default function ApproveMarks() {
         groups[key].totalScore += mark.marks;
         groups[key].rawMarks.push(mark);
 
-        // Final status should be the "highest" state if mixed, but usually they move together
-        // For ApproveMarks, we care about 'verified' (waiting for admin) or 'approved'
         if (mark.status === 'verified') groups[key].status = 'verified';
         else if (mark.status === 'submitted' && groups[key].status !== 'verified') groups[key].status = 'pending';
     });
@@ -160,9 +164,16 @@ export default function ApproveMarks() {
       sub.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.faculty.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
+    const isCurrent = ['pending', 'verified'].includes(sub.status);
+    const matchesView = viewMode === 'current' ? isCurrent : !isCurrent;
+
     const matchesStatus = statusFilter === 'all' || sub.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesBatch = batchFilter === 'all' || sub.batch === batchFilter;
+    const matchesExam = examFilter === 'all' || sub.examType === examFilter;
+    return matchesSearch && matchesStatus && matchesBatch && matchesExam && matchesView;
   });
+
+  const uniqueBatches = Array.from(new Set(submissions.map(s => s.batch)));
 
   const handleApprove = (id: string) => {
     const submission = submissions.find(s => s.id === id);
@@ -181,7 +192,7 @@ export default function ApproveMarks() {
     if (!submission) return;
 
     submission.rawMarks.forEach(mark => {
-        updateMarkStatus(mark.id, 'submitted', 'Admin'); // Sends back to tutor or faculty
+        updateMarkStatus(mark.id, 'submitted', 'Admin'); 
     });
 
     toast.error(`Rejected marks for ${submission.subjectCode} - Section ${submission.section}`);
@@ -191,11 +202,31 @@ export default function ApproveMarks() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Approve Marks
-        </h1>
-        <p className="text-muted-foreground mt-1">Review and approve internal assessment marks</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Approve Marks
+          </h1>
+          <p className="text-muted-foreground mt-1">Review and approve internal assessment marks</p>
+        </div>
+        <div className="flex bg-muted p-1 rounded-xl">
+          <Button 
+            variant={viewMode === 'current' ? 'default' : 'ghost'} 
+            size="sm"
+            onClick={() => setViewMode('current')}
+            className="rounded-lg font-bold"
+          >
+            Current Semester
+          </Button>
+          <Button 
+            variant={viewMode === 'history' ? 'default' : 'ghost'} 
+            size="sm"
+            onClick={() => setViewMode('history')}
+            className="rounded-lg font-bold"
+          >
+            History
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -229,218 +260,144 @@ export default function ApproveMarks() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="pending" className="gap-2">
-            <Clock className="w-4 h-4" />
-            Pending ({stats.pending + stats.verified})
-          </TabsTrigger>
-          <TabsTrigger value="approved" className="gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Approved ({stats.approved})
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="gap-2">
-            <XCircle className="w-4 h-4" />
-            Rejected ({stats.rejected})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by subject, faculty, or code..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending Verification</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Submissions Grid */}
-          <div className="grid gap-4">
-            <AnimatePresence>
-              {filteredSubmissions
-                .filter(s => s.status === 'pending' || s.status === 'verified')
-                .map((submission, index) => (
-                  <motion.div
-                    key={submission.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Card className="glass-card border-white/10 hover:border-white/20 transition-all">
-                      <CardContent className="p-4">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                          <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-                              <BookOpen className="w-6 h-6 text-primary" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold">{submission.subject}</h3>
-                                <Badge variant="outline">{submission.subjectCode}</Badge>
-                                <Badge className={getExamTypeBadge(submission.examType)}>
-                                  {submission.examType}
-                                </Badge>
-                                <Badge className={getStatusBadge(submission.status)}>
-                                  {getStatusIcon(submission.status)}
-                                  <span className="ml-1 capitalize">{submission.status}</span>
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {submission.faculty} • {submission.class} - Section {submission.section}
-                              </p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Users className="w-3 h-3" />
-                                  {submission.studentCount} students
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <TrendingUp className="w-3 h-3" />
-                                  Avg: {submission.avgScore}/{submission.maxScore}
-                                </span>
-                                <span>Submitted: {submission.submittedAt}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="gap-1"
-                              onClick={() => {
-                                setSelectedSubmission(submission);
-                                setIsViewOpen(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                              View
-                            </Button>
-                            {submission.status === 'verified' && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  className="gap-1 bg-emerald-500 hover:bg-emerald-600"
-                                  onClick={() => handleApprove(submission.id)}
-                                >
-                                  <ThumbsUp className="w-4 h-4" />
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm" 
-                                  className="gap-1"
-                                  onClick={() => handleReject(submission.id)}
-                                >
-                                  <ThumbsDown className="w-4 h-4" />
-                                  Reject
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {submission.status === 'verified' && (
-                          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                            <p className="text-sm text-amber-400">
-                              <CheckCircle2 className="w-4 h-4 inline mr-2" />
-                              Verified by {submission.verifiedBy} on {submission.verifiedAt}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-            </AnimatePresence>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="approved">
-          <Card className="glass-card border-white/10">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Faculty</TableHead>
-                    <TableHead>Class</TableHead>
-                    <TableHead>Exam</TableHead>
-                    <TableHead>Avg Score</TableHead>
-                    <TableHead>Approved On</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions
-                    .filter(s => s.status === 'approved')
-                    .map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell>
-                          <div className="font-medium">{sub.subject}</div>
-                          <div className="text-xs text-muted-foreground">{sub.subjectCode}</div>
-                        </TableCell>
-                        <TableCell>{sub.faculty}</TableCell>
-                        <TableCell>{sub.class} - {sub.section}</TableCell>
-                        <TableCell>
-                          <Badge className={getExamTypeBadge(sub.examType)}>{sub.examType}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={(sub.avgScore / sub.maxScore) * 100} className="w-16 h-2" />
-                            <span className="text-sm">{sub.avgScore}/{sub.maxScore}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{sub.verifiedAt}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="rejected">
-          <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
-              {submissions.filter(s => s.status === 'rejected').length === 0 ? (
-                <div className="text-center py-8">
-                  <XCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No rejected submissions</p>
-                </div>
-              ) : (
-                submissions
-                  .filter(s => s.status === 'rejected')
-                  .map((sub) => (
-                    <div key={sub.id} className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{sub.subject} ({sub.subjectCode})</h4>
-                          <p className="text-sm text-muted-foreground">{sub.faculty}</p>
-                        </div>
-                        <Badge className="bg-red-500/20 text-red-400">Rejected</Badge>
-                      </div>
+      {/* Table Section */}
+      <Card className="glass-card border-white/10">
+         <CardHeader>
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <CardTitle>Marks Submissions</CardTitle>
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
                     </div>
-                  ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-40">
+                            <Filter className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="verified">Verified</SelectItem>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+
+                    </Select>
+                    <Select value={batchFilter} onValueChange={setBatchFilter}>
+                        <SelectTrigger className="w-full sm:w-40">
+                            <BookOpen className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Batch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Batches</SelectItem>
+                            {uniqueBatches.map(batch => (
+                                <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={examFilter} onValueChange={setExamFilter}>
+                        <SelectTrigger className="w-full sm:w-40">
+                            <Filter className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Examination" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Exams</SelectItem>
+                            <SelectItem value="CIA 1">CIA 1</SelectItem>
+                            <SelectItem value="CIA 2">CIA 2</SelectItem>
+                            <SelectItem value="CIA 3">CIA 3</SelectItem>
+                            <SelectItem value="Model Exam">Model Exam</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+         </CardHeader>
+         <CardContent className="p-0">
+             <Table>
+                 <TableHeader>
+                     <TableRow>
+                         <TableHead>Batch</TableHead>
+                         <TableHead>Year</TableHead>
+                         <TableHead>Semester</TableHead>
+                         <TableHead>Section</TableHead>
+                         <TableHead>Subject Name</TableHead>
+                         <TableHead>Subject Code</TableHead>
+                         <TableHead>Examination</TableHead>
+                         <TableHead className="text-right">Status</TableHead>
+                     </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                     {filteredSubmissions.length === 0 ? (
+                         <TableRow>
+                             <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                 No submissions found
+                             </TableCell>
+                         </TableRow>
+                     ) : (
+                         filteredSubmissions.map((sub) => (
+                             <TableRow key={sub.id}>
+                                 <TableCell className="font-medium">{sub.batch}</TableCell>
+                                 <TableCell>{sub.year}</TableCell>
+                                 <TableCell>{sub.semester}</TableCell>
+                                 <TableCell>{sub.section}</TableCell>
+                                 <TableCell>{sub.subject}</TableCell>
+                                 <TableCell>
+                                     <Badge variant="outline">{sub.subjectCode}</Badge>
+                                 </TableCell>
+                                 <TableCell>
+                                     <Badge className={getExamTypeBadge(sub.examType)}>{sub.examType}</Badge>
+                                 </TableCell>
+                                 <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Badge className={`mr-2 ${getStatusBadge(sub.status)}`}>
+                                            <span className="capitalize">{sub.status}</span>
+                                        </Badge>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSelectedSubmission(sub);
+                                                setIsViewOpen(true);
+                                            }}
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </Button>
+                                        
+                                        {sub.status === 'verified' && (
+                                            <>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 w-8 p-0"
+                                                    onClick={() => handleApprove(sub.id)}
+                                                    title="Approve"
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0"
+                                                    onClick={() => handleReject(sub.id)}
+                                                    title="Reject"
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                 </TableCell>
+                             </TableRow>
+                         ))
+                     )}
+                 </TableBody>
+             </Table>
+         </CardContent>
+      </Card>
 
       {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
@@ -521,3 +478,5 @@ export default function ApproveMarks() {
     </div>
   );
 }
+
+

@@ -25,7 +25,8 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { UserRole } from '@/lib/auth';
 
@@ -34,6 +35,7 @@ interface SidebarLink {
   icon: React.ElementType;
   path: string;
   badge?: string;
+  children?: SidebarLink[];
 }
 
 const studentLinks: SidebarLink[] = [
@@ -79,19 +81,49 @@ const tutorLinks: SidebarLink[] = [
 
 const adminLinks: SidebarLink[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-  { label: 'Manage Students', icon: GraduationCap, path: '/admin/students' },
-  { label: 'Manage Faculty', icon: Users, path: '/admin/faculty' },
-  { label: 'Manage Tutors', icon: Users, path: '/admin/tutors' },
+  { 
+    label: 'Manage', 
+    icon: Users, 
+    path: '/admin/manage',
+    children: [
+      { label: 'Students', icon: GraduationCap, path: '/admin/students' },
+      { label: 'Faculty', icon: Users, path: '/admin/faculty' },
+      { label: 'Tutors', icon: Users, path: '/admin/tutors' }
+    ]
+  },
   { label: 'Batches & Classes', icon: Users, path: '/admin/batches' },
-  { label: 'Timetable', icon: Calendar, path: '/admin/timetable' },
+  { 
+    label: 'Timetable', 
+    icon: Calendar, 
+    path: '/admin/timetable',
+    children: [
+      { label: 'Student Timetable', icon: GraduationCap, path: '/admin/timetable/students' },
+      { label: 'Faculty Timetable', icon: Users, path: '/admin/timetable/faculty' }
+    ]
+  },
   { label: 'Approve Marks', icon: ClipboardList, path: '/admin/marks' },
-  { label: 'Notes Analytics', icon: BookOpen, path: '/admin/notes' },
-    { label: 'Assignments', icon: FileText, path: '/admin/assignments' },
-    { label: 'Circulars', icon: Bell, path: '/admin/circulars' },
-    { label: 'Leave Approvals', icon: ExternalLink, path: '/admin/leave' },
-    { label: 'LMS Management', icon: Trophy, path: '/admin/lms' },
-    { label: 'ECA Analytics', icon: Sparkles, path: '/admin/eca' },
-    { label: 'Settings', icon: Settings, path: '/admin/settings' },
+  {
+    label: 'Requests',
+    icon: ExternalLink,
+    path: '/admin/requests',
+    children: [
+      { label: 'Leave Requests', icon: ExternalLink, path: '/admin/requests/leave' },
+      { label: 'OD Requests', icon: ExternalLink, path: '/admin/requests/od' }
+    ]
+  },
+  { label: 'Circulars', icon: Bell, path: '/admin/circulars' },
+  { 
+    label: 'Analytics', 
+    icon: BarChart3, 
+    path: '/admin/analytics',
+    children: [
+      { label: 'Notes Analytics', icon: BookOpen, path: '/admin/notes' },
+      { label: 'Assignments', icon: FileText, path: '/admin/assignments' },
+      { label: 'LMS Management', icon: Trophy, path: '/admin/lms' },
+      { label: 'ECA Analytics', icon: Sparkles, path: '/admin/eca' }
+    ]
+  },
+  { label: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
 const getLinksByRole = (role: UserRole): SidebarLink[] => {
@@ -153,6 +185,102 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
           {links.map((link, index) => {
             const Icon = link.icon;
             const isActive = location.pathname === link.path;
+
+            if (link.children) {
+              const isChildActive = link.children.some(child => location.pathname === child.path);
+              const [isExpanded, setIsExpanded] = React.useState(isChildActive);
+              
+              const toggleExpand = (e: React.MouseEvent) => {
+                e.preventDefault();
+                setIsExpanded(!isExpanded);
+              };
+
+              // Auto-expand if child is active (run only once or when location changes)
+              React.useEffect(() => {
+                if (isChildActive) setIsExpanded(true);
+              }, [isChildActive]);
+
+              return (
+                <motion.li
+                  key={link.path}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                >
+                  <div
+                    onClick={toggleExpand}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative cursor-pointer',
+                      (isActive || isChildActive)
+                        ? 'bg-sidebar-primary/10 text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                    )}
+                  >
+                     {(isActive || isChildActive) && (
+                      <motion.div
+                        layoutId="activeIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"
+                      />
+                    )}
+                    <Icon className={cn(
+                      'w-5 h-5 flex-shrink-0 transition-transform',
+                      (isActive || isChildActive) ? 'text-primary scale-110' : 'group-hover:scale-105'
+                    )} />
+                    <AnimatePresence>
+                      {!collapsed && (
+                        <>
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            className="text-sm font-medium whitespace-nowrap overflow-hidden flex-1"
+                          >
+                            {link.label}
+                          </motion.span>
+                           <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            {isExpanded ? <ChevronDown className="w-4 h-4 ml-auto" /> : <ChevronRight className="w-4 h-4 ml-auto" />}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {isExpanded && !collapsed && (
+                      <motion.ul
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden bg-sidebar-accent/30 mt-1 rounded-lg"
+                      >
+                         {link.children.map(child => {
+                           const isChildLinkActive = location.pathname === child.path;
+                           return (
+                             <li key={child.path}>
+                               <NavLink 
+                                 to={child.path}
+                                 className={cn(
+                                   'flex items-center gap-3 pl-11 pr-3 py-2 text-sm transition-colors',
+                                   isChildLinkActive 
+                                    ? 'text-primary font-medium bg-primary/5' 
+                                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                                 )}
+                               >
+                                  {child.label}
+                               </NavLink>
+                             </li>
+                           );
+                         })}
+                      </motion.ul>
+                    )}
+                  </AnimatePresence>
+                </motion.li>
+              );
+            }
 
             return (
               <motion.li

@@ -5,6 +5,7 @@ import {
   BookOpen, Calendar, BarChart3, PieChart, Filter,
   AlertCircle
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -34,18 +35,26 @@ import { getResources, Resource } from '@/lib/data-store';
 export default function NotesAnalytics() {
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [selectedSemester, setSelectedSemester] = useState('all');
+  const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
   const [resources, setResources] = useState<Resource[]>([]);
 
   useEffect(() => {
     setResources(getResources());
   }, []);
 
-  const totalNotes = resources.filter(r => r.type === 'Note').length;
-  const totalQPs = resources.filter(r => r.type === 'QP').length;
-  const totalManuals = resources.filter(r => r.type === 'Manual').length;
-  const totalDownloads = resources.reduce((acc, curr) => acc + curr.downloads, 0);
+  // Filter resources based on viewMode (Mock logic: Assuming all are current for now, but adding structure)
+  const filteredResources = resources.filter(r => {
+      // In real app, check r.uploadedAt vs 6 months ago
+      if (viewMode === 'current') return true; 
+      return false; // Mocking no history for now to avoid empty page validation issues, or we can toggle
+  });
 
-  const subjectStats = resources.reduce((acc: any[], curr) => {
+  const totalNotes = filteredResources.filter(r => r.type === 'Note').length;
+  const totalQPs = filteredResources.filter(r => r.type === 'QP').length;
+  const totalManuals = filteredResources.filter(r => r.type === 'Manual').length;
+  const totalDownloads = filteredResources.reduce((acc, curr) => acc + curr.downloads, 0);
+
+  const subjectStats = filteredResources.reduce((acc: any[], curr) => {
     const existing = acc.find(s => s.subjectCode === curr.subjectCode);
     if (!existing) {
         acc.push({ subject: curr.subject, subjectCode: curr.subjectCode, uploaded: 1, total: 5, faculty: curr.facultyName });
@@ -79,7 +88,25 @@ export default function NotesAnalytics() {
           </h1>
           <p className="text-muted-foreground mt-1">Track uploads, downloads, and resource utilization</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex bg-muted p-1 rounded-xl mr-2">
+            <Button 
+                variant={viewMode === 'current' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setViewMode('current')}
+                className="rounded-lg font-bold"
+            >
+                Current Semester
+            </Button>
+            <Button 
+                variant={viewMode === 'history' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setViewMode('history')}
+                className="rounded-lg font-bold"
+            >
+                History
+            </Button>
+          </div>
           <Select value={selectedBatch} onValueChange={setSelectedBatch}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="Batch" />

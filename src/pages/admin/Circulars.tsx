@@ -27,7 +27,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getCirculars, saveCirculars, addCircular, Circular } from '@/lib/data-store';
+import { getCirculars, saveCirculars, addCircular, Circular, getStudents } from '@/lib/data-store';
 import { toast } from 'sonner';
 
 const getCategoryIcon = (category: string) => {
@@ -54,6 +54,7 @@ export default function Circulars() {
   const [circulars, setCirculars] = useState<Circular[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [selectedBatch, setSelectedBatch] = useState<string>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newCircular, setNewCircular] = useState<Omit<Circular, 'id' | 'createdAt'>>({
     title: '',
@@ -63,6 +64,14 @@ export default function Circulars() {
     audience: 'all',
     date: new Date().toISOString().split('T')[0]
   });
+
+  const [targetBatch, setTargetBatch] = useState<string>('all');
+  const [targetSection, setTargetSection] = useState<string>('all');
+  const [isAlertEnabled, setIsAlertEnabled] = useState(false);
+  const [alertDuration, setAlertDuration] = useState<string>('1');
+
+  const students = getStudents();
+  const uniqueBatches = Array.from(new Set(students.map(s => s.batch || s.class))).filter(Boolean).sort();
 
   useEffect(() => {
     setCirculars(getCirculars());
@@ -97,7 +106,12 @@ export default function Circulars() {
   const filteredCirculars = circulars.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || c.category.toLowerCase() === categoryFilter.toLowerCase();
-    return matchesSearch && matchesCategory;
+    // Assuming circular.batch exists or we're checking against a batch logic. 
+    // In mock data, circular might not have 'batch' directly. If it's missing, we ignore it or treat as 'all'.
+    // If we want strict filtering we'd need to add 'batch' to Circular interface or data.
+    // Let's assume for now if 'batch' prop exists on circular we check it.
+    const matchesBatch = selectedBatch === 'all' || (c as any).batch === selectedBatch; 
+    return matchesSearch && matchesCategory && matchesBatch;
   });
 
   return (
@@ -175,22 +189,59 @@ export default function Circulars() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Audience</Label>
-                  <Select 
-                    value={newCircular.audience} 
-                    onValueChange={(value: any) => setNewCircular({ ...newCircular, audience: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Everyone</SelectItem>
-                      <SelectItem value="students">Students Only</SelectItem>
-                      <SelectItem value="faculty">Faculty Only</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4 col-span-2 sm:col-span-1">
+                  <div className="space-y-2">
+                    <Label>Audience</Label>
+                    <Select 
+                      value={newCircular.audience} 
+                      onValueChange={(value: any) => setNewCircular({ ...newCircular, audience: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Everyone</SelectItem>
+                        <SelectItem value="students">Students Only</SelectItem>
+                        <SelectItem value="faculty">Faculty Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {newCircular.audience === 'students' && (
+                      <div className="space-y-2">
+                          <Label>Batch</Label>
+                          <Select value={targetBatch} onValueChange={setTargetBatch}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select Batch" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="all">All Batches</SelectItem>
+                                  {uniqueBatches.map(batch => (
+                                      <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  )}
+
+                  {newCircular.audience === 'students' && targetBatch !== 'all' && (
+                      <div className="space-y-2">
+                          <Label>Section</Label>
+                          <Select value={targetSection} onValueChange={setTargetSection}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select Section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="all">All Sections</SelectItem>
+                                  <SelectItem value="A">Section A</SelectItem>
+                                  <SelectItem value="B">Section B</SelectItem>
+                                  <SelectItem value="C">Section C</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  )}
                 </div>
+
                 <div className="space-y-2">
                     <Label>Date</Label>
                     <Input 
@@ -200,6 +251,36 @@ export default function Circulars() {
                     />
                 </div>
               </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-white/5">
+                <div className="flex items-center gap-4">
+                    <Label className="cursor-pointer" htmlFor="alert-mode">Enable Alert</Label>
+                    <Switch 
+                        id="alert-mode"
+                        checked={isAlertEnabled}
+                        onCheckedChange={setIsAlertEnabled}
+                    />
+                </div>
+                
+                {isAlertEnabled && (
+                    <div className="flex items-center gap-2">
+                        <Label className="whitespace-nowrap text-xs text-muted-foreground mr-2">Show Alert For:</Label>
+                        <Select value={alertDuration} onValueChange={setAlertDuration}>
+                            <SelectTrigger className="w-32 h-8 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">1 Day</SelectItem>
+                                <SelectItem value="2">2 Days</SelectItem>
+                                <SelectItem value="3">3 Days</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+              </div>
+
+
+
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
                 <Button className="gap-2" onClick={handlePublish}>
@@ -265,6 +346,19 @@ export default function Circulars() {
             <SelectItem value="examination">Examination</SelectItem>
             <SelectItem value="events">Events</SelectItem>
             <SelectItem value="administrative">Administrative</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+          <SelectTrigger className="w-full sm:w-48">
+             <Filter className="w-4 h-4 mr-2" />
+             <SelectValue placeholder="Batch" />
+          </SelectTrigger>
+          <SelectContent>
+             <SelectItem value="all">All Batches</SelectItem>
+             {uniqueBatches.map(batch => (
+                 <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+             ))}
           </SelectContent>
         </Select>
       </div>

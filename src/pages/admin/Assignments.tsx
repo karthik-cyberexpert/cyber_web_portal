@@ -35,7 +35,10 @@ import { getAssignments, getSubmissions, Assignment, Submission } from '@/lib/da
 export default function Assignments() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedClass, setSelectedClass] = useState('all');
+
+  const [batchFilter, setBatchFilter] = useState<string>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
   
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [stats, setStats] = useState({
@@ -70,6 +73,15 @@ export default function Assignments() {
           totalEvaluated: evaluated
       });
 
+      const todayStr = new Date().toISOString().split('T')[0];
+      const filtered = allAssignments.filter(a => {
+          if (viewMode === 'current') return a.dueDate >= todayStr;
+          return a.dueDate < todayStr;
+      });
+
+      setAssignments(allAssignments); // Keep raw for global stats if needed, or filter here. 
+      // Actually setAssignments is used for the list, so let's filter purely in render or another state.
+      // Ideally UI should filter 'assignments' state. Let's just store all in 'assignments' and filter in render logic below.
       setAssignments(allAssignments);
 
       // Subject Stats
@@ -113,12 +125,30 @@ export default function Assignments() {
     const matchesSearch = 
       a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.subject.toLowerCase().includes(searchTerm.toLowerCase());
+
     const isOverdue = new Date(a.dueDate) < new Date();
+    // View Mode Logic: Current = Active/Upcoming (or overdue but recent?), History = significantly past?
+    // Let's stick to simple: Current = Due Date >= Today, History = Past Due 
+    // OR matching the 'Active' vs 'Overdue' badges logic maybe? 
+    // Actually, Overdue is still an 'active' concern until submitted. 
+    // Let's say History is for 'Completed' or 'Graded' items, but here we list Assignments not submissions.
+    // So History = Past Due Date.
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isPastDue = a.dueDate < todayStr;
+    const matchesView = viewMode === 'current' ? !isPastDue : isPastDue;
+
     const status = isOverdue ? 'overdue' : 'active';
     const matchesStatus = statusFilter === 'all' || status === statusFilter;
-    const matchesClass = selectedClass === 'all' || a.classId === selectedClass;
-    return matchesSearch && matchesStatus && matchesClass;
+
+    const matchesBatch = batchFilter === 'all' || a.classId === batchFilter;
+    const matchesSubject = subjectFilter === 'all' || a.subject === subjectFilter;
+    
+    return matchesSearch && matchesStatus && matchesBatch && matchesSubject && matchesView;
   });
+
+  const uniqueBatches = Array.from(new Set(assignments.map(a => a.classId)));
+  const uniqueSubjects = Array.from(new Set(assignments.map(a => a.subject)));
+
 
   return (
     <div className="space-y-6">
@@ -130,7 +160,24 @@ export default function Assignments() {
           </h1>
           <p className="text-muted-foreground mt-1">Track and manage all class assignments</p>
         </div>
-        
+        <div className="flex bg-muted p-1 rounded-xl">
+            <Button 
+                variant={viewMode === 'current' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setViewMode('current')}
+                className="rounded-lg font-bold"
+            >
+                Current Semester
+            </Button>
+            <Button 
+                variant={viewMode === 'history' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setViewMode('history')}
+                className="rounded-lg font-bold"
+            >
+                History
+            </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -251,6 +298,33 @@ export default function Assignments() {
                   <SelectItem value="overdue">Overdue</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Select value={batchFilter} onValueChange={setBatchFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Batch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Batches</SelectItem>
+                  {uniqueBatches.map(batch => (
+                    <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <FileText className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subjects</SelectItem>
+                  {uniqueSubjects.map(subject => (
+                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
             </div>
           </div>
         </CardHeader>

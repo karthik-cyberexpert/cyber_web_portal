@@ -4,7 +4,7 @@ import {
   BookOpen, Users, Trophy, TrendingUp, Clock,
   Target, Award, BarChart3, Brain, Zap,
   CheckCircle2, XCircle, Star, Filter, Plus, Send, AlertCircle,
-  Medal
+  Medal, Search
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,13 +39,15 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { getQuizzes, addQuiz, Quiz, getQuizResults, QuizResult } from '@/lib/data-store';
+
+import { getQuizzes, addQuiz, Quiz, getQuizResults, QuizResult, getStudents, Student } from '@/lib/data-store';
 import { toast } from 'sonner';
 
 export default function LMSManagement() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newQuiz, setNewQuiz] = useState<Omit<Quiz, 'id' | 'createdAt'>>({
     title: '',
@@ -55,8 +57,19 @@ export default function LMSManagement() {
     questions: 20,
     difficulty: 'Medium',
     deadline: '',
+
+    assignedTo: 'all',
     status: 'active'
   });
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedStudent, setSearchedStudent] = useState<Student | null>(null);
+
+  // Get unique batches for assignment
+  const uniqueBatches = useMemo(() => {
+      const students = getStudents();
+      return Array.from(new Set(students.map(s => s.batch))).sort();
+  }, []);
 
   useEffect(() => {
     setQuizzes(getQuizzes());
@@ -73,6 +86,31 @@ export default function LMSManagement() {
     setIsAddOpen(false);
     toast.success("Quiz created successfully!");
   };
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    const students = getStudents();
+    const found = students.find(s => s.rollNumber.toLowerCase() === searchQuery.toLowerCase());
+    
+    if (found) {
+        setSearchedStudent(found);
+        toast.success(`Found student: ${found.name}`);
+    } else {
+        setSearchedStudent(null);
+        toast.error("Student not found with this register number");
+    }
+  };
+
+  const searchedStudentStats = useMemo(() => {
+    if (!searchedStudent) return null;
+    const studentResults = results.filter(r => r.userId === searchedStudent.id);
+    const total = studentResults.length;
+    const avgScore = total > 0 ? Math.round(studentResults.reduce((acc, r) => acc + r.score, 0) / total) : 0;
+    const passed = studentResults.filter(r => r.score >= 50).length;
+    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+    
+    return { total, avgScore, passRate, results: studentResults };
+  }, [searchedStudent, results]);
 
   const filteredQuizzes = quizzes.filter(q => 
     selectedSubject === 'all' || q.subjectCode.toLowerCase() === selectedSubject.toLowerCase()
@@ -119,6 +157,18 @@ export default function LMSManagement() {
           <p className="text-muted-foreground mt-1 font-medium">Global assessment distribution and performance analytics</p>
         </div>
         <div className="flex gap-2">
+            <div className="flex bg-muted/50 rounded-xl p-1 border border-white/5">
+                <Input 
+                    placeholder="Search Register No..." 
+                    className="h-9 w-[180px] bg-transparent border-none text-xs"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-lg" onClick={handleSearch}>
+                    <Search className="w-4 h-4" />
+                </Button>
+            </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
                 <Button className="gap-2 bg-gradient-to-r from-primary to-accent shadow-glow-sm h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest">
@@ -162,6 +212,21 @@ export default function LMSManagement() {
                             </Select>
                         </div>
                     </div>
+
+                    <div className="space-y-2">
+                        <Label className="uppercase text-[10px] font-black tracking-widest text-muted-foreground">Assign To</Label>
+                        <Select value={newQuiz.assignedTo} onValueChange={(val: any) => setNewQuiz({...newQuiz, assignedTo: val})}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Batch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Batches</SelectItem>
+                                {uniqueBatches.map(batch => (
+                                    <SelectItem key={batch} value={batch}>{batch}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label className="uppercase text-[10px] font-black tracking-widest text-muted-foreground">Qs Count</Label>
@@ -197,6 +262,82 @@ export default function LMSManagement() {
           </Dialog>
         </div>
       </div>
+
+      {searchedStudent && searchedStudentStats && (
+        <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="glass-card border-primary/20 bg-primary/5 p-6 rounded-2xl relative overflow-hidden"
+        >
+            <div className="flex items-start justify-between">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <Badge className="bg-primary text-primary-foreground pointer-events-none">STUDENT FOUND</Badge>
+                        <h2 className="text-xl font-bold">{searchedStudent.name}</h2>
+                    </div>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Batch: {searchedStudent.batch} • Section: {searchedStudent.section} • Roll: {searchedStudent.rollNumber}
+                    </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => {
+                    setSearchedStudent(null);
+                    setSearchQuery('');
+                }}>Close</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <Card className="bg-background/40 border-white/5">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                            <BookOpen className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase font-black text-muted-foreground tracking-widest">Quizzes Taken</p>
+                            <p className="text-2xl font-black font-mono">{searchedStudentStats.total}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-background/40 border-white/5">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                            <Trophy className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase font-black text-muted-foreground tracking-widest">Avg Score</p>
+                            <p className="text-2xl font-black font-mono">{searchedStudentStats.avgScore}%</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-background/40 border-white/5">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+                            <Target className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase font-black text-muted-foreground tracking-widest">Pass Rate</p>
+                            <p className="text-2xl font-black font-mono">{searchedStudentStats.passRate}%</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <div className="mt-6">
+                <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-70">Recent Attempts</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {searchedStudentStats.results.slice(0, 6).map((res, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-background/40 border border-white/5">
+                             <span className="text-sm font-medium">Unknown Quiz</span>
+                             <Badge variant={res.score >= 50 ? "default" : "destructive"}>{res.score}%</Badge>
+                        </div>
+                    ))}
+                    {searchedStudentStats.results.length === 0 && (
+                         <div className="col-span-full py-4 text-center text-muted-foreground text-xs italic">No quizzes attempted yet.</div>
+                    )}
+                </div>
+            </div>
+
+        </motion.div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

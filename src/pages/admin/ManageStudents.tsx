@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -16,7 +17,9 @@ import {
   UserCheck,
   AlertCircle,
   X,
-  Lock
+  Lock,
+  Upload, 
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +72,11 @@ export default function ManageStudents() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
+  
+  // Bulk Upload State
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setStudents(getStudents());
@@ -202,6 +210,100 @@ export default function ManageStudents() {
       'On Leave': 'bg-warning/10 text-warning border-warning/20',
     };
     return styles[status] || styles.Active;
+    return styles[status] || styles.Active;
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        'Full Name': 'John Doe',
+        'Roll Number': '21CSE101',
+        'Email': 'john.doe@college.edu',
+        'Phone': '9876543210',
+        'Batch': '2024-2028',
+        'Section': 'A',
+        'Gender': 'Male',
+        'Guardian Name': 'Robert Doe',
+        'Guardian Phone': '9876543211'
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, "student_upload_template.xlsx");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let addedCount = 0;
+        let errorCount = 0;
+
+        data.forEach((row: any) => {
+          // Basic validation
+          if (!row['Full Name'] || !row['Roll Number'] || !row['Email']) {
+            errorCount++;
+            return;
+          }
+
+          addStudent({
+            name: row['Full Name'],
+            rollNumber: row['Roll Number'],
+            email: row['Email'],
+            phone: row['Phone'] || '',
+            batch: row['Batch'] || '2024-2028',
+            section: row['Section'] || 'A',
+            year: 1, // Defaulting, could be calculated or added to template
+            semester: 1,
+            enrollmentType: 'Regular',
+            admissionType: 'Government',
+            status: 'Active',
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${row['Full Name']}`,
+            dateOfBirth: '',
+            address: '',
+            guardianName: row['Guardian Name'] || '',
+            guardianPhone: row['Guardian Phone'] || '',
+            attendance: 0,
+            cgpa: 0,
+            programme: 'B.Tech',
+            class: '1st Year',
+            backlogs: 0,
+            gender: row['Gender'] || 'Not Specified',
+            bloodGroup: '',
+            nationality: 'Indian',
+            semesterHistory: [],
+          });
+          addedCount++;
+        });
+
+        setStudents(getStudents()); // Refresh list
+        toast.success(`Successfully added ${addedCount} students. ${errorCount > 0 ? `${errorCount} entries failed due to missing data.` : ''}`);
+        setIsBulkUploadModalOpen(false);
+      } catch (error) {
+        console.error("Error parsing file:", error);
+        toast.error("Failed to parse the file. Please check the format.");
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+           fileInputRef.current.value = '';
+        }
+      }
+    };
+
+    reader.readAsBinaryString(file);
   };
 
   return (
@@ -216,10 +318,19 @@ export default function ManageStudents() {
           <h1 className="text-3xl font-bold">Manage Students</h1>
           <p className="text-muted-foreground">View and manage all enrolled students</p>
         </div>
-        <Button variant="gradient" onClick={handleAdd}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Student
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="gradient" onClick={handleAdd}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Student
+          </Button>
+          <Button 
+            className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/20 border-0"
+            onClick={() => setIsBulkUploadModalOpen(true)}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Bulk Upload
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
@@ -752,6 +863,62 @@ export default function ManageStudents() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk Upload Modal */}
+      <Dialog open={isBulkUploadModalOpen} onOpenChange={setIsBulkUploadModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Students</DialogTitle>
+            <DialogDescription>
+              Upload an Excel file to add multiple students at once.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+             <div className="flex flex-col gap-4">
+                <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileSpreadsheet className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Download Template</p>
+                      <p className="text-sm text-muted-foreground">Use this format to import students</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+                    Download
+                  </Button>
+                </div>
+                
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center space-y-4 hover:bg-muted/50 transition-colors">
+                  <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                     <p className="font-medium">Click to upload or drag and drop</p>
+                     <p className="text-sm text-muted-foreground">XLSX files only</p>
+                  </div>
+                  <Input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept=".xlsx, .xls"
+                    className="hidden" 
+                    id="file-upload"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                  />
+                  <Label 
+                    htmlFor="file-upload" 
+                    className={`inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    {isUploading ? 'Uploading...' : 'Select File'}
+                  </Label>
+                </div>
+             </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

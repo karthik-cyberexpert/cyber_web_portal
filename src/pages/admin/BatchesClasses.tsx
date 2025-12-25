@@ -3,8 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Users, Calendar, Plus, Edit2, Trash2, 
   ChevronDown, ChevronRight, Search, BookOpen,
-  Clock, ShieldAlert, ArrowUpCircle, History, Settings2
+  Clock, ShieldAlert, ArrowUpCircle, History, Settings2,
+  MoreHorizontal
 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -35,6 +51,13 @@ import {
   TabsList, 
   TabsTrigger 
 } from '@/components/ui/tabs';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   getData, saveData, addItem, updateItem, deleteItem,
@@ -70,6 +93,10 @@ export default function BatchesClasses() {
   const [editBatchSemester, setEditBatchSemester] = useState<"Odd"| "Even">('Odd');
   const [editBatchStartDate, setEditBatchStartDate] = useState('');
   const [editBatchEndDate, setEditBatchEndDate] = useState('');
+
+  // Sections Management Sheet
+  const [isManageSectionsOpen, setIsManageSectionsOpen] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
 
   useEffect(() => {
     refreshData();
@@ -413,214 +440,189 @@ export default function BatchesClasses() {
         </div>
       </div>
 
-      {/* Batches List */}
-      <div className="space-y-4">
-        <AnimatePresence mode="popLayout">
-          {filteredBatches.length > 0 ? (
-            filteredBatches.map((batch) => {
-              const activeClass = classes.find(c => c.batchId === batch.id && c.isActive);
-              const historyClasses = classes.filter(c => c.batchId === batch.id && !c.isActive);
-
-              return (
-                <motion.div
-                  key={batch.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                >
-                  <Card className="glass-card border-white/10 overflow-hidden hover:border-primary/20 transition-all">
-                    <CardHeader className="py-4 bg-white/5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10">
-                            <GraduationCap className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <CardTitle className="text-xl italic">Batch {batch.label}</CardTitle>
-                              <Badge variant="outline" className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary border-primary/20 italic">
-                                4-Year Program
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground italic flex items-center gap-1.5 mt-0.5">
-                              <Calendar className="w-3.5 h-3.5" />
-                              Cycle: {batch.startYear} — {batch.endYear}
-                            </p>
-                          </div>
+      {/* Batches Table */}
+      <div className="glass-card rounded-2xl border border-white/10 overflow-hidden">
+        <Table>
+          <TableHeader className="bg-white/5">
+            <TableRow className="border-white/10 hover:bg-transparent">
+              <TableHead className="w-[180px] italic">Batch</TableHead>
+              <TableHead className="italic">Current Status</TableHead>
+              <TableHead className="italic">Total Sections</TableHead>
+              <TableHead className="italic">Current Semester</TableHead>
+              <TableHead className="italic">Academic Cycle</TableHead>
+              <TableHead className="text-right italic">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredBatches.length > 0 ? (
+              filteredBatches.map((batch) => {
+                const activeClass = classes.find(c => c.batchId === batch.id && c.isActive);
+                const activeSectionsCount = activeClass 
+                  ? sections.filter(s => s.classId === activeClass.id).length 
+                  : 0;
+                
+                return (
+                  <TableRow key={batch.id} className="border-white/10 hover:bg-white/5 transition-colors">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <GraduationCap className="w-4 h-4 text-primary" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="hover:bg-primary/20 text-primary rounded-xl h-10 w-10"
-                            onClick={() => openBatchEdit(batch)}
-                          >
-                            <Settings2 className="w-5 h-5" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="hover:bg-destructive/20 text-destructive rounded-xl h-10 w-10"
-                            onClick={() => handleDeleteBatch(batch.id)}
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </Button>
-                        </div>
+                        <span className="font-bold italic text-lg">{batch.label}</span>
                       </div>
-                    </CardHeader>
-
-                    <CardContent className="p-6">
-                      <Tabs defaultValue="active" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 border border-white/10 p-1 rounded-xl">
-                          <TabsTrigger value="active" className="italic data-[state=active]:bg-primary/20 data-[state=active]:text-primary rounded-lg transition-all">
-                            Current Academic Year
-                          </TabsTrigger>
-                          <TabsTrigger value="history" className="italic data-[state=active]:bg-white/10 rounded-lg transition-all">
-                            History
-                          </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="active" className="space-y-6">
-                          {activeClass ? (
-                            <div className="space-y-6">
-                              <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-primary/10">
-                                    <Clock className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-lg italic">{activeClass.yearLabel}</h4>
-                                    <p className="text-xs text-muted-foreground italic">Current Active Level</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  {activeClass.yearNumber < 4 && (
-                                    <Button 
-                                      variant="outline" 
-                                      className="gap-2 border-primary/20 hover:bg-primary/10 text-primary italic rounded-xl"
-                                      onClick={() => promoteClass(batch.id)}
-                                    >
-                                      <ArrowUpCircle className="w-4 h-4" />
-                                      Promote to {activeClass.yearNumber + 1 === 2 ? '2nd' : activeClass.yearNumber + 1 === 3 ? '3rd' : '4th'} Year
-                                    </Button>
-                                  )}
-                                  <Button 
-                                    className="gap-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 italic rounded-xl"
-                                    onClick={() => {
-                                      setTargetClassId(activeClass.id);
-                                      setIsAddSectionOpen(true);
-                                    }}
-                                  >
-                                    <Plus className="w-4 h-4" /> Add Section
-                                  </Button>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {sections
-                                  .filter(s => s.classId === activeClass.id)
-                                  .map((section) => (
-                                    <div 
-                                      key={section.id}
-                                      className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-white/10 transition-all"
-                                    >
-                                      <div className="flex flex-col items-center gap-2">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
-                                          <BookOpen className="w-6 h-6 text-primary" />
-                                        </div>
-                                        <span className="text-xl font-black italic tracking-tighter">Section {section.sectionName}</span>
-                                      </div>
-                                      
-                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8 hover:bg-primary/20 text-primary"
-                                          onClick={() => {
-                                            setEditingSection(section);
-                                            setEditSectionName(section.sectionName);
-                                            setIsEditSectionOpen(true);
-                                          }}
-                                        >
-                                          <Edit2 className="w-4 h-4" />
-                                        </Button>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8 hover:bg-destructive/20 text-destructive"
-                                          onClick={() => handleDeleteSection(section.id)}
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                {sections.filter(s => s.classId === activeClass.id).length === 0 && (
-                                  <div className="col-span-full py-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
-                                    <p className="text-muted-foreground italic text-sm">No sections defined for this year yet.</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/10">
-                              <p className="text-muted-foreground italic">No active class found. This might be a graduated batch.</p>
-                            </div>
-                          )}
-                        </TabsContent>
-
-                        <TabsContent value="history">
-                          <div className="space-y-3">
-                            {historyClasses
-                              .sort((a, b) => b.yearNumber - a.yearNumber)
-                              .map((hCls) => (
-                                <div key={hCls.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
-                                  <div className="flex items-center gap-4">
-                                    <History className="w-5 h-5 text-muted-foreground" />
-                                    <div>
-                                      <span className="font-bold italic">{hCls.yearLabel}</span>
-                                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic">Completed Year</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-8">
-                                    <div className="text-center">
-                                      <p className="text-[10px] text-muted-foreground italic">Sections</p>
-                                      <p className="font-bold italic">{sections.filter(s => s.classId === hCls.id).length}</p>
-                                    </div>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                      onClick={() => handleDeleteClass(hCls.id)}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            {historyClasses.length === 0 && (
-                              <div className="text-center py-8">
-                                <p className="text-muted-foreground italic text-sm">No historical records yet.</p>
-                              </div>
-                            )}
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })
-          ) : (
-            <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
-              <GraduationCap className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="text-xl font-bold italic text-muted-foreground">No batches found</h3>
-              <p className="text-sm text-muted-foreground italic">Try adjusting your search or create a new batch.</p>
-            </div>
-          )}
-        </AnimatePresence>
+                    </TableCell>
+                    <TableCell>
+                      {activeClass ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 italic">
+                          {activeClass.yearLabel}
+                        </Badge>
+                      ) : (
+                         <Badge variant="outline" className="italic">Completed / Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-bold">{activeSectionsCount}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="italic">
+                        {batch.currentSemester || 'Odd'} Sem
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                       {batch.semesterStartDate && batch.semesterEndDate ? (
+                         <div className="text-xs text-muted-foreground italic">
+                            {new Date(batch.semesterStartDate).toLocaleDateString()} — {new Date(batch.semesterEndDate).toLocaleDateString()}
+                         </div>
+                       ) : (
+                         <span className="text-xs text-muted-foreground italic">Not Set</span>
+                       )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="italic">
+                           <DropdownMenuItem onClick={() => openBatchEdit(batch)}>
+                             <Settings2 className="w-4 h-4 mr-2" />
+                             Settings
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => {
+                             setSelectedBatchId(batch.id);
+                             setIsManageSectionsOpen(true);
+                           }}>
+                             <BookOpen className="w-4 h-4 mr-2" />
+                             Manage Sections
+                           </DropdownMenuItem>
+                           {activeClass && activeClass.yearNumber < 4 && (
+                             <DropdownMenuItem onClick={() => promoteClass(batch.id)}>
+                               <ArrowUpCircle className="w-4 h-4 mr-2" />
+                               Promote
+                             </DropdownMenuItem>
+                           )}
+                           <DropdownMenuSeparator />
+                           <DropdownMenuItem onClick={() => handleDeleteBatch(batch.id)} className="text-destructive">
+                             <Trash2 className="w-4 h-4 mr-2" />
+                             Delete Batch
+                           </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                   <div className="flex flex-col items-center justify-center text-muted-foreground italic">
+                      <Search className="w-8 h-8 mb-2 opacity-20" />
+                      <p>No batches found</p>
+                   </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* Manage Sections Sheet */}
+      <Sheet open={isManageSectionsOpen} onOpenChange={setIsManageSectionsOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] border-l border-white/10 glass-card">
+           <SheetHeader>
+             <SheetTitle className="italic text-2xl">Manage Sections</SheetTitle>
+             <SheetDescription className="italic">
+               Add, edit, or remove sections for {selectedBatchId && batches.find(b => b.id === selectedBatchId)?.label}
+             </SheetDescription>
+           </SheetHeader>
+           
+           <div className="mt-6 scroll-smooth h-[calc(100vh-120px)] overflow-y-auto pr-4">
+             {selectedBatchId && (() => {
+               const batch = batches.find(b => b.id === selectedBatchId);
+               const activeClass = classes.find(c => c.batchId === batch?.id && c.isActive);
+               
+               if (!activeClass) return <p className="text-muted-foreground italic text-center">No active class found for this batch.</p>;
+
+               const currentSections = sections.filter(s => s.classId === activeClass.id);
+
+               return (
+                 <div className="space-y-6">
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                       <h3 className="font-bold italic text-primary mb-1">{activeClass.yearLabel}</h3>
+                       <p className="text-xs text-muted-foreground italic mb-4">Current Active Academic Year</p>
+                       
+                       <Button 
+                         size="sm"
+                         className="w-full gap-2 italic bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                         onClick={() => {
+                           setTargetClassId(activeClass.id);
+                           setIsAddSectionOpen(true);
+                         }}
+                       >
+                         <Plus className="w-4 h-4" /> Add New Section
+                       </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                       {currentSections.map(section => (
+                         <div key={section.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 group hover:border-white/20 transition-colors">
+                           <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center border border-white/10">
+                               <span className="font-bold italic">{section.sectionName}</span>
+                             </div>
+                             <div>
+                               <p className="font-medium text-sm italic">Section {section.sectionName}</p>
+                               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active</p>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                setEditingSection(section);
+                                setEditSectionName(section.sectionName);
+                                setIsEditSectionOpen(true);
+                              }}>
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteSection(section.id)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                           </div>
+                         </div>
+                       ))}
+                       {currentSections.length === 0 && (
+                         <p className="text-center text-sm text-muted-foreground italic py-4">No sections yet.</p>
+                       )}
+                    </div>
+                 </div>
+               );
+             })()}
+           </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Add Section Dialog */}
       <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>

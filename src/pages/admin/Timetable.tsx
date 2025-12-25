@@ -14,23 +14,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getTimetable, saveTimetable, TimetableSlot, addTimetableSlot, deleteTimetableSlot, getFaculty } from '@/lib/data-store';
 import { toast } from 'sonner';
 
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Period structure conceptualization: 
+// 1, 2, BREAK, 3, 4, LUNCH, 5, 6, 7
 const periods = [
-  { num: 1, time: '9:00 - 9:50' },
-  { num: 2, time: '9:50 - 10:40' },
-  { num: 3, time: '10:50 - 11:40' },
-  { num: 4, time: '11:40 - 12:30' },
-  { num: 5, time: '1:30 - 2:20' },
-  { num: 6, time: '2:20 - 3:10' },
-  { num: 7, time: '3:20 - 4:10' },
-  { num: 8, time: '4:10 - 5:00' },
+  { num: 1, time: '8:30 - 9:15' },
+  { num: 2, time: '9:15 - 10:20' },
+  { num: 'BREAK', time: '10:20 - 10:30', isBreak: true, label: 'Short Break' },
+  { num: 3, time: '10:30 - 11:25' },
+  { num: 4, time: '11:25 - 12:20' },
+  { num: 'LUNCH', time: '12:20 - 1:20', isBreak: true, label: 'Lunch Break' },
+  { num: 5, time: '1:20 - 2:15' },
+  { num: 6, time: '2:15 - 3:10' },
+  { num: 7, time: '3:10 - 4:05' },
 ];
 
 const getSlotColor = (type: string) => {
@@ -43,9 +45,10 @@ const getSlotColor = (type: string) => {
   }
 };
 
-export default function Timetable() {
-  const [selectedBatch, setSelectedBatch] = useState('2021-2025');
-  const [selectedClass, setSelectedClass] = useState('4');
+export default function Timetable({ view = 'students' }: { view?: 'students' | 'faculty' }) {
+  const [selectedBatch, setSelectedBatch] = useState('2024-2028');
+  const [selectedYearSem, setSelectedYearSem] = useState('1-1'); // Year 1 - Sem 1
+  const [selectedFacultyId, setSelectedFacultyId] = useState('');
   const [selectedSection, setSelectedSection] = useState('A');
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [facultyList, setFacultyList] = useState<any[]>([]);
@@ -57,6 +60,7 @@ export default function Timetable() {
     loadData();
     const faculty = getFaculty();
     setFacultyList(faculty);
+    if (faculty.length > 0) setSelectedFacultyId(faculty[0].id);
   }, []);
 
   const loadData = () => {
@@ -65,14 +69,24 @@ export default function Timetable() {
   };
 
   const currentTimetable = timetable.filter(
-    t => t.classId === selectedBatch && t.sectionId === selectedSection // simplistic mapping. matching batch to classId
+    t => view === 'students' 
+      ? t.classId === selectedBatch && t.sectionId === selectedSection
+      : t.facultyId === selectedFacultyId
   );
 
-  const getSlot = (day: string, period: number) => {
+  const getSlot = (day: string, period: number | string) => {
     return currentTimetable.find(slot => slot.day === day && slot.period === period);
   };
 
-  const handleCellClick = (day: string, period: number) => {
+  const handleCellClick = (day: string, period: number | string) => {
+    // Ensure period is a number for slot creation
+    if (typeof period !== 'number') return;
+
+    // Saturday constraint: only 4 periods
+    if (day === 'Saturday' && period > 4) {
+       toast.error("Saturday is a half day (Only 4 periods)");
+       return;
+    }
     const existing = getSlot(day, period);
     if (existing) {
       setEditingSlot(existing);
@@ -91,6 +105,13 @@ export default function Timetable() {
       });
     }
     setIsEditOpen(true);
+  };
+
+  const hasSameContent = (day: string, p1: number | string, p2: number | string) => {
+    const s1 = getSlot(day, p1);
+    const s2 = getSlot(day, p2);
+    if (!s1 || !s2) return false;
+    return s1.subject === s2.subject && s1.type === s2.type && s1.subjectCode === s2.subjectCode;
   };
 
   const saveSlot = () => {
@@ -144,9 +165,11 @@ export default function Timetable() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Timetable Management
+            {view === 'students' ? 'Student Timetable' : 'Faculty Timetable'}
           </h1>
-          <p className="text-muted-foreground mt-1">Create and manage class schedules</p>
+          <p className="text-muted-foreground mt-1">
+            {view === 'students' ? 'Manage class schedules and academic periods' : 'View and manage faculty scheduling'}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="gap-2">
@@ -168,16 +191,80 @@ export default function Timetable() {
       <Card className="glass-card border-white/10">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4">
-            <Select value={selectedSection} onValueChange={setSelectedSection}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Select Section" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A">Section A</SelectItem>
-                <SelectItem value="B">Section B</SelectItem>
-                <SelectItem value="C">Section C</SelectItem>
-              </SelectContent>
-            </Select>
+            {view === 'students' ? (
+              <>
+                 {/* Batch Selection */}
+                 <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select Batch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024-2028">Batch 2024-28</SelectItem>
+                    <SelectItem value="2023-2027">Batch 2023-27</SelectItem>
+                    <SelectItem value="2022-2026">Batch 2022-26</SelectItem>
+                    <SelectItem value="2021-2025">Batch 2021-25</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Year - Sem Selection */}
+                <Select value={selectedYearSem} onValueChange={setSelectedYearSem}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Year & Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-1">Year 1 - Odd Sem (I)</SelectItem>
+                    <SelectItem value="1-2">Year 1 - Even Sem (II)</SelectItem>
+                    <SelectItem value="2-1">Year 2 - Odd Sem (III)</SelectItem>
+                    <SelectItem value="2-2">Year 2 - Even Sem (IV)</SelectItem>
+                    <SelectItem value="3-1">Year 3 - Odd Sem (V)</SelectItem>
+                    <SelectItem value="3-2">Year 3 - Even Sem (VI)</SelectItem>
+                    <SelectItem value="4-1">Year 4 - Odd Sem (VII)</SelectItem>
+                    <SelectItem value="4-2">Year 4 - Even Sem (VIII)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Section Selection */}
+                <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Section A</SelectItem>
+                    <SelectItem value="B">Section B</SelectItem>
+                    <SelectItem value="C">Section C</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            ) : (
+              <>
+                 {/* Faculty Selection */}
+                 <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Select Faculty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {facultyList.map(f => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Year - Sem Selection (Descending Order) */}
+                <Select value={selectedYearSem} onValueChange={setSelectedYearSem}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Year & Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2025-even">2025 (Even Sem)</SelectItem>
+                    <SelectItem value="2025-odd">2025 (Odd Sem)</SelectItem>
+                    <SelectItem value="2024-even">2024 (Even Sem)</SelectItem>
+                    <SelectItem value="2024-odd">2024 (Odd Sem)</SelectItem>
+                    <SelectItem value="2023-even">2023 (Even Sem)</SelectItem>
+                    <SelectItem value="2023-odd">2023 (Odd Sem)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -203,55 +290,104 @@ export default function Timetable() {
       </div>
 
       {/* Timetable Grid */}
-      <Tabs defaultValue="week" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="week">Week View</TabsTrigger>
-          <TabsTrigger value="day">Day View</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="week">
-          <Card className="glass-card border-white/10 overflow-hidden">
-            <CardHeader className="border-b border-white/10">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                Schedule Management - Section {selectedSection}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
+      <Card className="glass-card border-white/10 overflow-hidden">
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            Schedule View - {view === 'students' ? `Section ${selectedSection}` : (facultyList.find(f => f.id === selectedFacultyId)?.name || 'Faculty')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-hidden">
+            <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="p-3 text-left text-sm font-semibold text-muted-foreground w-28">
-                        <Clock className="w-4 h-4 inline mr-2" />
-                        Time
+                      <th className="p-2 text-left text-sm font-semibold text-muted-foreground w-32 sticky left-0 bg-background/95 backdrop-blur z-10">
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        Day
                       </th>
-                      {days.map((day) => (
-                        <th key={day} className="p-3 text-center text-sm font-semibold">
-                          {day}
+                      {periods.map((period) => (
+                        <th 
+                          key={period.num} 
+                          className={`p-2 text-center text-sm font-semibold ${period.isBreak ? 'w-10 p-0 bg-emerald-500/20 border-b-0' : ''}`}
+                        >
+                          {!period.isBreak && (
+                            <>
+                              <div>{`Period ${period.num}`}</div>
+                              <div className="text-xs font-normal text-muted-foreground">{period.time}</div>
+                            </>
+                          )}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {periods.map((period) => (
-                      <tr key={period.num} className="border-b border-white/5">
-                        <td className="p-2 text-sm text-muted-foreground whitespace-nowrap">
-                          <div className="font-semibold">Period {period.num}</div>
-                          <div className="text-xs">{period.time}</div>
+                    {days.map((day, dayIndex) => (
+                      <tr key={day} className="border-b border-white/5">
+                        <td className="p-3 text-sm font-medium text-muted-foreground sticky left-0 bg-background/95 backdrop-blur z-10">
+                          {day}
                         </td>
-                        {days.map((day) => {
+                        {periods.map((period, index) => {
+                          // Handle Breaks - Vertical Column
+                          if (period.isBreak) {
+                             if (dayIndex === 0) {
+                               return (
+                                 <td 
+                                    key={`${day}-${period.num}`} 
+                                    rowSpan={days.length} 
+                                    className="p-0 bg-emerald-500/20 align-middle text-center w-10 border-x border-white/10 border-t-0"
+                                 >
+                                    <div className="h-full flex items-center justify-center writing-vertical-lr rotate-180 font-extrabold text-emerald-600 tracking-widest text-xl py-4 uppercase shadow-inner">
+                                      {period.label}
+                                    </div>
+                                 </td>
+                               );
+                             }
+                             return null;
+                          }
+
+                          // Handle Saturday Constraint
+                          if (day === 'Saturday' && typeof period.num === 'number' && period.num > 4) {
+                             return (
+                               <td key={`${day}-${period.num}`} className="p-1 bg-white/5 opacity-50 relative">
+                                  <div className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground font-medium -rotate-12 select-none">
+                                      No Class
+                                  </div>
+                               </td>
+                             );
+                          }
+
+                          // MERGE LOGIC
+                          // Check if previous period was same (and not break), if so, skip rendering
+                          const prevPeriod = periods[index - 1];
+                          if (prevPeriod && !prevPeriod.isBreak && hasSameContent(day, prevPeriod.num, period.num)) {
+                              return null;
+                          }
+
+                          // Calculate span
+                          let colSpan = 1;
+                          for (let k = index + 1; k < periods.length; k++) {
+                              const nextPeriod = periods[k];
+                              if (nextPeriod.isBreak) break; // Don't merge across breaks
+                              if (hasSameContent(day, period.num, nextPeriod.num)) {
+                                  colSpan++;
+                              } else {
+                                  break;
+                              }
+                          }
+
                           const slot = getSlot(day, period.num);
                           return (
                             <td 
                                 key={`${day}-${period.num}`} 
                                 className="p-1"
+                                colSpan={colSpan}
                                 onClick={() => handleCellClick(day, period.num)}
                             >
                               {slot ? (
                                 <motion.div
                                   whileHover={{ scale: 1.02 }}
-                                  className={`p-2 rounded-lg border transition-all cursor-pointer ${getSlotColor(slot.type)}`}
+                                  className={`p-2 rounded-lg border transition-all cursor-pointer min-h-[80px] flex flex-col justify-center ${getSlotColor(slot.type)}`}
                                 >
                                   <div className="font-medium text-sm truncate">
                                     {slot.subject}
@@ -285,54 +421,10 @@ export default function Timetable() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="day">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {days.map((day) => (
-              <Card key={day} className="glass-card border-white/10">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{day}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {periods.map((period) => {
-                    const slot = getSlot(day, period.num);
-                    if (!slot) return null;
-                    return (
-                      <motion.div
-                        key={period.num}
-                        whileHover={{ x: 4 }}
-                        className={`p-3 rounded-lg border ${getSlotColor(slot.type)} cursor-pointer`}
-                        onClick={() => handleCellClick(day, period.num)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium">{slot.subject}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {slot.facultyName && <span>{slot.facultyName}</span>}
-                              {slot.room && <span> • {slot.room}</span>}
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            P{period.num}
-                          </Badge>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                  {periods.every(p => !getSlot(day, p.num)) && (
-                      <div className="text-center text-sm text-muted-foreground py-4">No classes</div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            </table>
           </div>
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Subject Summary - Could be calculated from timetable */}
       <Card className="glass-card border-white/10">

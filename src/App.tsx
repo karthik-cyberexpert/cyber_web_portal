@@ -172,7 +172,15 @@ const App = () => {
                 <Route path="faculty" element={<ManageFaculty />} />
                 <Route path="tutors" element={<ManageTutors />} />
                 <Route path="batches" element={<BatchesClasses />} />
-                  <Route path="timetable" element={<TimetableAdmin />} />
+                <Route path="batches" element={<BatchesClasses />} />
+                  <Route path="timetable" element={<Navigate to="/admin/timetable/students" replace />} />
+                  <Route path="timetable/students" element={<TimetableAdmin view="students" />} />
+                  <Route path="timetable/faculty" element={<TimetableAdmin view="faculty" />} />
+                  <Route path="marks" element={<ApproveMarks />} />
+                  <Route path="requests" element={<Navigate to="/admin/requests/leave" replace />} />
+                  <Route path="requests/leave" element={<LeaveApprovals filterType="leave" />} />
+                  <Route path="requests/od" element={<LeaveApprovals filterType="od" />} />
+
                   <Route path="marks" element={<ApproveMarks />} />
                   <Route path="notes" element={<NotesAnalytics />} />
                   <Route path="assignments" element={<Assignments />} />

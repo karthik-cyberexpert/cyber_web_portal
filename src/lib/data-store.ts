@@ -891,6 +891,7 @@ export interface Quiz {
   questions: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   deadline: string;
+  assignedTo?: string;
   status: 'active' | 'scheduled' | 'expired';
   createdAt: string;
 }
