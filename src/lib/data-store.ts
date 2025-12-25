@@ -124,6 +124,10 @@ export interface BatchData {
   label: string;
   name?: string; // Legacy/Alias support
   sem8EndDate?: string;
+  status?: 'Active' | 'Graduated';
+  currentSemester?: 'Odd' | 'Even';
+  semesterStartDate?: string;
+  semesterEndDate?: string;
 }
 
 export interface ClassData {
@@ -227,7 +231,8 @@ export function initializeStorage() {
   //   ]);
   // }
 
-  // checkGraduationLogic();
+  checkAutoPromotionLogic();
+  // checkGraduationLogic(); // Replaced by checkAutoPromotionLogic
 }
 
 // Helper to clean up persistent dummy data from local storage
@@ -264,6 +269,99 @@ function purgeDummyData() {
     console.log('Purging dummy leave requests...');
     saveData(LEAVE_REQUESTS_KEY, []);
   }
+}
+
+export function checkAutoPromotionLogic() {
+    const batches = getData<BatchData>(BATCHES_KEY);
+    const classes = getData<ClassData>(CLASSES_KEY);
+    const sections = getData<SectionData>(SECTIONS_KEY);
+    let batchesUpdated = false;
+    let classesUpdated = false;
+    let sectionsUpdated = false;
+
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11. June is 5.
+    const currentYear = now.getFullYear();
+
+    batches.forEach(batch => {
+        if (!batch.startYear) return;
+        if (batch.status === 'Graduated') return;
+
+        // Calculate Theoretical Year
+        // June 2024 to May 2025 = Year 1
+        // June 2025 to May 2026 = Year 2
+        
+        let theoreticalYear = currentYear - batch.startYear;
+        // If before June, we are still in the previous academic cycle year
+        if (currentMonth < 5) { // Jan(0) to May(4)
+             // e.g. Feb 2025 (start 2024). 2025-2024=1. Correct (Year 1).
+             // e.g. Feb 2026 (start 2024). 2026-2024=2. Correct (Year 2).
+        } else { // June(5) to Dec(11)
+             // e.g. June 2024 (start 2024). 2024-2024=0. Need +1 -> Year 1.
+             // e.g. Dec 2024 (start 2024). 2024-2024=0. Need +1 -> Year 1.
+             theoreticalYear += 1;
+        }
+
+        if (theoreticalYear <= 0) theoreticalYear = 1; // Safety
+
+        // Check Graduation
+        if (theoreticalYear > 4) {
+            batch.status = 'Graduated';
+            batchesUpdated = true;
+            
+            // Deactivate all classes
+             const activeClasses = classes.filter(c => c.batchId === batch.id && c.isActive);
+             activeClasses.forEach(c => {
+                 c.isActive = false;
+                 classesUpdated = true;
+             });
+            return;
+        }
+
+        // Check Promotion
+        const activeClass = classes.find(c => c.batchId === batch.id && c.isActive);
+        
+        // If no active class found (maybe just created or logic error), we might need to handle it.
+        // But usually there is one.
+        
+        if (activeClass && activeClass.yearNumber < theoreticalYear) {
+            // Needed Promotion
+            console.log(`Promoting Batch ${batch.label} from Year ${activeClass.yearNumber} to ${theoreticalYear}`);
+            
+            // 1. Deactivate current
+            activeClass.isActive = false;
+            classesUpdated = true;
+
+            // 2. Create new Active Class
+            const labels = ["", "1st Year", "2nd Year", "3rd Year", "4th Year"];
+            const newClass: ClassData = {
+                id: `cls-${Date.now()}-${Math.random()}`,
+                batchId: batch.id,
+                yearNumber: theoreticalYear,
+                yearLabel: labels[theoreticalYear] || `${theoreticalYear}th Year`,
+                isActive: true
+            };
+            classes.push(newClass);
+            classesUpdated = true;
+
+            // 3. Copy Sections from previous active class
+            const oldSections = sections.filter(s => s.classId === activeClass.id);
+            oldSections.forEach(os => {
+                sections.push({
+                    id: `sec-${Date.now()}-${Math.random()}`,
+                    classId: newClass.id,
+                    sectionName: os.sectionName
+                });
+                sectionsUpdated = true;
+            });
+        }
+    });
+
+    if (batchesUpdated) saveData(BATCHES_KEY, batches);
+    if (classesUpdated) saveData(CLASSES_KEY, classes);
+    if (sectionsUpdated) saveData(SECTIONS_KEY, sections);
+    
+    // cleanup graduated students logic could go here
 }
 
 // Student generation functions removed to prevent dummy data

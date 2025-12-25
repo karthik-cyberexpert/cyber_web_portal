@@ -3,8 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Users, Calendar, Plus, Edit2, Trash2, 
   ChevronDown, ChevronRight, Search, BookOpen,
-  Clock, ShieldAlert, ArrowUpCircle, History
+  Clock, ShieldAlert, ArrowUpCircle, History, Settings2
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +54,7 @@ export default function BatchesClasses() {
   // Dialog States
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false);
   const [startYear, setStartYear] = useState<string>(new Date().getFullYear().toString());
+  const [maxSections, setMaxSections] = useState<string>('1');
   
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
   const [targetClassId, setTargetClassId] = useState('');
@@ -55,6 +63,13 @@ export default function BatchesClasses() {
   const [isEditSectionOpen, setIsEditSectionOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<SectionData | null>(null);
   const [editSectionName, setEditSectionName] = useState('');
+
+  // Batch Edit State
+  const [isEditBatchOpen, setIsEditBatchOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<BatchData | null>(null);
+  const [editBatchSemester, setEditBatchSemester] = useState<"Odd"| "Even">('Odd');
+  const [editBatchStartDate, setEditBatchStartDate] = useState('');
+  const [editBatchEndDate, setEditBatchEndDate] = useState('');
 
   useEffect(() => {
     refreshData();
@@ -87,8 +102,15 @@ export default function BatchesClasses() {
 
   const handleAddBatch = () => {
     const year = parseInt(startYear);
+    const sectionsCount = parseInt(maxSections);
+
     if (isNaN(year)) {
       toast.error('Please enter a valid start year');
+      return;
+    }
+
+    if (isNaN(sectionsCount) || sectionsCount < 1) {
+      toast.error('Please enter a valid number of sections (at least 1)');
       return;
     }
 
@@ -108,15 +130,40 @@ export default function BatchesClasses() {
       label
     });
 
-    // 2. Create Initial Active Class (Year 1)
-    addItem<ClassData>(CLASSES_KEY, {
+    // 2. Determine Correct Active Year
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+    
+    let theoreticalYear = currentYear - year;
+    if (currentMonth >= 5) { // June or later
+      theoreticalYear += 1;
+    }
+    if (theoreticalYear <= 0) theoreticalYear = 1;
+    if (theoreticalYear > 4) theoreticalYear = 4; // Cap at 4 for initial creation if user creates very old batch, or let logic handle graduation later. 
+    // Actually if it creates >4, it might be weird. Let's assume standard creation. 
+
+    const labels = ["", "1st Year", "2nd Year", "3rd Year", "4th Year"];
+    const activeYearLabel = labels[theoreticalYear] || `${theoreticalYear}th Year`;
+
+    // 2. Create Initial Active Class
+    const newClass = addItem<ClassData>(CLASSES_KEY, {
       batchId: batch.id,
-      yearNumber: 1,
-      yearLabel: "1st Year",
+      yearNumber: theoreticalYear,
+      yearLabel: activeYearLabel,
       isActive: true
     });
 
-    toast.success(`Batch ${label} created with 1st Year as active`);
+    // 3. Auto-generate sections
+    for (let i = 0; i < sectionsCount; i++) {
+        const sectionName = String.fromCharCode(65 + i); // 65 is 'A'
+        addItem<SectionData>(SECTIONS_KEY, {
+            classId: newClass.id,
+            sectionName: sectionName
+        });
+    }
+
+    toast.success(`Batch ${label} created at ${activeYearLabel} with ${sectionsCount} sections`);
     setIsAddBatchOpen(false);
     refreshData();
   };
@@ -157,13 +204,17 @@ export default function BatchesClasses() {
     const relatedClasses = classes.filter(c => c.batchId === batchId);
     const relatedSections = sections.filter(s => relatedClasses.some(c => c.id === s.classId));
     
-    if (relatedClasses.length > 0 || relatedSections.length > 0) {
-      toast.error('Cannot delete batch: It has associated classes or sections. Clear them first.');
-      return;
-    }
+    // Cascading Delete
+    // 1. Delete all related sections
+    relatedSections.forEach(s => deleteItem(SECTIONS_KEY, s.id));
 
+    // 2. Delete all related classes
+    relatedClasses.forEach(c => deleteItem(CLASSES_KEY, c.id));
+
+    // 3. Delete the batch
     deleteItem(BATCHES_KEY, batchId);
-    toast.success('Batch deleted');
+    
+    toast.success('Batch and all associated data deleted');
     refreshData();
   };
 
@@ -264,6 +315,28 @@ export default function BatchesClasses() {
     refreshData();
   };
 
+  const openBatchEdit = (batch: BatchData) => {
+    setEditingBatch(batch);
+    setEditBatchSemester(batch.currentSemester || 'Odd');
+    setEditBatchStartDate(batch.semesterStartDate || '');
+    setEditBatchEndDate(batch.semesterEndDate || '');
+    setIsEditBatchOpen(true);
+  };
+
+  const handleUpdateBatch = () => {
+    if (!editingBatch) return;
+
+    updateItem<BatchData>(BATCHES_KEY, editingBatch.id, {
+        currentSemester: editBatchSemester,
+        semesterStartDate: editBatchStartDate,
+        semesterEndDate: editBatchEndDate
+    });
+
+    toast.success('Batch academic settings updated');
+    setIsEditBatchOpen(false);
+    refreshData();
+  };
+
   const filteredBatches = batches.filter(batch => 
     (batch.label || batch.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -299,6 +372,24 @@ export default function BatchesClasses() {
                   onChange={(e) => setStartYear(e.target.value)}
                   className="italic"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="italic">Number of Sections</Label>
+                <Input 
+                  type="number" 
+                  placeholder="1"
+                  min="1"
+                  value={maxSections}
+                  onChange={(e) => setMaxSections(e.target.value)}
+                  className="italic"
+                />
+                <p className="text-xs text-muted-foreground italic">
+                  Will auto-create sections (A, B, C...) for the 1st Year.
+                </p>
+              </div>
+              
+              <div className="pt-1">
                 <p className="text-xs text-muted-foreground italic">
                   End year will be {parseInt(startYear || '0') + 4}. This creates a 1st Year active class.
                 </p>
@@ -359,6 +450,14 @@ export default function BatchesClasses() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="hover:bg-primary/20 text-primary rounded-xl h-10 w-10"
+                            onClick={() => openBatchEdit(batch)}
+                          >
+                            <Settings2 className="w-5 h-5" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -559,6 +658,53 @@ export default function BatchesClasses() {
               />
             </div>
             <Button onClick={handleEditSection} className="w-full bg-primary hover:bg-primary/90 rounded-xl py-6 italic font-black">UPDATE SECTION</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Batch Dialog */}
+      <Dialog open={isEditBatchOpen} onOpenChange={setIsEditBatchOpen}>
+        <DialogContent className="glass-card border-white/10">
+          <DialogHeader><DialogTitle className="italic">Batch Academic Settings</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+             <div className="space-y-2">
+                <Label className="italic">Current Semester Type</Label>
+                <Select 
+                  value={editBatchSemester} 
+                  onValueChange={(value: "Odd" | "Even") => setEditBatchSemester(value)}
+                >
+                  <SelectTrigger className="italic">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Odd">Odd Semester</SelectItem>
+                    <SelectItem value="Even">Even Semester</SelectItem>
+                  </SelectContent>
+                </Select>
+             </div>
+             
+             <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label className="italic">Semester Start Date</Label>
+                    <Input 
+                        type="date"
+                        value={editBatchStartDate}
+                        onChange={(e) => setEditBatchStartDate(e.target.value)}
+                        className="italic"
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <Label className="italic">Semester End Date</Label>
+                    <Input 
+                        type="date"
+                        value={editBatchEndDate}
+                        onChange={(e) => setEditBatchEndDate(e.target.value)}
+                        className="italic"
+                    />
+                 </div>
+             </div>
+
+            <Button onClick={handleUpdateBatch} className="w-full bg-primary hover:bg-primary/90 rounded-xl py-6 italic font-black">SAVE SETTINGS</Button>
           </div>
         </DialogContent>
       </Dialog>

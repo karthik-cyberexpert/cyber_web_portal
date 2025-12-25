@@ -29,7 +29,6 @@ export default function Settings() {
     departmentName: 'Computer Science and Engineering',
     collegeName: 'Tamil Nadu Engineering College',
     academicYear: '2024-2025',
-    currentSemester: 'Even',
     
     // Notifications
     emailNotifications: true,
@@ -40,8 +39,6 @@ export default function Settings() {
     notifyOnCircular: true,
     
     // Academic
-    semesterStartDate: '2024-01-15',
-    semesterEndDate: '2024-05-31',
     iaMarksDeadline: 7,
     assignmentGracePeriod: 2,
     minAttendanceRequired: 75,
@@ -148,22 +145,8 @@ export default function Settings() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Current Semester</Label>
-                    <Select 
-                      value={settings.currentSemester} 
-                      onValueChange={(value) => setSettings({ ...settings, currentSemester: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Odd">Odd Semester</SelectItem>
-                        <SelectItem value="Even">Even Semester</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
-                </div>
+
               </CardContent>
             </Card>
 
@@ -198,36 +181,6 @@ export default function Settings() {
         {/* Academic Settings */}
         <TabsContent value="academic" className="mt-6">
           <div className="grid gap-6">
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  Semester Dates
-                </CardTitle>
-                <CardDescription>Configure current semester timeline</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Semester Start Date</Label>
-                    <Input 
-                      type="date"
-                      value={settings.semesterStartDate}
-                      onChange={(e) => setSettings({ ...settings, semesterStartDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Semester End Date</Label>
-                    <Input 
-                      type="date"
-                      value={settings.semesterEndDate}
-                      onChange={(e) => setSettings({ ...settings, semesterEndDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card className="glass-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
