@@ -15,7 +15,8 @@ import {
   Clock,
   XCircle,
   MessageSquare,
-  Send
+  Send,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export default function ECAAchievements() {
   const [filter, setFilter] = useState('all');
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [selectedProofImage, setSelectedProofImage] = useState<File | null>(null);
   const [newAch, setNewAch] = useState({
     title: '',
     organization: '',
@@ -90,6 +92,7 @@ export default function ECAAchievements() {
         customCategory: '',
         link: ''
     });
+    setSelectedProofImage(null);
   };
 
   const totalPoints = useMemo(() => {
@@ -203,6 +206,45 @@ export default function ECAAchievements() {
                                 onChange={e => setNewAch({...newAch, link: e.target.value})}
                             />
                         </div>
+                    </div>
+
+                    {/* Proof Image Upload */}
+                    <div className="space-y-2">
+                        <Label>Proof Image (Max 5MB)</Label>
+                        <input
+                          type="file"
+                          id="proof-image-upload"
+                          className="hidden"
+                          accept="image/*,.pdf"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast.error('File size must be less than 5MB');
+                                return;
+                              }
+                              setSelectedProofImage(file);
+                              toast.success(`Selected: ${file.name}`);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="proof-image-upload"
+                          className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 flex flex-col items-center justify-center bg-muted/5 cursor-pointer hover:bg-muted/10 transition-colors block"
+                        >
+                            <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                            {selectedProofImage ? (
+                              <>
+                                <p className="text-sm text-primary font-medium">{selectedProofImage.name}</p>
+                                <p className="text-xs text-muted-foreground">{(selectedProofImage.size / 1024).toFixed(2)} KB</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm text-muted-foreground font-medium">Click to upload proof image</p>
+                                <p className="text-xs text-muted-foreground/50">JPG, PNG, or PDF (Max 5MB)</p>
+                              </>
+                            )}
+                        </label>
                     </div>
                     <Button className="w-full gap-2 shadow-glow-sm font-black uppercase tracking-widest text-xs h-11" onClick={handleAdd}>
                         <Send className="w-4 h-4" />

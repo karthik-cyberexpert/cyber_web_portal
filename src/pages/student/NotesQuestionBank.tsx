@@ -30,53 +30,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  getResources, 
-  getStudents, 
-  Resource, 
-  getFaculty, 
-  Faculty, 
-  addNotification 
-} from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function NotesQuestionBank() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [activeTab, setActiveTab ] = useState('notes');
+  const [notesData, setNotesData] = useState<any>({});
+  const [activeTab, setActiveTab] = useState('notes');
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const allResources = getResources();
-    setResources(allResources);
-  }, []);
+    if (user && user.role === 'student') {
+      loadNotes();
+    }
+  }, [user]);
 
-  const filteredResources = resources.filter(res => {
-    const matchesSearch = res.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          res.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          res.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject = selectedSubject ? res.subjectCode === selectedSubject : true;
+  const loadNotes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/student-notes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Notes loaded:', data);
+        setNotesData(data.notesBySubject || {});
+      } else {
+        console.error('Failed to load notes');
+      }
+    } catch (error) {
+      console.error('Error loading notes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Flatten notes for filtering
+  const allNotes = Object.values(notesData).flatMap((subject: any) => 
+    subject.notes.map((note: any) => ({
+      ...note,
+      subjectName: subject.subjectName,
+      subjectCode: subject.subjectCode
+    }))
+  );
+
+  const filteredResources = allNotes.filter((note: any) => {
+    const matchesSearch = note.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          note.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          note.subjectCode?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject = selectedSubject ? note.subjectCode === selectedSubject : true;
+    const matchesType = activeTab === 'notes' ? note.category === 'Note' : note.category === 'QP';
     
-    // Mapping activeTab to Resource Type
-    // Assuming 'Note' and 'Question Bank' are the exact strings in the data store based on previous observations in this file
-    // Check data-store if 'Question Bank' is 'QP' or 'Question Bank'
-    // Previous code used 'Question Bank' so sticking to that, but making it robust
-    const matchesType = activeTab === 'notes' ? res.type === 'Note' : (res.type === 'Question Bank' || res.type === 'QP');
-
     return matchesSearch && matchesSubject && matchesType;
   });
 
   // Unique Subjects for Sidebar
-  const subjects = resources.reduce((acc: any[], curr) => {
-    if (!acc.find(s => s.code === curr.subjectCode)) {
-      acc.push({ name: curr.subject, code: curr.subjectCode, count: 1 });
-    } else {
-      const idx = acc.findIndex(s => s.code === curr.subjectCode);
-      acc[idx].count += 1;
-    }
-    return acc;
-  }, []);
+  const subjects = Object.keys(notesData).map(code => ({
+    name: notesData[code].subjectName,
+    code: code,
+    count: notesData[code].notes.length
+  }));
+  
+  const totalNotes = allNotes.length;
 
   return (
     <div className="space-y-6">
@@ -143,7 +160,7 @@ export default function NotesQuestionBank() {
               >
                   <span className="text-sm font-medium">All Subjects</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                    {resources.length}
+                    {totalNotes}
                   </span>
               </div>
               {subjects.map((sub, idx) => (
@@ -182,9 +199,9 @@ export default function NotesQuestionBank() {
             </span>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredResources.map((res, idx) => (
-                <ResourceCard key={res.id} res={res} idx={idx} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredResources.map((note: any, idx: number) => (
+                <ResourceCard key={note.id} note={note} idx={idx} />
             ))}
             {filteredResources.length === 0 && (
                 <EmptyState type={activeTab === 'notes' ? "Lecture Notes" : "Question Banks"} />
@@ -214,36 +231,68 @@ export default function NotesQuestionBank() {
 
 function RequestMaterialDialog({ user }: { user: any }) {
   const [open, setOpen] = useState(false);
-  const [facultyList, setFacultyList] = useState<Faculty[]>([]);
+  const [facultyList, setFacultyList] = useState<any[]>([]);
   const [selectedFaculty, setSelectedFaculty] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setFacultyList(getFaculty());
-  }, []);
+    if (open) {
+      loadFaculty();
+    }
+  }, [open]);
 
-  const handleSubmit = () => {
+  const loadFaculty = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/faculty', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setFacultyList(data.faculty || []);
+      }
+    } catch (error) {
+      console.error('Error loading faculty:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!selectedFaculty || !description) {
       toast.error("Please select a faculty and provide a description.");
       return;
     }
 
-    const faculty = facultyList.find(f => f.id === selectedFaculty);
-    if (!faculty) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/material-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          facultyId: selectedFaculty,
+          description
+        })
+      });
 
-    addNotification({
-      recipientId: faculty.id,
-      senderId: user?.id || 'unknown',
-      senderName: user?.name || 'Student',
-      title: 'Material Request',
-      message: `${user?.name} has requested study material: ${description}`,
-      type: 'request'
-    });
-
-    toast.success("Request sent successfully!");
-    setOpen(false);
-    setSelectedFaculty('');
-    setDescription('');
+      if (res.ok) {
+        toast.success("Request sent successfully!");
+        setOpen(false);
+        setSelectedFaculty('');
+        setDescription('');
+      } else {
+        toast.error("Failed to send request");
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+      toast.error("Error sending request");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -266,8 +315,8 @@ function RequestMaterialDialog({ user }: { user: any }) {
                 <SelectValue placeholder="Choose Faculty" />
               </SelectTrigger>
               <SelectContent>
-                {facultyList.map(f => (
-                  <SelectItem key={f.id} value={f.id}>{f.name} ({f.designation})</SelectItem>
+                {facultyList.map((f: any) => (
+                  <SelectItem key={f.id} value={f.id.toString()}>{f.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -283,52 +332,91 @@ function RequestMaterialDialog({ user }: { user: any }) {
           </div>
         </div>
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmit}>Send Request</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Sending...' : 'Send Request'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-const ResourceCard = ({ res, idx }: { res: Resource, idx: number }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ delay: idx * 0.05 }}
-    className="p-5 glass-card rounded-2xl group hover:border-primary/20 transition-all cursor-pointer"
-  >
-    <div className="flex items-start justify-between mb-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-        res.type === 'Note' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'
-      }`}>
-        {res.type === 'Note' ? <FileText className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
-      </div>
-      <div className="flex gap-2">
-        <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity">
-          <ExternalLink className="w-4 h-4 text-muted-foreground" />
-        </Button>
-        <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted text-primary">
-          <Download className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
+const ResourceCard = ({ note, idx }: { note: any, idx: number }) => {
+  const handleDownload = () => {
+    if (note.fileUrl) {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = note.fileUrl;
+      link.download = note.title || 'download';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(`Downloading ${note.title}`);
+    } else {
+      toast.error('File URL not available');
+    }
+  };
 
-    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{res.subjectCode}</p>
-    <h4 className="font-bold text-lg mb-4 group-hover:text-primary transition-colors">{res.title}</h4>
+  const handleView = () => {
+    if (note.fileUrl) {
+      window.open(note.fileUrl, '_blank');
+      toast.success('Opening in new tab');
+    } else {
+      toast.error('File URL not available');
+    }
+  };
 
-    <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase">
-      <span>{res.fileSize} ({res.fileType})</span>
-      <span className="flex items-center gap-1 text-[8px]">
-        <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-        {new Date(res.createdAt).toLocaleDateString()}
-      </span>
-    </div>
-  </motion.div>
-);
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: idx * 0.05 }}
+      className="p-5 glass-card rounded-2xl group hover:border-primary/20 transition-all cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+          note.category === 'Note' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'
+        }`}>
+          {note.category === 'Note' ? <FileText className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleView}
+          >
+            <ExternalLink className="w-4 h-4 text-muted-foreground" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-muted text-primary"
+            onClick={handleDownload}
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{note.subjectCode}</p>
+      <h4 className="font-bold text-lg mb-4 group-hover:text-primary transition-colors">{note.title}</h4>
+
+      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase">
+        <span>{note.fileSize} ({note.fileType})</span>
+        <span className="flex items-center gap-1 text-[8px]">
+          <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+          {new Date(note.uploadedAt).toLocaleDateString()}
+        </span>
+      </div>
+    </motion.div>
+  );
+};
 
 const EmptyState = ({ type }: { type: string }) => (
-    <div className="col-span-2 py-20 text-center flex flex-col items-center gap-3 bg-muted/20 rounded-2xl border-2 border-dashed border-white/5">
+    <div className="col-span-1 md:col-span-2 xl:col-span-3 py-20 text-center flex flex-col items-center gap-3 bg-muted/20 rounded-2xl border-2 border-dashed border-white/5">
         <AlertCircle className="w-10 h-10 opacity-20" />
         <p className="text-muted-foreground font-medium">No {type} found matching your criteria.</p>
     </div>

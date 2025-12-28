@@ -156,7 +156,7 @@ export default function PersonalDetails() {
 
           <div className="grid grid-cols-2 gap-3 w-full pt-4">
             <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
-              <p className="text-xl font-black text-primary font-mono leading-none slashed-zero">{student.cgpa.toFixed(2)}</p>
+              <p className="text-xl font-black text-primary font-mono leading-none slashed-zero">{Number(student.cgpa || 0).toFixed(2)}</p>
               <p className="text-[9px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Global GPA</p>
             </div>
             <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-accent/20 transition-all">

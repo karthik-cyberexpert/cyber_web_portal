@@ -81,6 +81,13 @@ export default function Assignments() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Grading state
+  const [isGradingOpen, setIsGradingOpen] = useState(false);
+  const [gradingSubmission, setGradingSubmission] = useState<any | null>(null);
+  const [gradeScore, setGradeScore] = useState('');
+  const [gradeFeedback, setGradeFeedback] = useState('');
+  const [isGrading, setIsGrading] = useState(false);
+
   // View configuration
   const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
 
@@ -290,6 +297,60 @@ export default function Assignments() {
       }
     } catch (error) {
       console.error('Fetch submissions error:', error);
+    }
+  };
+
+  const handleGrade = (submission: any) => {
+    setGradingSubmission(submission);
+    setGradeScore(submission.score || '');
+    setGradeFeedback(submission.feedback || '');
+    setIsGradingOpen(true);
+  };
+
+  const submitGrade = async () => {
+    if (!gradingSubmission) return;
+
+    const score = parseFloat(gradeScore);
+    if (isNaN(score)) {
+      toast.error('Please enter a valid score');
+      return;
+    }
+
+    setIsGrading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/grade-submission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          submissionId: gradingSubmission.id,
+          score: score,
+          feedback: gradeFeedback
+        })
+      });
+
+      if (res.ok) {
+        toast.success('Submission graded successfully!');
+        setIsGradingOpen(false);
+        setGradingSubmission(null);
+        setGradeScore('');
+        setGradeFeedback('');
+        // Refresh submissions
+        if (selectedAssignment) {
+          handleEvaluate(selectedAssignment);
+        }
+      } else {
+        const data = await res.json();
+        toast.error(data.message || 'Failed to grade submission');
+      }
+    } catch (error) {
+      console.error('Grade error:', error);
+      toast.error('Error grading submission');
+    } finally {
+      setIsGrading(false);
     }
   };
 
@@ -709,20 +770,77 @@ export default function Assignments() {
                                             {sub.status}
                                         </Badge>
                                         {sub.file_url && (
-                                            <Button variant="outline" size="sm" asChild>
-                                                <a href={`http://localhost:3007${sub.file_url}`} target="_blank" rel="noopener noreferrer">
-                                                    View File
-                                                </a>
+                                            <Button 
+                                              variant="outline" 
+                                              size="sm"
+                                              onClick={() => {
+                                                const url = sub.file_url.startsWith('http') 
+                                                  ? sub.file_url 
+                                                  : `http://localhost:3007${sub.file_url}`;
+                                                window.open(url, '_blank', 'noopener,noreferrer');
+                                              }}
+                                            >
+                                                View File
                                             </Button>
                                         )}
-                                        {/* Placeholder for Grading - can be expanded */}
-                                        <Button size="sm">Grade</Button>
+                                        {/* Grading Button */}
+                                        <Button 
+                                          size="sm" 
+                                          onClick={() => handleGrade(sub)}
+                                          disabled={sub.status === 'Graded'}
+                                        >
+                                          {sub.status === 'Graded' ? 'Graded' : 'Grade'}
+                                        </Button>
                                     </div>
                                 </Card>
                             ))}
                         </div>
                     )}
                 </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Grading Dialog */}
+        <Dialog open={isGradingOpen} onOpenChange={setIsGradingOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Grade Submission</DialogTitle>
+                    <DialogDescription>
+                        Assign marks and provide feedback for {gradingSubmission?.student_name}'s submission
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div>
+                        <Label htmlFor="score">Score (out of {selectedAssignment?.max_score})</Label>
+                        <Input
+                            id="score"
+                            type="number"
+                            min="0"
+                            max={selectedAssignment?.max_score || 100}
+                            value={gradeScore}
+                            onChange={(e) => setGradeScore(e.target.value)}
+                            placeholder="Enter score"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="feedback">Feedback (Optional)</Label>
+                        <Textarea
+                            id="feedback"
+                            value={gradeFeedback}
+                            onChange={(e) => setGradeFeedback(e.target.value)}
+                            placeholder="Provide feedback to the student..."
+                            rows={4}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsGradingOpen(false)} disabled={isGrading}>
+                        Cancel
+                    </Button>
+                    <Button onClick={submitGrade} disabled={isGrading || !gradeScore}>
+                        {isGrading ? 'Grading...' : 'Submit Grade'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 

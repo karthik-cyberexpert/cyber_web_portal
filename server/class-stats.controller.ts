@@ -52,6 +52,7 @@ export const getClassStatistics = async (req: Request | any, res: Response) => {
                     sa.section_id,
                     ts.day_of_week,
                     ts.start_time,
+                    ts.period_number,
                     ts.room_number
                 FROM timetable_slots ts
                 JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
@@ -101,23 +102,25 @@ export const getClassStatistics = async (req: Request | any, res: Response) => {
                 const dayIndex = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(slot.day_of_week);
                 
                 let nextClass = '';
+                const periodText = slot.period_number ? ` - Period ${slot.period_number}` : '';
+                
                 if (slot.start_time) {
                     // If we have a start time, calculate properly
                     const timeStr = slot.start_time.slice(0, 5);
                     if (dayIndex === today && slot.start_time > currentTime) {
-                        nextClass = `Today, ${timeStr}`;
+                        nextClass = `Today, ${timeStr}${periodText}`;
                     } else if (dayIndex > today || (dayIndex < today)) {
                         // Include week wrap-around: Monday (1) after Friday (5)
-                        nextClass = `${slot.day_of_week}, ${timeStr}`;
+                        nextClass = `${slot.day_of_week}, ${timeStr}${periodText}`;
                     }
                 } else {
-                    // If no start time, just show the day
+                    // If no start time, just show the day and period
                     // For any future day (including next week), show it
                     if (dayIndex === today) {
-                        nextClass = `Today`;
+                        nextClass = `Today${periodText}`;
                     } else {
                         // Show next occurrence of this day
-                        nextClass = slot.day_of_week;
+                        nextClass = `${slot.day_of_week}${periodText}`;
                     }
                 }
                 

@@ -41,11 +41,17 @@ interface SidebarLink {
 const studentLinks: SidebarLink[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/student' },
   { label: 'Personal Details', icon: User, path: '/student/personal' },
-  { label: 'Academic Details', icon: GraduationCap, path: '/student/academic' },
-  { label: 'Timetable & Syllabus', icon: Calendar, path: '/student/timetable' },
-  { label: 'Marks & Grades', icon: ClipboardList, path: '/student/marks' },
-  { label: 'Notes & Question Bank', icon: BookOpen, path: '/student/notes' },
-  { label: 'Assignments', icon: FileText, path: '/student/assignments' },
+  { 
+    label: 'Academic Details', 
+    icon: GraduationCap, 
+    path: '/student/academic-menu',
+    children: [
+      { label: 'Timetable & Syllabus', icon: Calendar, path: '/student/timetable' },
+      { label: 'Marks & Grades', icon: ClipboardList, path: '/student/marks' },
+      { label: 'Notes & Question Bank', icon: BookOpen, path: '/student/notes' },
+      { label: 'Assignments', icon: FileText, path: '/student/assignments' },
+    ]
+  },
   { label: 'Circulars', icon: Bell, path: '/student/circulars' },
   { label: 'Leave Portal', icon: ExternalLink, path: '/student/leave' },
   { label: 'LMS Quiz', icon: Trophy, path: '/student/lms' },

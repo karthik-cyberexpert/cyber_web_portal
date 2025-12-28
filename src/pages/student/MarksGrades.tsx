@@ -30,19 +30,17 @@ import {
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentMarks, MarkEntry } from '@/lib/data-store';
 
 export default function MarksGrades() {
   const { user } = useAuth();
   const [marksData, setMarksData] = useState<any[]>([]);
   const [stats, setStats] = useState({
-    gpa: 0,
-    rank: "N/A",
-    totalPoints: 0
+    cgpa: 0,
+    averageMarks: 0,
+    totalSubjects: 0
   });
   const [viewType, setViewType] = useState<"internal" | "external">("internal");
-
-  const [previousGrades, setPreviousGrades] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user && user.role === 'student') {
@@ -55,7 +53,7 @@ export default function MarksGrades() {
     
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/students/marks', {
+        const res = await fetch('http://localhost:3007/api/student-marks', {
              headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -64,81 +62,21 @@ export default function MarksGrades() {
             return;
         }
 
-        const rawMarks = await res.json();
-    
-        // Group marks by subject
-        const subjects: Record<string, any> = {};
+        const data = await res.json();
+        console.log('Marks data loaded:', data);
         
-        rawMarks.forEach((mark: any) => {
-          if (!subjects[mark.subjectCode]) {
-            subjects[mark.subjectCode] = {
-                subject: mark.subject, 
-                code: mark.subjectCode,
-                ia1: '-',
-                ia2: '-',
-                cia3: '-',
-                model: '-',
-                assignment: '-',
-                total: 0,
-                external: 'Pending'
-              };
-          }
-          
-          if (mark.examType === 'ia1') subjects[mark.subjectCode].ia1 = mark.marks;
-          if (mark.examType === 'ia2') subjects[mark.subjectCode].ia2 = mark.marks;
-          if (mark.examType === 'cia3') subjects[mark.subjectCode].cia3 = mark.marks;
-          if (mark.examType === 'model') subjects[mark.subjectCode].model = mark.marks;
-          if (mark.examType === 'assignment') subjects[mark.subjectCode].assignment = mark.marks;
-        });
-
-        // Calculate totals and GPA for current semester
-        let totalObtained = 0;
-        let totalMax = 0;
-        
-        Object.values(subjects).forEach(sub => {
-          let subTotal = 0;
-          if (typeof sub.ia1 === 'number') subTotal += sub.ia1; // Max 50
-          if (typeof sub.ia2 === 'number') subTotal += sub.ia2; // Max 50
-          if (typeof sub.cia3 === 'number') subTotal += sub.cia3;
-          if (typeof sub.model === 'number') subTotal += sub.model; // Max 100
-          if (typeof sub.assignment === 'number') subTotal += sub.assignment; // Max 1?
-          
-          // Note: Logic for 'Total' depends on weightage. 
-          // Assuming simple sum for display or logic: 
-          // Realistically: Internal = (IA1+IA2+Model)/X
-          // Displaying RAW sum for now
-          sub.total = subTotal; 
-          
-          // Calculate contribution to GPA (Mock logic)
-          totalObtained += subTotal;
-          totalMax += 200; // Approx max
-
-          // Simple grade logic
-          const percentage = (subTotal / 200) * 100; // Very rough
-          if (percentage >= 90) sub.external = 'O';
-          else if (percentage >= 80) sub.external = 'A+';
-          else if (percentage >= 70) sub.external = 'A';
-          else if (percentage >= 60) sub.external = 'B+';
-          else if (percentage >= 50) sub.external = 'B';
-          else if (percentage > 0) sub.external = 'C';
-          else sub.external = 'Pending';
-        });
-
-        const currentGpa = totalMax > 0 ? (totalObtained / totalMax) * 10 : 0;
-
-        setMarksData(Object.values(subjects));
+        setMarksData(data.subjectMarks || []);
         setStats({
-            gpa: Number(currentGpa.toFixed(2)),
-            rank: "N/A", 
-            totalPoints: Number(currentGpa.toFixed(2))
+          cgpa: data.stats?.cgpa || 0,
+          averageMarks: data.stats?.averageMarks || 0,
+          totalSubjects: data.stats?.totalSubjects || 0
         });
-
-        setPreviousGrades([]);
-    } catch(e) {
-        console.error("Error fetching marks", e);
+    } catch (error) {
+        console.error('Error loading marks:', error);
+    } finally {
+        setLoading(false);
     }
   };
-
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -205,23 +143,23 @@ export default function MarksGrades() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <GlassStatCard
-          title="Current Semester GPA"
-          value={stats.gpa === 0 ? "0.00" : stats.gpa.toString()}
+          title="Current CGPA"
+          value={stats.cgpa === 0 ? "0.00" : stats.cgpa.toFixed(2)}
           icon={TrendingUp}
           iconColor="text-primary"
           delay={0.1}
         />
         <GlassStatCard
-          title="Class Rank"
-          value={stats.rank}
-          icon={Award}
+          title="Total Subjects"
+          value={stats.totalSubjects.toString()}
+          icon={BookOpen}
           iconColor="text-accent"
           delay={0.2}
         />
         <GlassStatCard
-          title="Cumulative GPA"
-          value={stats.totalPoints === 0 ? "0.00" : stats.totalPoints.toString()}
-          subtitle="All Semesters"
+          title="Average Marks"
+          value={stats.averageMarks === 0 ? "0.00" : stats.averageMarks.toFixed(2)}
+          subtitle="Out of 100"
           icon={BarChart3}
           iconColor="text-success"
           delay={0.3}
@@ -354,30 +292,9 @@ export default function MarksGrades() {
             Previous History
           </h3>
           <div className="space-y-4">
-            {previousGrades.length > 0 ? previousGrades.map((grade, idx) => (
-              <div 
-                key={idx}
-                className="p-4 rounded-xl bg-muted/30 border border-transparent hover:border-accent/20 transition-all cursor-default group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{grade.sem}</span>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-success">
-                    <ArrowUpRight className="w-3 h-3" />
-                    RANK {grade.rank}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-2xl font-black text-foreground font-mono">{grade.gpa.toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">{grade.status}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-accent">{grade.credits} Credits</p>
-                    <p className="text-[10px] text-muted-foreground font-medium uppercase">Earned</p>
-                  </div>
-                </div>
-              </div>
-            )) : (
+            {false ? (
+              <div>Placeholder</div>
+            ) : (
                 <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl">
                     <p className="text-sm text-muted-foreground font-medium">No previous records found.</p>
                 </div>

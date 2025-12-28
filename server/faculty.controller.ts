@@ -76,6 +76,32 @@ export const getFacultyProfile = async (req: Request | any, res: Response) => {
     }
 };
 
+// Get All Faculty (for student material requests, etc.)
+export const getAllFaculty = async (req: Request, res: Response) => {
+    try {
+        const [faculty]: any = await pool.query(
+            `SELECT 
+                u.id,
+                u.name,
+                u.email,
+                fp.designation,
+                fp.department_id
+             FROM users u
+             JOIN faculty_profiles fp ON u.id = fp.user_id
+             WHERE u.role = 'faculty'
+             ORDER BY u.name ASC`
+        );
+
+        console.log('=== FACULTY LIST DEBUG ===');
+        console.log('Total faculty:', faculty.length);
+
+        res.json({ faculty });
+    } catch (error) {
+        console.error('Get All Faculty Error:', error);
+        res.status(500).json({ message: 'Error fetching faculty list' });
+    }
+};
+
 // Get Faculty Timetable
 export const getFacultyTimetable = async (req: Request | any, res: Response) => {
     const userId = req.user?.id;

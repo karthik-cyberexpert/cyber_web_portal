@@ -16,7 +16,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTimetable, getSyllabus, getStudents, TimetableSlot, Syllabus } from '@/lib/data-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -45,34 +44,48 @@ const getSlotColor = (type: string) => {
 
 export default function TimetableSyllabus() {
   const { user } = useAuth();
-  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
-  const [syllabus, setSyllabus] = useState<Syllabus[]>([]);
+  const [timetableData, setTimetableData] = useState<any>({});
+  const [syllabus, setSyllabus] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const allStudents = getStudents();
-    const student = allStudents.find(s => s.id === user.id || s.email === user.email);
     
-    if (student) {
-        setSyllabus(getSyllabus()); // Fetch all for now
-        const allSlots = getTimetable();
-        const mySlots = allSlots.filter(s => 
-            (s.classId === student.batch || s.classId === student.year.toString()) && 
-            s.sectionId === student.section
-        );
-        setTimetable(mySlots);
-    }
+    const fetchTimetable = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:3007/api/student-timetable', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Timetable loaded:', data);
+          setTimetableData(data.timetable || {});
+          setSyllabus(data.syllabus || []);
+        } else {
+          console.error('Failed to load timetable');
+        }
+      } catch (err) {
+        console.error('Error loading timetable:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTimetable();
   }, [user]);
 
   const getSlot = (day: string, period: number | string) => {
-    return timetable.find(slot => slot.day === day && slot.period === period);
+    const daySlots = timetableData[day] || [];
+    return daySlots.find((slot: any) => slot.period === period);
   };
 
   const hasSameContent = (day: string, p1: number | string, p2: number | string) => {
     const s1 = getSlot(day, p1);
     const s2 = getSlot(day, p2);
     if (!s1 || !s2) return false;
-    return s1.subject === s2.subject && s1.type === s2.type && s1.subjectCode === s2.subjectCode;
+    return s1.subject === s2.subject && s1.type === s2.type && s1.code === s2.code;
   };
 
   return (
@@ -216,16 +229,16 @@ export default function TimetableSyllabus() {
                                         <div className="font-medium text-sm truncate">
                                             {slot.subject}
                                         </div>
-                                        {slot.subjectCode && (
+                                        {slot.code && (
                                             <div className="text-xs text-muted-foreground mt-1">
-                                            {slot.subjectCode}
+                                            {slot.code}
                                             </div>
                                         )}
                                         <div className="flex items-center gap-2 mt-1">
-                                            {slot.facultyName && (
+                                            {slot.faculty && (
                                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                 <User className="w-3 h-3" />
-                                                {slot.facultyName.split(' ')[0]}
+                                                {slot.faculty.split(' ')[0]}
                                                 </div>
                                             )}
                                             {slot.room && (
@@ -274,27 +287,21 @@ export default function TimetableSyllabus() {
                     </TableHeader>
                     <TableBody>
                         {syllabus.length > 0 ? syllabus.map((course, idx) => {
-                             // Attempt to find faculty from timetable for this subject
-                             const subjectSlots = timetable.filter(t => t.subjectCode === course.subjectCode || t.subject === course.subjectName);
-                             // Get unique faculty names
-                             const facultyNames = [...new Set(subjectSlots.map(s => s.facultyName).filter(Boolean))];
-                             const facultyDisplay = facultyNames.length > 0 ? facultyNames.join(', ') : 'Not Assigned';
-
                              return (
                                 <TableRow key={idx} className="border-white/10 hover:bg-white/5">
                                     <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
-                                    <TableCell className="font-medium">{course.subjectName}</TableCell>
+                                    <TableCell className="font-medium">{course.subject_name}</TableCell>
                                     <TableCell>
                                         <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded">
-                                            {course.subjectCode}
+                                            {course.subject_code}
                                         </span>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center text-[10px] text-accent font-bold">
-                                                {facultyDisplay !== 'Not Assigned' ? facultyDisplay.charAt(0) : '?'}
+                                                {course.faculty_name ? course.faculty_name.charAt(0).toUpperCase() : '?'}
                                             </div>
-                                            <span className="text-sm">{facultyDisplay}</span>
+                                            <span className="text-sm">{course.faculty_name || 'Not Assigned'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -303,7 +310,7 @@ export default function TimetableSyllabus() {
                                                 variant="ghost" 
                                                 size="sm" 
                                                 className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                onClick={() => toast.success(`Viewing syllabus for ${course.subjectName}`)}
+                                                onClick={() => toast.success(`Viewing syllabus for ${course.subject_name}`)}
                                             >
                                                 <Eye className="w-4 h-4" />
                                             </Button>
@@ -311,7 +318,7 @@ export default function TimetableSyllabus() {
                                                 variant="ghost" 
                                                 size="sm" 
                                                 className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
-                                                onClick={() => toast.success(`Downloading syllabus for ${course.subjectName}`)}
+                                                onClick={() => toast.success(`Downloading syllabus for ${course.subject_name}`)}
                                             >
                                                 <Download className="w-4 h-4" />
                                             </Button>
@@ -319,7 +326,7 @@ export default function TimetableSyllabus() {
                                     </TableCell>
                                 </TableRow>
                              );
-                        }) : (
+                         }) : (
                             <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                     No syllabus data available.

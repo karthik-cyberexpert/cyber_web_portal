@@ -29,7 +29,6 @@ import {
   Cell,
 } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentMarks, getStudents, getAssignments, getSubmissions, getResources, getCirculars, Assignment, Submission, Student, Resource, Circular } from '@/lib/data-store';
 import { useNavigate } from 'react-router-dom';
 
 export default function StudentDashboard() {
@@ -45,8 +44,8 @@ export default function StudentDashboard() {
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   const [subjectDist, setSubjectDist] = useState<any[]>([]);
-  const [recentUpdates, setRecentUpdates] = useState<Circular[]>([]);
-  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
+  const [studentData, setStudentData] = useState<any>(null);
 
   useEffect(() => {
     if (user && user.role === 'student') {
@@ -54,93 +53,49 @@ export default function StudentDashboard() {
     }
   }, [user]);
 
-  const loadStats = () => {
-    // 1. Get Student Details
-    const allStudents = getStudents();
-    const me = allStudents.find(s => s.id === user?.id || s.email === user?.email);
-    
-    // 2. Get Marks & Tasks
-    const myMarks = user ? getStudentMarks(user.id) : [];
-    const allAssignments = getAssignments();
-    const allSubmissions = getSubmissions();
-    const allResources = getResources();
-    
-    // Filter assignments for student's class/section
-    const myAssignments = allAssignments.filter(a => 
-      me && (a.classId === me.batch || a.classId === me.year.toString()) && (a.sectionId === me.section || !a.sectionId)
-    );
-    
-    // Find pending assignments (not submitted yet)
-    const mySubmissions = allSubmissions.filter(s => s.studentId === (me?.id || user?.id));
-    const pending = myAssignments.filter(a => !mySubmissions.find(s => s.assignmentId === a.id));
+  const loadStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Fetch student stats from API
+      const response = await fetch('http://localhost:3007/api/student-stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    let avgMarks = 0;
-    if (myMarks.length > 0) {
-      const totalObtained = myMarks.reduce((acc, curr) => acc + curr.marks, 0);
-      const totalMax = myMarks.reduce((acc, curr) => acc + curr.maxMarks, 0);
-      if (totalMax > 0) {
-        avgMarks = (totalObtained / totalMax) * 100;
-      }
-    }
-
-    const studentStatsData = {
-      attendance: me ? me.attendance : 0,
-      internalAverage: Number(avgMarks.toFixed(1)),
-      pendingTasks: pending.length,
-      ecaPoints: me ? me.semesterHistory.reduce((sum, sem) => sum + sem.credits, 0) : 0 // Calculate ECA points from semester credits
-    };
-    setStudentStats(studentStatsData);
-    setStudentData(me);
-
-    // Populate upcoming tasks from pending assignments
-    setUpcomingTasks(pending.slice(0, 3).map(a => ({
-      title: a.title,
-      type: 'assignment',
-      due: a.dueDate,
-      icon: FileText
-    })));
-
-    // Generate attendance trend data
-    if (me) {
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const now = new Date();
-      const trendData = [];
-      for (let i = 5; i >= 0; i--) {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthName = months[monthDate.getMonth()];
-        // Use student's attendance as a base and add some variation
-        const attendance = Math.max(60, Math.min(100, me.attendance + Math.floor(Math.random() * 10) - 5));
-        trendData.push({
-          month: monthName,
-          attendance: attendance
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Student stats loaded:', data);
+        
+        setStudentStats({
+          attendance: data.attendance || 0,
+          internalAverage: data.internalAverage || 0,
+          pendingTasks: data.pendingTasks || 0,
+          ecaPoints: data.ecaPoints || 0
         });
-      }
-      setAttendanceTrend(trendData);
-    }
 
-    // Generate subject distribution based on marks
-    const subjectCounts: Record<string, number> = {};
-    myMarks.forEach(mark => {
-      if (subjectCounts[mark.subjectCode]) {
-        subjectCounts[mark.subjectCode] += mark.marks;
+        setStudentData(data.studentInfo);
+
+        // Generate attendance trend (placeholder with constant value for now)
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const now = new Date();
+        const trendData = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthName = months[monthDate.getMonth()];
+          trendData.push({
+            month: monthName,
+            attendance: data.attendance || 0
+          });
+        }
+        setAttendanceTrend(trendData);
       } else {
-        subjectCounts[mark.subjectCode] = mark.marks;
+        console.error('Failed to load student stats');
       }
-    });
-
-    const subjectDistData = Object.entries(subjectCounts).map(([subject, marks]) => ({
-      name: subject,
-      value: marks
-    }));
-    setSubjectDist(subjectDistData);
-
-    // Get recent updates/circulars
-    const allCirculars = getCirculars();
-    const myUpdates = allCirculars
-        .filter(c => c.audience === 'all' || c.audience === 'students')
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 3);
-    setRecentUpdates(myUpdates);
+    } catch (error) {
+      console.error('Error loading student stats:', error);
+    }
   };
 
   if (!user || user.role !== 'student') {
@@ -309,7 +264,7 @@ export default function StudentDashboard() {
         <div className="space-y-4">
           <ProgressCard
             title="Resume Completion"
-            value={studentData?.semesterHistory.length > 0 ? 60 : 30} // Placeholder value based on whether student has semester history
+            value={studentData ? 60 : 30}
             color="primary"
             delay={0.5}
           />

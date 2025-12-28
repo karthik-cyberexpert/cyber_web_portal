@@ -47,6 +47,38 @@ app.use('/api/circulars', circularRoutes);
 import classStatsRoutes from './class-stats.routes.js';
 app.use('/api/class-stats', classStatsRoutes);
 
+import facultyStudentsRoutes from './faculty-students.routes.js';
+app.use('/api/faculty-students', facultyStudentsRoutes);
+
+import studentStatsRoutes from './student-stats.routes.js';
+app.use('/api/student-stats', studentStatsRoutes);
+
+import academicDetailsRoutes from './academic-details.routes.js';
+app.use('/api/academic-details', academicDetailsRoutes);
+
+import studentTimetableRoutes from './student-timetable.routes.js';
+app.use('/api/student-timetable', studentTimetableRoutes);
+
+import studentMarksRoutes from './student-marks.routes.js';
+app.use('/api/student-marks', studentMarksRoutes);
+
+import studentNotesRoutes from './student-notes.routes.js';
+app.use('/api/student-notes', studentNotesRoutes);
+
+import materialRequestRoutes from './material-request.routes.js';
+app.use('/api/material-request', materialRequestRoutes);
+
+import studentAssignmentsRoutes from './student-assignments.routes.js';
+app.use('/api/student-assignments', studentAssignmentsRoutes);
+
+import assignmentSubmissionRoutes from './assignment-submission.routes.js';
+app.use('/api/assignment-submission', assignmentSubmissionRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+import gradeSubmissionRoutes from './grade-submission.routes.js';
+app.use('/api/grade-submission', gradeSubmissionRoutes);
 
 // Health Check
 app.get('/api/health', async (req, res) => {
@@ -70,3 +102,4 @@ app.post('/api/faculty/marks', authenticateToken, marksController.saveMarks);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

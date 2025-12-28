@@ -8,12 +8,14 @@ import {
   ChevronRight,
   TrendingUp,
   Award,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFaculty, getStudents, Faculty, Student } from '@/lib/data-store';
 
@@ -38,6 +40,9 @@ export default function MyClasses() {
     totalStudents: 0,
     avgAttendance: 0
   });
+  const [selectedClass, setSelectedClass] = useState<ClassSection | null>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   useEffect(() => {
     if (user && user.role === 'faculty') {
@@ -88,9 +93,36 @@ export default function MyClasses() {
         }
       }
     } catch (error) {
-      console.error('Error loading faculty classes:', error);
+      console.error('Error loading classes:', error);
       setClasses([]);
       setStats({ totalCourses: 0, totalStudents: 0, avgAttendance: 0 });
+    }
+  };
+
+  const handleViewStudents = async (classSection: ClassSection) => {
+    setSelectedClass(classSection);
+    setLoadingStudents(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3007/api/faculty-students/${classSection.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data);
+      } else {
+        console.error('Failed to load students');
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error('Error loading students:', error);
+      setStudents([]);
+    } finally {
+      setLoadingStudents(false);
     }
   };
 
@@ -219,9 +251,17 @@ export default function MyClasses() {
                        </div>
                     </div>
   
-                    <div className="p-4 flex flex-row lg:flex-col justify-center gap-2 border-t lg:border-t-0 lg:border-l border-white/5">
-                       <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/10 hover:text-primary"><ChevronRight className="w-5 h-5" /></Button>
-                    </div>
+                     <div className="p-4 flex flex-row lg:flex-col justify-center gap-2 border-t lg:border-t-0 lg:border-l border-white/5">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="rounded-xl hover:bg-primary/10 hover:text-primary"
+                          onClick={() => handleViewStudents(cls)}
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          View Students
+                        </Button>
+                     </div>
                  </div>
               </Card>
             </motion.div>
@@ -251,6 +291,55 @@ export default function MyClasses() {
            View Full Analytics <TrendingUp className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
         </div>
       </motion.div>
+
+      {/* Student List Modal */}
+      <Dialog open={!!selectedClass} onOpenChange={() => setSelectedClass(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedClass?.subject} ({selectedClass?.code}) - {selectedClass?.section}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {loadingStudents ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">Loading students...</div>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No students enrolled in this section
+            </div>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {students.map((student, index) => (
+                <Card key={student.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{student.name}</h4>
+                        <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                          <span>Reg No: {student.register_number}</span>
+                          <span>•</span>
+                          <span>{student.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground mb-1">Attendance</p>
+                      <Badge variant={student.attendance_percentage >= 75 ? 'default' : 'destructive'}>
+                        {student.attendance_percentage}%
+                      </Badge>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

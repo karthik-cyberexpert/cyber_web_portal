@@ -16,47 +16,51 @@ import {
 } from 'lucide-react';
 import { GlassStatCard } from '@/components/dashboard/StatCards';
 import { cn } from '@/lib/utils';
-import { getStudents, Student, getTutors } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AcademicDetails() {
   const { user } = useAuth();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [tutorName, setTutorName] = useState<string>('Not Assigned');
+  const [academicData, setAcademicData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user && user.role === 'student') {
-        const fetchProfile = async () => {
+        const fetchAcademicDetails = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3007/api/students/profile', {
+                const res = await fetch('http://localhost:3007/api/academic-details', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    setStudent(data);
-                    // Tutors logic would require separate API or be included in profile
-                    // For now, let's keep it minimal or mock if not in profile
-                    setTutorName("Dr. Sarah Wilson (HOD)"); // Placeholder until Tutor API integration
+                    console.log('Academic details loaded:', data);
+                    setAcademicData(data);
+                } else {
+                    console.error('Failed to load academic details');
                 }
             } catch (err) {
-                console.error("Error loading profile", err);
+                console.error("Error loading academic details", err);
+            } finally {
+                setLoading(false);
             }
         };
-        fetchProfile();
+        fetchAcademicDetails();
     }
   }, [user]);
 
-  if (!student) {
+  if (loading || !academicData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <AlertCircle className="w-12 h-12 text-muted-foreground/50" />
-        <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Awaiting academic records...</p>
+        <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">
+          {loading ? 'Loading academic records...' : 'No academic data available'}
+        </p>
       </div>
     );
   }
 
-  const totalCredits = student.semesterHistory.reduce((acc, s) => acc + s.credits, 0);
+  const student = academicData.studentInfo;
+  const totalCredits = academicData.totalCredits || 0;
 
   return (
     <div className="space-y-6 text-left">
@@ -64,7 +68,7 @@ export default function AcademicDetails() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold italic">Academic Overview 🎓</h1>
+        <h1 className="text-3xl font-bold italic">Academic Details 🎓</h1>
         <p className="text-muted-foreground font-medium">Detailed track record of your academic journey and achievements</p>
       </motion.div>
 
@@ -72,7 +76,7 @@ export default function AcademicDetails() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <GlassStatCard
           title="Current CGPA"
-          value={student.cgpa.toFixed(2)}
+          value={Number(academicData.cgpa || 0).toFixed(2)}
           icon={TrendingUp}
           iconColor="primary"
           delay={0.1}
@@ -86,14 +90,14 @@ export default function AcademicDetails() {
         />
         <GlassStatCard
           title="Backlogs"
-          value={student.backlogs.toString().padStart(2, '0')}
+          value={(academicData.backlogs || 0).toString().padStart(2, '0')}
           icon={ShieldCheck}
           iconColor="green"
           delay={0.3}
         />
         <GlassStatCard
           title="Semesters"
-          value={`${student.semester.toString().padStart(2, '0')}/08`}
+          value={`${(academicData.semesters?.length || 0).toString().padStart(2, '0')}/08`}
           icon={History}
           iconColor="orange"
           delay={0.4}
@@ -114,22 +118,19 @@ export default function AcademicDetails() {
             </div>
             <div>
               <p className="text-[10px] text-primary font-black uppercase tracking-widest">Programme</p>
-              <p className="text-sm font-bold italic">{student.programme}</p>
+              <p className="text-sm font-bold italic">{student.program || 'B.Tech'}</p>
             </div>
           </div>
 
             <div className="space-y-4">
               <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1 italic">Academic Identity</h3>
               {[
-                { label: "Current Status", value: student.status, icon: ShieldCheck, color: student.status === 'Active' ? "text-success" : "text-warning" },
-                { label: "Batch", value: student.batch, icon: Clock },
-                { label: "Curriculum Year", value: `Year ${student.year}`, icon: Calendar },
-                { label: "Active Semester", value: `Semester ${student.semester}`, icon: History },
-                { label: "Major", value: student.class, icon: Layout },
-                { label: "Section", value: `Section ${student.section}`, icon: User },
-                { label: "Class Tutor", value: tutorName, icon: User },
-                { label: "Enrollment Type", value: student.enrollmentType, icon: BookOpen },
-                { label: "Admission Type", value: student.admissionType, icon: FileBadge },
+                { label: "Current Status", value: student.currentStatus || 'Active', icon: ShieldCheck, color: "text-success" },
+                { label: "Batch", value: student.batch || 'N/A', icon: Clock },
+                { label: "Curriculum Year", value: `Year ${student.year || 2}`, icon: Calendar },
+                { label: "Section", value: `Section ${student.section || 'A'}`, icon: User },
+                { label: "Department", value: student.department || 'CSE', icon: Layout },
+                { label: "Register Number", value: student.registerNumber || 'N/A', icon: FileBadge },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-white/5 group">
                   <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
@@ -157,7 +158,8 @@ export default function AcademicDetails() {
           </div>
           
           <div className="space-y-3">
-            {student.semesterHistory.map((s, idx) => (
+            {academicData.semesters && academicData.semesters.length > 0 ? (
+              academicData.semesters.map((s: any, idx: number) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, y: 10 }}
@@ -169,11 +171,11 @@ export default function AcademicDetails() {
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black italic text-lg ${
                     s.status === "Completed" ? "bg-success/10 text-success" : "bg-warning/10 text-warning animate-pulse"
                   }`}>
-                    S{s.sem}
+                    S{s.sem || idx + 1}
                   </div>
                   <div>
-                    <p className="text-sm font-black italic">Semester {s.sem}</p>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{s.credits} Credits • {s.status}</p>
+                    <p className="text-sm font-black italic">Semester {s.sem || idx + 1}</p>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{s.credits} Credits • {s.status || 'Completed'}</p>
                   </div>
                 </div>
 
@@ -182,7 +184,12 @@ export default function AcademicDetails() {
                   <p className="text-[9px] font-black text-muted-foreground tracking-widest uppercase">GPA Score</p>
                 </div>
               </motion.div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-muted-foreground/20 rounded-xl">
+                <p className="text-muted-foreground text-sm font-medium">No semester data available yet</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
