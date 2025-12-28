@@ -80,6 +80,9 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 import gradeSubmissionRoutes from './grade-submission.routes.js';
 app.use('/api/grade-submission', gradeSubmissionRoutes);
 
+import studentResumeDataRoutes from './student-resume-data.routes.js';
+app.use('/api/student-resume-data', studentResumeDataRoutes);
+
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {
@@ -102,4 +105,5 @@ app.post('/api/faculty/marks', authenticateToken, marksController.saveMarks);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 

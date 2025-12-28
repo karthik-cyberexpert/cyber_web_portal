@@ -280,26 +280,6 @@ export default function LeavePortal() {
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-1 space-y-6"
             >
-              <div className="glass-card rounded-2xl p-6 bg-gradient-to-br from-primary/5 to-accent/5">
-                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6">Leave Balance</h3>
-                <div className="space-y-6">
-                  {leaveBalance.map((item, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex justify-between text-sm font-bold">
-                        <span>{item.label}</span>
-                        <span className="text-muted-foreground">{item.used}/{item.total} Days</span>
-                      </div>
-                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${item.color} rounded-full transition-all duration-1000`} 
-                          style={{ width: `${(item.used / item.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               <div className="glass-card rounded-2xl p-6">
                 <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">Guidelines</h3>
                 <ul className="space-y-3">
