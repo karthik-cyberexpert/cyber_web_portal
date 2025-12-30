@@ -28,6 +28,7 @@ import {
 
 // import { getCirculars, Circular } from '@/lib/data-store'; // Removed local data store
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -90,7 +91,7 @@ export default function Circulars() {
   const loadCirculars = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/circulars', {
+        const res = await fetch(`${API_BASE_URL}/circulars`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -113,7 +114,7 @@ export default function Circulars() {
   const loadAllocations = async () => {
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:3007/api/assignments/my-allocations', {
+          const res = await fetch(`${API_BASE_URL}/assignments/my-allocations`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -153,8 +154,8 @@ export default function Circulars() {
       try {
           const token = localStorage.getItem('token');
           const url = isEditMode 
-            ? `http://localhost:3007/api/circulars/${editingId}`
-            : 'http://localhost:3007/api/circulars';
+            ? `${API_BASE_URL}/circulars/${editingId}`
+            : `${API_BASE_URL}/circulars`;
           const method = isEditMode ? 'PUT' : 'POST';
           
           const res = await fetch(url, {
@@ -195,7 +196,7 @@ export default function Circulars() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3007/api/circulars/${circularId}`, {
+      const res = await fetch(`${API_BASE_URL}/circulars/${circularId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -417,7 +418,7 @@ export default function Circulars() {
                   </DropdownMenuItem>
                   {notice.attachment_url && (
                     <DropdownMenuItem asChild>
-                      <a href={`http://localhost:3007${notice.attachment_url}`} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      <a href={`${API_BASE_URL}${notice.attachment_url}`} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
                         <Download className="w-4 h-4 mr-2" />
                         Download File
                       </a>
@@ -531,7 +532,7 @@ export default function Circulars() {
               <div>
                 <h4 className="text-sm font-bold mb-2">Attachment:</h4>
                 <Button asChild variant="outline" size="sm">
-                  <a href={`http://localhost:3007${selectedCircular.attachment_url}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`${API_BASE_URL}${selectedCircular.attachment_url}`} target="_blank" rel="noopener noreferrer">
                     <Download className="w-4 h-4 mr-2" />
                     Download File
                   </a>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState, getStoredAuth, setStoredAuth, clearStoredAuth, getRoleDashboardPath } from '@/lib/auth';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/api-config';
 
 interface AuthContextType {
   user: User | null;
@@ -28,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3007/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

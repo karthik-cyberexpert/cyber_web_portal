@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 // Remvoing getStudents etc as we move to API
 import { 
   getData, 
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3007/api/admin/stats', {
+        const response = await fetch(`${API_BASE_URL}/admin/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

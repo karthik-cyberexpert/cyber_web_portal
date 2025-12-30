@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getFaculty, getStudents, Faculty, Student } from '@/lib/data-store';
 
 interface ClassSection {
@@ -53,7 +54,7 @@ export default function MyClasses() {
   const loadFacultyClasses = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/class-stats', {
+      const res = await fetch(`${API_BASE_URL}/class-stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -105,7 +106,7 @@ export default function MyClasses() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3007/api/faculty-students/${classSection.id}`, {
+      const response = await fetch(`${API_BASE_URL}/faculty-students/${classSection.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

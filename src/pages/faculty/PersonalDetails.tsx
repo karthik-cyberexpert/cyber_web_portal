@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getFaculty, Faculty } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 export default function PersonalDetails() {
@@ -42,7 +43,7 @@ export default function PersonalDetails() {
         const fetchProfile = async () => {
              try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3007/api/faculty/profile', {
+                const res = await fetch(`${API_BASE_URL}/faculty/profile`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -76,7 +77,7 @@ export default function PersonalDetails() {
   const handleUpdateProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/faculty/profile', {
+      const res = await fetch(`${API_BASE_URL}/faculty/profile`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,

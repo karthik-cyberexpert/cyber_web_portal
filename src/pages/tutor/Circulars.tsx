@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,7 +60,7 @@ export default function Circulars() {
   const loadCirculars = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/circulars', {
+        const res = await fetch(`${API_BASE_URL}/circulars`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -76,7 +77,7 @@ export default function Circulars() {
   const loadAssignment = async () => {
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:3007/api/tutors/class', {
+          const res = await fetch(`${API_BASE_URL}/tutors/class`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -113,7 +114,7 @@ export default function Circulars() {
 
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:3007/api/circulars', {
+          const res = await fetch(`${API_BASE_URL}/circulars`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${token}` },
               body: formData
@@ -147,7 +148,7 @@ export default function Circulars() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3007/api/circulars/${circularId}`, {
+      const res = await fetch(`${API_BASE_URL}/circulars/${circularId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

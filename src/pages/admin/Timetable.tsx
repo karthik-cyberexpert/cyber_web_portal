@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getTimetable, saveTimetable, TimetableSlot, addTimetableSlot, deleteTimetableSlot } from '@/lib/data-store';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -101,7 +102,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         const headers = { Authorization: `Bearer ${token}` };
 
         // 1. Fetch Batches
-        const resBatches = await fetch('http://localhost:3007/api/academic/batches', { headers });
+        const resBatches = await fetch(`${API_BASE_URL}/academic/batches`, { headers });
         if (resBatches.ok) {
             const data = await resBatches.json();
             setBatches(data);
@@ -111,7 +112,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         }
 
         // 2. Fetch Faculty
-        const resFaculty = await fetch('http://localhost:3007/api/admin/faculty', { headers });
+        const resFaculty = await fetch(`${API_BASE_URL}/admin/faculty`, { headers });
         if (resFaculty.ok) {
             const data = await resFaculty.json();
             setFacultyList(data);
@@ -121,7 +122,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         }
 
         // 3. Fetch Subjects
-        const resSubjects = await fetch('http://localhost:3007/api/academic/subjects', { headers });
+        const resSubjects = await fetch(`${API_BASE_URL}/academic/subjects`, { headers });
         if (resSubjects.ok) {
             const data = await resSubjects.json();
             setSubjects(data);
@@ -138,7 +139,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
   const fetchSections = async (batchId: string) => {
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${batchId}/sections`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -160,7 +161,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
         
-        let url = 'http://localhost:3007/api/academic/timetable?';
+        let url = `${API_BASE_URL}/academic/timetable?`;
         if (view === 'students' && selectedBatch && selectedSection) {
             url += `batchId=${selectedBatch}&sectionId=${selectedSection}`;
         } else if (view === 'faculty' && selectedFacultyId) {
@@ -233,7 +234,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
       // Fetch sections for this batch
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${batchId}/sections`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -294,7 +295,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
             type: editingSlot.type
         };
 
-        const res = await fetch('http://localhost:3007/api/academic/timetable', {
+        const res = await fetch(`${API_BASE_URL}/academic/timetable`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

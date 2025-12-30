@@ -25,6 +25,7 @@ import { getStudents, Student, getLeaveRequests, addLeaveRequest, LeaveRequest }
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { API_BASE_URL } from '@/lib/api-config';
 import {
   Table,
   TableBody,
@@ -67,7 +68,7 @@ export default function LeavePortal() {
           if (current) setStudentData(current);
           
           // Fetch leave history from backend
-          const historyResponse = await fetch('http://localhost:3007/api/leave/my-requests', {
+          const historyResponse = await fetch(`${API_BASE_URL}/leave/my-requests`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -117,7 +118,7 @@ export default function LeavePortal() {
         }
 
         // Call backend API
-        const response = await fetch('http://localhost:3007/api/leave/request', {
+        const response = await fetch(`${API_BASE_URL}/leave/request`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -136,7 +137,7 @@ export default function LeavePortal() {
         setShowApply(false);
         
         // Refresh leave history
-        const historyResponse = await fetch('http://localhost:3007/api/leave/my-requests', {
+        const historyResponse = await fetch(`${API_BASE_URL}/leave/my-requests`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -160,7 +161,7 @@ export default function LeavePortal() {
 
   const handleCancelRequest = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3007/api/leave/${id}/cancel-request`, {
+      const response = await fetch(`${API_BASE_URL}/leave/${id}/cancel-request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -176,7 +177,7 @@ export default function LeavePortal() {
       toast.success(data.message);
       
       // Refresh list
-      const historyResponse = await fetch('http://localhost:3007/api/leave/my-requests', {
+      const historyResponse = await fetch(`${API_BASE_URL}/leave/my-requests`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getTimetable, TimetableSlot } from '@/lib/data-store';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -53,7 +54,7 @@ export default function Timetable() {
     const fetchTimetable = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3007/api/faculty/timetable', {
+            const res = await fetch(`${API_BASE_URL}/faculty/timetable`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             

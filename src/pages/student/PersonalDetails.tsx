@@ -43,6 +43,7 @@ import { getStudents, Student } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function PersonalDetails() {
   const { user } = useAuth();
@@ -56,7 +57,7 @@ export default function PersonalDetails() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/students/profile', {
+      const res = await fetch(`${API_BASE_URL}/students/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -94,7 +95,7 @@ export default function PersonalDetails() {
     try {
       setIsSaving(true);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/students/profile', {
+      const res = await fetch(`${API_BASE_URL}/students/profile`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,

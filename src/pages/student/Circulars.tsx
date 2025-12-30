@@ -24,6 +24,7 @@ import {
     DialogFooter
   } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 interface BackendCircular {
@@ -53,7 +54,7 @@ export default function Circulars() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3007/api/circulars', {
+      const response = await fetch(`${API_BASE_URL}/circulars`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

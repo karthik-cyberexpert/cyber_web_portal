@@ -17,6 +17,7 @@ import {
 import { GlassStatCard } from '@/components/dashboard/StatCards';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function AcademicDetails() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function AcademicDetails() {
         const fetchAcademicDetails = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3007/api/academic-details', {
+                const res = await fetch(`${API_BASE_URL}/academic-details`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.ok) {

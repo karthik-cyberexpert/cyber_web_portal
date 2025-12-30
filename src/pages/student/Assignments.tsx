@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
@@ -38,7 +39,7 @@ export default function Assignments() {
   const loadAssignments = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/student-assignments', {
+      const res = await fetch(`${API_BASE_URL}/student-assignments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -89,7 +90,7 @@ export default function Assignments() {
       formData.append('file', selectedFile);
       formData.append('assignmentId', assignmentId);
       
-      const res = await fetch('http://localhost:3007/api/assignment-submission', {
+      const res = await fetch(`${API_BASE_URL}/assignment-submission`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`

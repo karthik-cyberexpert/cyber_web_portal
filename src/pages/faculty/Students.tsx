@@ -31,6 +31,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Students() {
@@ -60,7 +61,7 @@ export default function Students() {
       const token = localStorage.getItem('token');
       
       // First get all subject allocations for this faculty
-      const allocRes = await fetch('http://localhost:3007/api/class-stats', {
+      const allocRes = await fetch(`${API_BASE_URL}/class-stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -73,7 +74,7 @@ export default function Students() {
         // Load ALL students from all sections by default
         if (allocData.length > 0) {
           const allStudentsPromises = allocData.map((alloc: any) =>
-            fetch(`http://localhost:3007/api/faculty-students/${alloc.allocation_id}`, {
+            fetch(`${API_BASE_URL}/faculty-students/${alloc.allocation_id}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             }).then(res => res.ok ? res.json() : [])
           );
@@ -97,7 +98,7 @@ export default function Students() {
   const loadStudentsForAllocation = async (allocationId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3007/api/faculty-students/${allocationId}`, {
+      const response = await fetch(`${API_BASE_URL}/faculty-students/${allocationId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -127,7 +128,7 @@ export default function Students() {
     try {
       const token = localStorage.getItem('token');
       const allStudentsPromises = allocations.map(alloc =>
-        fetch(`http://localhost:3007/api/faculty-students/${alloc.allocation_id}`, {
+        fetch(`${API_BASE_URL}/faculty-students/${alloc.allocation_id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.ok ? res.json() : [])
       );

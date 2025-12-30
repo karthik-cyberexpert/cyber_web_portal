@@ -30,6 +30,7 @@ import {
     DialogTrigger,
   } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 interface ResumeData {
@@ -250,7 +251,7 @@ export default function ResumeBuilder() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/student-resume-data', {
+      const res = await fetch(`${API_BASE_URL}/student-resume-data`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

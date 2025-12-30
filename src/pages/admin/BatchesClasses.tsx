@@ -24,6 +24,7 @@ import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 interface Batch {
@@ -77,7 +78,7 @@ export default function BatchesClasses() {
 
   const fetchBatches = async () => {
       try {
-          const res = await fetch('http://localhost:3007/api/academic/batches', {
+          const res = await fetch(`${API_BASE_URL}/academic/batches`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -91,7 +92,7 @@ export default function BatchesClasses() {
 
   const fetchSections = async (batchId: number) => {
       try {
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${batchId}/sections`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -131,7 +132,7 @@ export default function BatchesClasses() {
     const name = `${year}-${end_year}`;
 
     try {
-        const res = await fetch('http://localhost:3007/api/academic/batches', {
+        const res = await fetch(`${API_BASE_URL}/academic/batches`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ export default function BatchesClasses() {
             // Auto-create sections
             for (let i = 0; i < secs; i++) {
                 const sectionName = String.fromCharCode(65 + i);
-                await fetch('http://localhost:3007/api/academic/sections', {
+                await fetch(`${API_BASE_URL}/academic/sections`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -182,7 +183,7 @@ export default function BatchesClasses() {
       if(!confirm("Are you sure? This will delete all sections and data associated with this batch.")) return;
 
       try {
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${id}`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${id}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` }
           });
@@ -206,7 +207,7 @@ export default function BatchesClasses() {
   const handleUpdateBatch = async () => {
       if (!editingBatch) return;
       try {
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${editingBatch.id}`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${editingBatch.id}`, {
               method: 'PUT',
               headers: {
                   'Content-Type': 'application/json',
@@ -253,7 +254,7 @@ export default function BatchesClasses() {
   const handleAddSection = async () => {
     if (!newSectionName || !selectedBatchId) return;
     try {
-        const res = await fetch('http://localhost:3007/api/academic/sections', {
+        const res = await fetch(`${API_BASE_URL}/academic/sections`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -283,7 +284,7 @@ export default function BatchesClasses() {
   const handleEditSectionAction = async () => {
       if (!editingSection) return;
       try {
-          const res = await fetch(`http://localhost:3007/api/academic/sections/${editingSection.id}`, {
+          const res = await fetch(`${API_BASE_URL}/academic/sections/${editingSection.id}`, {
               method: 'PUT',
               headers: {
                   'Content-Type': 'application/json',
@@ -304,7 +305,7 @@ export default function BatchesClasses() {
   const handleDeleteSection = async (id: number) => {
       if (!confirm("Delete section?")) return;
       try {
-           const res = await fetch(`http://localhost:3007/api/academic/sections/${id}`, {
+           const res = await fetch(`${API_BASE_URL}/academic/sections/${id}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` }
            });

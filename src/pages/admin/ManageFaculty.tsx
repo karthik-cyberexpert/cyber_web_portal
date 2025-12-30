@@ -44,6 +44,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { StatCard } from '@/components/dashboard/StatCards';
 
 const ITEMS_PER_PAGE = 10;
@@ -90,7 +91,7 @@ export default function ManageFaculty() {
 
   const fetchData = async () => {
     try {
-        const res = await fetch('http://localhost:3007/api/admin/faculty', {
+        const res = await fetch(`${API_BASE_URL}/admin/faculty`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -207,7 +208,7 @@ export default function ManageFaculty() {
     }
     
     try {
-        const res = await fetch('http://localhost:3007/api/admin/faculty', {
+        const res = await fetch(`${API_BASE_URL}/admin/faculty`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -237,7 +238,7 @@ export default function ManageFaculty() {
     if (!selectedFaculty) return;
     
     try {
-        const res = await fetch(`http://localhost:3007/api/admin/faculty/${selectedFaculty.id}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/faculty/${selectedFaculty.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -263,7 +264,7 @@ export default function ManageFaculty() {
     if (!selectedFaculty) return;
     
     try {
-        const res = await fetch(`http://localhost:3007/api/admin/faculty/${selectedFaculty.id}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/faculty/${selectedFaculty.id}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
         });
@@ -339,7 +340,7 @@ export default function ManageFaculty() {
              }
 
              try {
-                 const res = await fetch('http://localhost:3007/api/admin/faculty', {
+                 const res = await fetch(`${API_BASE_URL}/admin/faculty`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

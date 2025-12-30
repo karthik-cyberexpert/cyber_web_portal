@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getTimetable, getTutors, TimetableSlot } from '@/lib/data-store';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -69,7 +70,7 @@ export default function Timetable() {
             const token = localStorage.getItem('token');
             
             // 1. Get Class Info
-            const classRes = await fetch('http://localhost:3007/api/tutors/class', {
+            const classRes = await fetch(`${API_BASE_URL}/tutors/class`, {
                  headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -84,7 +85,7 @@ export default function Timetable() {
                      // Actually, we haven't made a dedicated "Get Class Timetable" API yet.
                      // Let's quickly add `getTutorTimetable` to `tutor.controller`.
                      
-                     const ttRes = await fetch(`http://localhost:3007/api/tutors/timetable`, { // New Endpoint needed
+                     const ttRes = await fetch(`${API_BASE_URL}/tutors/timetable`, { // New Endpoint needed
                          headers: { Authorization: `Bearer ${token}` }
                      });
                      

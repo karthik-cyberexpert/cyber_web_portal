@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getTutors, getFaculty, Tutor, Faculty } from '@/lib/data-store';
 
 export default function PersonalDetails() {
@@ -33,7 +34,7 @@ export default function PersonalDetails() {
     const fetchProfile = async () => {
          try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3007/api/faculty/profile', {
+            const res = await fetch(`${API_BASE_URL}/faculty/profile`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {

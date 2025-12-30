@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { getFaculty, Faculty } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function MarksEntrySelection() {
   const { user } = useAuth();
@@ -40,7 +41,7 @@ export default function MarksEntrySelection() {
   const fetchClasses = async () => {
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:3007/api/faculty/classes', {
+          const res = await fetch(`${API_BASE_URL}/faculty/classes`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {

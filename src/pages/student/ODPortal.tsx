@@ -23,10 +23,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getStudents, Student, getLeaveRequests, addLeaveRequest, LeaveRequest } from '@/lib/data-store';
+import { getStudents, Student } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { API_BASE_URL } from '@/lib/api-config';
 import {
   Table,
   TableBody,
@@ -70,7 +71,7 @@ export default function ODPortal() {
           if (current) setStudentData(current);
           
           // Fetch OD history from backend
-          const historyResponse = await fetch('http://localhost:3007/api/od/my-requests', {
+          const historyResponse = await fetch(`${API_BASE_URL}/od/my-requests`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -121,7 +122,7 @@ export default function ODPortal() {
         }
 
         // Call backend API
-        const response = await fetch('http://localhost:3007/api/od/request', {
+        const response = await fetch(`${API_BASE_URL}/od/request`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -140,7 +141,7 @@ export default function ODPortal() {
         setShowApply(false);
 
         // Refresh OD history
-        const historyResponse = await fetch('http://localhost:3007/api/od/my-requests', {
+        const historyResponse = await fetch(`${API_BASE_URL}/od/my-requests`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -165,7 +166,7 @@ export default function ODPortal() {
 
   const handleCancelRequest = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:3007/api/od/${id}/cancel-request`, {
+      const response = await fetch(`${API_BASE_URL}/od/${id}/cancel-request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -181,7 +182,7 @@ export default function ODPortal() {
       toast.success(data.message);
       
       // Refresh list
-      const historyResponse = await fetch('http://localhost:3007/api/od/my-requests', {
+      const historyResponse = await fetch(`${API_BASE_URL}/od/my-requests`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

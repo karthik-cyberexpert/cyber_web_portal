@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 interface Note {
@@ -74,7 +75,7 @@ export default function NotesUpload() {
   const loadSubjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/notes/my-subjects', {
+      const res = await fetch(`${API_BASE_URL}/notes/my-subjects`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -98,7 +99,7 @@ export default function NotesUpload() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/notes/my-notes', {
+      const res = await fetch(`${API_BASE_URL}/notes/my-notes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -143,7 +144,7 @@ export default function NotesUpload() {
         formData.append('file', selectedFile);
       }
 
-      const res = await fetch('http://localhost:3007/api/notes', {
+      const res = await fetch(`${API_BASE_URL}/notes`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -179,7 +180,7 @@ export default function NotesUpload() {
   const handleDelete = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3007/api/notes/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -202,12 +203,12 @@ export default function NotesUpload() {
 
     try {
       // Increment download count
-      await fetch(`http://localhost:3007/api/notes/${note.id}/download`, {
+      await fetch(`${API_BASE_URL}/notes/${note.id}/download`, {
         method: 'POST'
       });
 
       // Download the file using fetch + blob to force download
-      const fileUrl = `http://localhost:3007${note.file_url}`;
+      const fileUrl = `${API_BASE_URL}${note.file_url}`;
       const response = await fetch(fileUrl);
       
       if (!response.ok) {

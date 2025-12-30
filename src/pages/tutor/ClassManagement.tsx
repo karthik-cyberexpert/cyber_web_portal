@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GlassStatCard } from '@/components/dashboard/StatCards';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getTutors, getStudents, Tutor, Student } from '@/lib/data-store';
 
 export default function ClassManagement() {
@@ -46,7 +47,7 @@ export default function ClassManagement() {
     const fetchClassData = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3007/api/tutors/class', {
+            const res = await fetch(`${API_BASE_URL}/tutors/class`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

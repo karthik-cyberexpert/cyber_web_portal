@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function MarksGrades() {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function MarksGrades() {
     
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/student-marks', {
+        const res = await fetch(`${API_BASE_URL}/student-marks`, {
              headers: { Authorization: `Bearer ${token}` }
         });
         

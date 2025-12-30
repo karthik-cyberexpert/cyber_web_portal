@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getLeaveRequests, updateLeaveStatus, LeaveRequest } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 'leave' | 'od' }) {
   const { user } = useAuth();
@@ -56,7 +57,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
   const loadRequests = async () => {
     try {
       const endpoint = filterType === 'od' ? 'od' : 'leave';
-      const response = await fetch(`http://localhost:3007/api/${endpoint}/admin`, {
+      const response = await fetch(`${API_BASE_URL}/${endpoint}/admin`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -80,7 +81,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
       const endpoint = action === 'approve' ? 'admin-approve' : (action === 'reject' ? 'reject' : 'admin-revoke');
       const apiEndpoint = filterType === 'od' ? 'od' : 'leave';
       
-      const response = await fetch(`http://localhost:3007/api/${apiEndpoint}/${id}/${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/${apiEndpoint}/${id}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

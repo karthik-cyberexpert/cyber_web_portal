@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 interface Subject {
   id: number;
@@ -85,7 +86,7 @@ export default function ManageSubjects() {
     setIsLoading(true);
     try {
       // Fetch Subjects
-      const subjectsRes = await fetch('http://localhost:3007/api/academic/subjects', {
+      const subjectsRes = await fetch(`${API_BASE_URL}/academic/subjects`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (subjectsRes.ok) {
@@ -94,7 +95,7 @@ export default function ManageSubjects() {
       }
 
       // Fetch All Faculties
-      const facultyRes = await fetch('http://localhost:3007/api/admin/faculty', {
+      const facultyRes = await fetch(`${API_BASE_URL}/admin/faculty`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (facultyRes.ok) {
@@ -155,8 +156,8 @@ export default function ManageSubjects() {
     setIsSaving(true);
     try {
         const url = isEditOpen && selectedSubject 
-            ? `http://localhost:3007/api/academic/subjects/${selectedSubject.id}`
-            : 'http://localhost:3007/api/academic/subjects';
+            ? `${API_BASE_URL}/academic/subjects/${selectedSubject.id}`
+            : `${API_BASE_URL}/academic/subjects`;
             
         const method = isEditOpen ? 'PUT' : 'POST';
         
@@ -225,7 +226,7 @@ export default function ManageSubjects() {
       if (!selectedSubject) return;
       setIsSaving(true);
       try {
-          const res = await fetch(`http://localhost:3007/api/academic/subjects/${selectedSubject.id}/faculties`, {
+          const res = await fetch(`${API_BASE_URL}/academic/subjects/${selectedSubject.id}/faculties`, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',

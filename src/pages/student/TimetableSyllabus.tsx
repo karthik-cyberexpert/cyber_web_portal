@@ -16,6 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -54,7 +55,7 @@ export default function TimetableSyllabus() {
     const fetchTimetable = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/student-timetable', {
+        const res = await fetch(`${API_BASE_URL}/student-timetable`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

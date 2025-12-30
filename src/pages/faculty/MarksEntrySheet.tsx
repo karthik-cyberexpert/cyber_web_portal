@@ -23,6 +23,7 @@ import {
   Faculty
 } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 interface StudentWithMarks extends Student {
   currentMarks: number | null;
@@ -54,7 +55,7 @@ export default function MarksEntrySheet() {
     setLoading(true);
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:3007/api/faculty/marks?sectionId=${section}&subjectCode=${subject}&examType=${exam}`, {
+        const res = await fetch(`${API_BASE_URL}/faculty/marks?sectionId=${section}&subjectCode=${subject}&examType=${exam}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -179,7 +180,7 @@ export default function MarksEntrySheet() {
         };
 
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3007/api/faculty/marks', {
+        const res = await fetch(`${API_BASE_URL}/faculty/marks`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

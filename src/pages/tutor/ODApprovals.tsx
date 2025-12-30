@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LeaveRequest, getTutors, Tutor, getStudents } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function ODApprovals() {
   const { user } = useAuth();
@@ -78,7 +79,7 @@ export default function ODApprovals() {
 
   const loadRequests = async () => {
     try {
-      const response = await fetch('http://localhost:3007/api/od/tutor', {
+      const response = await fetch(`${API_BASE_URL}/od/tutor`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

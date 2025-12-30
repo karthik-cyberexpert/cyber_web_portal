@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 
@@ -106,7 +107,7 @@ export default function Assignments() {
   const loadAllocations = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/assignments/my-allocations', {
+      const res = await fetch(`${API_BASE_URL}/assignments/my-allocations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -121,7 +122,7 @@ export default function Assignments() {
   const loadAssignments = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/assignments/my-assignments', {
+      const res = await fetch(`${API_BASE_URL}/assignments/my-assignments`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -175,8 +176,8 @@ export default function Assignments() {
       }
 
       const url = isEditMode && editingId 
-        ? `http://localhost:3007/api/assignments/${editingId}`
-        : 'http://localhost:3007/api/assignments';
+        ? `${API_BASE_URL}/assignments/${editingId}`
+        : `${API_BASE_URL}/assignments`;
       
       const method = isEditMode ? 'PUT' : 'POST';
 
@@ -265,7 +266,7 @@ export default function Assignments() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3007/api/assignments/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -288,7 +289,7 @@ export default function Assignments() {
     // Fetch submissions
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3007/api/assignments/${assignment.id}/submissions`, {
+      const res = await fetch(`${API_BASE_URL}/assignments/${assignment.id}/submissions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -319,7 +320,7 @@ export default function Assignments() {
     setIsGrading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/grade-submission', {
+      const res = await fetch(`${API_BASE_URL}/grade-submission`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -776,7 +777,7 @@ export default function Assignments() {
                                               onClick={() => {
                                                 const url = sub.file_url.startsWith('http') 
                                                   ? sub.file_url 
-                                                  : `http://localhost:3007${sub.file_url}`;
+                                                  : `${API_BASE_URL}${sub.file_url}`;
                                                 window.open(url, '_blank', 'noopener,noreferrer');
                                               }}
                                             >

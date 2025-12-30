@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { StatCard } from '@/components/dashboard/StatCards';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 interface TutorAssignment {
   id: number;
@@ -84,7 +85,7 @@ export default function ManageTutors() {
 
   const fetchTutors = async () => {
     try {
-        const res = await fetch('http://localhost:3007/api/tutors', {
+        const res = await fetch(`${API_BASE_URL}/tutors`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -98,7 +99,7 @@ export default function ManageTutors() {
 
   const fetchFaculty = async () => {
       try {
-        const res = await fetch('http://localhost:3007/api/admin/faculty', {
+        const res = await fetch(`${API_BASE_URL}/admin/faculty`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -112,7 +113,7 @@ export default function ManageTutors() {
 
   const fetchBatches = async () => {
       try {
-        const res = await fetch('http://localhost:3007/api/academic/batches', {
+        const res = await fetch(`${API_BASE_URL}/academic/batches`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -127,7 +128,7 @@ export default function ManageTutors() {
   const fetchSections = async (batchId: string) => {
       if (!batchId) return;
       try {
-        const res = await fetch(`http://localhost:3007/api/academic/batches/${batchId}/sections`, {
+        const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -174,7 +175,7 @@ export default function ManageTutors() {
       }
 
       try {
-          const res = await fetch('http://localhost:3007/api/tutors', {
+          const res = await fetch(`${API_BASE_URL}/tutors`, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
@@ -212,7 +213,7 @@ export default function ManageTutors() {
   const confirmDelete = async () => {
       if (!selectedTutor) return;
       try {
-          const res = await fetch(`http://localhost:3007/api/tutors/${selectedTutor.id}`, {
+          const res = await fetch(`${API_BASE_URL}/tutors/${selectedTutor.id}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` }
           });

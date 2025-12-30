@@ -50,6 +50,7 @@ import {
   Student, 
   // Removing local store functions
 } from '@/lib/data-store';
+import { API_BASE_URL } from '@/lib/api-config';
 // ... existing imports ...
 import { StatCard } from '@/components/dashboard/StatCards';
 
@@ -70,9 +71,14 @@ interface ApiStudent {
 
 const ITEMS_PER_PAGE = 10;
 
+interface LocalStudent extends Student {
+    batchId?: number;
+    sectionId?: number;
+}
+
 export default function ManageStudents() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<LocalStudent[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<LocalStudent[]>([]);
   const [batches, setBatches] = useState<any[]>([]); // New State for Batches
   const [sections, setSections] = useState<any[]>([]); // New State for Sections
   
@@ -85,7 +91,7 @@ export default function ManageStudents() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<LocalStudent | null>(null);
   const [formData, setFormData] = useState<any>({}); // Relaxed type for form data
 
   
@@ -104,11 +110,11 @@ export default function ManageStudents() {
           const headers = { Authorization: `Bearer ${token}` };
 
           // 1. Fetch Students
-          const resStudents = await fetch('http://localhost:3007/api/students', { headers });
+          const resStudents = await fetch(`${API_BASE_URL}/students`, { headers });
           if (resStudents.ok) {
               const data = await resStudents.json();
               // Map API data to Frontend Interface
-              const mappedStudents: Student[] = data.map((s: any) => ({
+              const mappedStudents: LocalStudent[] = data.map((s: any) => ({
                   id: s.id.toString(),
                   name: s.name,
                   rollNumber: s.roll_number,
@@ -128,7 +134,7 @@ export default function ManageStudents() {
           }
 
           // 2. Fetch Batches for Filter/Dropdown
-          const resBatches = await fetch('http://localhost:3007/api/academic/batches', { headers });
+          const resBatches = await fetch(`${API_BASE_URL}/academic/batches`, { headers });
           if (resBatches.ok) {
               const data = await resBatches.json();
               setBatches(data);
@@ -146,7 +152,7 @@ export default function ManageStudents() {
       if (batchFilter !== 'all') {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${batchFilter}/sections`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchFilter}/sections`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -246,7 +252,7 @@ export default function ManageStudents() {
       
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`http://localhost:3007/api/academic/batches/${batchId}/sections`, {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {
@@ -265,7 +271,7 @@ export default function ManageStudents() {
       }
   };
 
-  const handleEdit = (student: Student) => {
+  const handleEdit = (student: LocalStudent) => {
     setSelectedStudent(student);
     // Student object uses names for display, need to use IDs for form if available
     // OR map back. Since we added batchId/sectionId to student object earlier:
@@ -281,12 +287,12 @@ export default function ManageStudents() {
     setIsEditModalOpen(true);
   };
 
-  const handleView = (student: Student) => {
+  const handleView = (student: LocalStudent) => {
     setSelectedStudent(student);
     setIsViewModalOpen(true);
   };
 
-  const handleDelete = (student: Student) => {
+  const handleDelete = (student: LocalStudent) => {
     setSelectedStudent(student);
     setIsDeleteModalOpen(true);
   };
@@ -312,7 +318,7 @@ export default function ManageStudents() {
         gender: formData.gender || 'Other'
       };
 
-      const response = await fetch('http://localhost:3007/api/students', {
+      const response = await fetch(`${API_BASE_URL}/students`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -348,7 +354,7 @@ export default function ManageStudents() {
         section_id: formData.section
       };
 
-      const response = await fetch(`http://localhost:3007/api/students/${selectedStudent.id}`, {
+      const response = await fetch(`${API_BASE_URL}/students/${selectedStudent.id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -374,7 +380,7 @@ export default function ManageStudents() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3007/api/students/${selectedStudent.id}`, {
+      const response = await fetch(`${API_BASE_URL}/students/${selectedStudent.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -441,46 +447,51 @@ export default function ManageStudents() {
         let addedCount = 0;
         let errorCount = 0;
 
-        data.forEach((row: any) => {
-          // Basic validation
-          if (!row['Full Name'] || !row['Roll Number'] || !row['Email']) {
-            errorCount++;
-            return;
-          }
+        // Process in chunks or sequentially
+        const uploadStudents = async () => {
+             for (const row of data as any[]) {
+                // Basic validation
+                if (!row['Full Name'] || !row['Roll Number'] || !row['Email']) {
+                  errorCount++;
+                  continue;
+                }
 
-          addStudent({
-            name: row['Full Name'],
-            rollNumber: row['Roll Number'],
-            email: row['Email'],
-            phone: row['Phone'] || '',
-            batch: row['Batch'] || '2024-2028',
-            section: row['Section'] || 'A',
-            year: 1, // Defaulting, could be calculated or added to template
-            semester: 1,
-            enrollmentType: 'Regular',
-            admissionType: 'Government',
-            status: 'Active',
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${row['Full Name']}`,
-            dateOfBirth: '',
-            address: '',
-            guardianName: row['Guardian Name'] || '',
-            guardianPhone: row['Guardian Phone'] || '',
-            attendance: 0,
-            cgpa: 0,
-            programme: 'B.Tech',
-            class: '1st Year',
-            backlogs: 0,
-            gender: row['Gender'] || 'Not Specified',
-            bloodGroup: '',
-            nationality: 'Indian',
-            semesterHistory: [],
-          });
-          addedCount++;
-        });
-
-        setStudents(getStudents()); // Refresh list
-        toast.success(`Successfully added ${addedCount} students. ${errorCount > 0 ? `${errorCount} entries failed due to missing data.` : ''}`);
-        setIsBulkUploadModalOpen(false);
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_BASE_URL}/students`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            name: row['Full Name'],
+                            roll_number: row['Roll Number'],
+                            email: row['Email'],
+                            phone: row['Phone'] || '',
+                            batch_id: row['Batch ID'] || 1, // Validation needed for ID vs Name
+                            section_id: row['Section ID'] || 1, // Validation needed
+                            dob: '2000-01-01', // Default
+                            gender: row['Gender'] || 'Not Specified',
+                            // Add other fields as necessary mapped from Excel
+                        })
+                    });
+                    
+                    if (res.ok) addedCount++;
+                    else errorCount++;
+                } catch (e) {
+                    errorCount++;
+                }
+             }
+             
+             setIsUploading(false);
+             if (fileInputRef.current) fileInputRef.current.value = '';
+             fetchData();
+             toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
+             setIsBulkUploadModalOpen(false);
+        };
+        
+        uploadStudents();
       } catch (error) {
         console.error("Error parsing file:", error);
         toast.error("Failed to parse the file. Please check the format.");

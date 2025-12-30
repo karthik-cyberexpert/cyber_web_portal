@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function NotesQuestionBank() {
   const { user } = useAuth();
@@ -49,7 +50,7 @@ export default function NotesQuestionBank() {
   const loadNotes = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/student-notes', {
+      const res = await fetch(`${API_BASE_URL}/student-notes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -245,7 +246,7 @@ function RequestMaterialDialog({ user }: { user: any }) {
   const loadFaculty = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/faculty', {
+      const res = await fetch(`${API_BASE_URL}/faculty`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -267,7 +268,7 @@ function RequestMaterialDialog({ user }: { user: any }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3007/api/material-request', {
+      const res = await fetch(`${API_BASE_URL}/material-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

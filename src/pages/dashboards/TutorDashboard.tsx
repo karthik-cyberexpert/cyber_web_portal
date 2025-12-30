@@ -30,6 +30,7 @@ import {
   Bar,
 } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { 
   getTutors, 
   getStudents, 
@@ -79,7 +80,7 @@ export default function TutorDashboard() {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         // 1. Get Overview & Assignment
-        const ovRes = await fetch('http://localhost:3007/api/tutor-analytics/overview', { headers });
+        const ovRes = await fetch(`${API_BASE_URL}/tutor-analytics/overview`, { headers });
         const overview = await ovRes.json();
         
         if (overview.hasAssignment) {
@@ -95,7 +96,7 @@ export default function TutorDashboard() {
           }));
 
           // 2. Fetch Class List for alerts
-          const classRes = await fetch('http://localhost:3007/api/tutors/class', { headers });
+          const classRes = await fetch(`${API_BASE_URL}/tutors/class`, { headers });
           const classData = await classRes.json();
           const myStudents = classData.students || [];
 
@@ -110,7 +111,7 @@ export default function TutorDashboard() {
         }
 
         // 3. Performance Trend (Mocking with real average as base)
-        const perfRes = await fetch('http://localhost:3007/api/tutor-analytics/attendance', { headers });
+        const perfRes = await fetch(`${API_BASE_URL}/tutor-analytics/attendance`, { headers });
         const attData = await perfRes.json();
         const trend = attData.map((d: any) => ({
           month: d.day,

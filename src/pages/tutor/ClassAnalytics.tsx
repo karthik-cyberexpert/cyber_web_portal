@@ -28,6 +28,7 @@ import {
   Pie,
 } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/api-config';
 import { getTutors, getStudents, getMarks, Tutor, Student, MarkEntry } from '@/lib/data-store';
 
 export default function ClassAnalytics() {
@@ -45,7 +46,7 @@ export default function ClassAnalytics() {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         // 1. Overview
-        const ovRes = await fetch('http://localhost:3007/api/tutor-analytics/overview', { headers });
+        const ovRes = await fetch(`${API_BASE_URL}/tutor-analytics/overview`, { headers });
         const overview = await ovRes.json();
         if (overview.hasAssignment) {
           setTutor({
@@ -57,17 +58,17 @@ export default function ClassAnalytics() {
         }
 
         // 2. Attendance
-        const attRes = await fetch('http://localhost:3007/api/tutor-analytics/attendance', { headers });
+        const attRes = await fetch(`${API_BASE_URL}/tutor-analytics/attendance`, { headers });
         const attendance = await attRes.json();
         setAttendanceTrend(attendance);
 
         // 3. Performance
-        const perfRes = await fetch('http://localhost:3007/api/tutor-analytics/performance', { headers });
+        const perfRes = await fetch(`${API_BASE_URL}/tutor-analytics/performance`, { headers });
         const performance = await perfRes.json();
         setGradeDistribution(performance);
 
         // 4. Subjects
-        const subRes = await fetch('http://localhost:3007/api/tutor-analytics/subjects', { headers });
+        const subRes = await fetch(`${API_BASE_URL}/tutor-analytics/subjects`, { headers });
         const subjects = await subRes.json();
         setSubjectPerformance(subjects);
 
