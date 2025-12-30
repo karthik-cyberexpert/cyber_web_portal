@@ -136,6 +136,60 @@ export const uploadAssignment = multer({
     }
 });
 
+// Storage configuration for Leave Requests
+const leaveStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(UPLOADS_BASE, 'leave_requests');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        const basename = path.basename(file.originalname, ext)
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .substring(0, 50);
+        cb(null, `leave_${uniqueSuffix}_${basename}${ext}`);
+    }
+});
+
+// Storage configuration for OD Requests
+const odStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(UPLOADS_BASE, 'od_requests');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        const basename = path.basename(file.originalname, ext)
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .substring(0, 50);
+        cb(null, `od_${uniqueSuffix}_${basename}${ext}`);
+    }
+});
+
+export const uploadLeave = multer({
+    storage: leaveStorage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
+});
+
+export const uploadOD = multer({
+    storage: odStorage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
+});
+
 // Helper to get file URL from path
 export const getFileUrl = (filePath: string): string => {
     // Convert absolute path to relative URL

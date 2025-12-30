@@ -27,6 +27,10 @@ import NotesQuestionBankStudent from "@/pages/student/NotesQuestionBank";
 import AssignmentsStudent from "@/pages/student/Assignments";
 import CircularsStudent from "@/pages/student/Circulars";
 import LeavePortalStudent from "@/pages/student/LeavePortal";
+import ODPortalStudent from "@/pages/student/ODPortal";
+import FeedbackPortalStudent from "@/pages/student/FeedbackPortal";
+import GrievancePortalStudent from "@/pages/student/GrievancePortal";
+import LostFoundPortalStudent from "@/pages/student/LostFoundPortal";
 import LMSQuizStudent from "@/pages/student/LMSQuiz";
 import ECAAchievementsStudent from "@/pages/student/ECAAchievements";
 import ResumeBuilderStudent from "@/pages/student/ResumeBuilder";
@@ -54,6 +58,10 @@ import VerifyMarks from "@/pages/tutor/VerifyMarks";
 import NotesStatus from "@/pages/tutor/NotesStatus";
 import AssignmentStatus from "@/pages/tutor/AssignmentStatus";
 import LeaveApprovals from "@/pages/tutor/LeaveApprovals";
+import ODApprovals from "@/pages/tutor/ODApprovals";
+import FeedbackPortalTutor from "@/pages/tutor/FeedbackPortal";
+import GrievancePortalTutor from "@/pages/tutor/GrievancePortal";
+import LostFoundPortalTutor from "@/pages/tutor/LostFoundPortal";
 import LMSAnalytics from "@/pages/tutor/LMSAnalytics";
 import ECAApprovals from "@/pages/tutor/ECAApprovals";
 import CircularsTutor from "@/pages/tutor/Circulars";
@@ -73,6 +81,9 @@ import CircularsAdmin from "@/pages/admin/Circulars";
 import LMSManagement from "@/pages/admin/LMSManagement";
 import ECAAnalytics from "@/pages/admin/ECAAnalytics";
 import LeaveApprovalsAdmin from "@/pages/admin/LeaveApprovals";
+import FeedbackPortalAdmin from "@/pages/admin/FeedbackPortal";
+import GrievancePortalAdmin from "@/pages/admin/GrievancePortal";
+import LostFoundPortalAdmin from "@/pages/admin/LostFoundPortal";
 import Settings from "@/pages/admin/Settings";
 import Profile from "@/pages/admin/Profile";
 
@@ -115,6 +126,10 @@ const App = () => {
                   <Route path="assignments" element={<AssignmentsStudent />} />
                   <Route path="circulars" element={<CircularsStudent />} />
                   <Route path="leave" element={<LeavePortalStudent />} />
+                  <Route path="od" element={<ODPortalStudent />} />
+                  <Route path="feedback" element={<FeedbackPortalStudent />} />
+                  <Route path="grievance" element={<GrievancePortalStudent />} />
+                  <Route path="lost-found" element={<LostFoundPortalStudent />} />
                   <Route path="lms" element={<LMSQuizStudent />} />
                   <Route path="eca" element={<ECAAchievementsStudent />} />
                   <Route path="resume" element={<ResumeBuilderStudent />} />
@@ -160,6 +175,10 @@ const App = () => {
                   <Route path="notes" element={<NotesStatus />} />
                   <Route path="assignments" element={<AssignmentStatus />} />
                   <Route path="leave" element={<LeaveApprovals />} />
+                  <Route path="od" element={<ODApprovals />} />
+                  <Route path="feedback" element={<FeedbackPortalTutor />} />
+                  <Route path="grievance" element={<GrievancePortalTutor />} />
+                  <Route path="lost-found" element={<LostFoundPortalTutor />} />
                   <Route path="lms" element={<LMSAnalytics />} />
                   <Route path="eca" element={<ECAApprovals />} />
                   <Route path="circulars" element={<CircularsTutor />} />
@@ -186,8 +205,11 @@ const App = () => {
                   <Route path="timetable/faculty" element={<TimetableAdmin view="faculty" />} />
                   <Route path="marks" element={<ApproveMarks />} />
                   <Route path="requests" element={<Navigate to="/admin/requests/leave" replace />} />
-                  <Route path="requests/leave" element={<LeaveApprovals filterType="leave" />} />
-                  <Route path="requests/od" element={<LeaveApprovals filterType="od" />} />
+                  <Route path="requests/leave" element={<LeaveApprovalsAdmin filterType="leave" />} />
+                  <Route path="requests/od" element={<LeaveApprovalsAdmin filterType="od" />} />
+                  <Route path="feedback" element={<FeedbackPortalAdmin />} />
+                  <Route path="grievance" element={<GrievancePortalAdmin />} />
+                  <Route path="lost-found" element={<LostFoundPortalAdmin />} />
 
                   <Route path="marks" element={<ApproveMarks />} />
                   <Route path="notes" element={<NotesAnalytics />} />

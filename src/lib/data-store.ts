@@ -50,7 +50,6 @@ export interface Faculty {
   address: string;
   office: string;
   department?: string;
-  employeeId: string;
   education: { degree: string; institution: string; year: string }[];
   createdAt: string;
 }
@@ -843,14 +842,32 @@ export interface LeaveRequest {
   id: string;
   userId: string;
   userName: string;
+  user_name?: string; // Support for backend casing
+  roll_number?: string;
+  batch_id?: string;
+  batch_name?: string;
+  current_semester?: number;
+  section_id?: string;
   type: string;
   startDate: string;
   endDate: string;
   reason: string;
   contact: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'pending_admin' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
   processedBy?: string;
   processedDate?: string;
+  durationType?: string;
+  approvedBy?: string;
+  approved_by?: string;
+  workingDays?: number;
+  working_days?: number;
+  placeToVisit?: string;
+  place_to_visit?: string;
+  forwarded_by_name?: string;
+  approver_name?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  proofUrl?: string;
   createdAt: string;
 }
 

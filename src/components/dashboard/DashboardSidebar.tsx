@@ -53,7 +53,18 @@ const studentLinks: SidebarLink[] = [
     ]
   },
   { label: 'Circulars', icon: Bell, path: '/student/circulars' },
-  { label: 'Leave Portal', icon: ExternalLink, path: '/student/leave' },
+  { 
+    label: 'Portals', 
+    icon: ExternalLink, 
+    path: '/student/portals-menu',
+    children: [
+      { label: 'Leave Portal', icon: ExternalLink, path: '/student/leave' },
+      { label: 'OD Portal', icon: ExternalLink, path: '/student/od' },
+      { label: 'Feedback Portal', icon: ExternalLink, path: '/student/feedback' },
+      { label: 'Grievance Portal', icon: ExternalLink, path: '/student/grievance' },
+      { label: 'Lost & Found', icon: ExternalLink, path: '/student/lost-found' },
+    ]
+  },
   { label: 'LMS Quiz', icon: Trophy, path: '/student/lms' },
   { label: 'ECA & Achievements', icon: Sparkles, path: '/student/eca' },
   { label: 'Resume Builder', icon: FileCheck, path: '/student/resume' },
@@ -94,7 +105,19 @@ const tutorLinks: SidebarLink[] = [
       { label: 'LMS Analytics', icon: BarChart3, path: '/tutor/lms' },
       { label: 'ECA Analytics', icon: Trophy, path: '/tutor/eca' },
       { label: 'Circulars', icon: Bell, path: '/tutor/circulars' },
+    ]
+  },
+  // Portals
+  { 
+    label: 'Portals', 
+    icon: ExternalLink, 
+    path: '/tutor/portals-menu',
+    children: [
       { label: 'Leave Approvals', icon: ExternalLink, path: '/tutor/leave' },
+      { label: 'OD Approvals', icon: ExternalLink, path: '/tutor/od' },
+      { label: 'Feedback Portal', icon: ExternalLink, path: '/tutor/feedback' },
+      { label: 'Grievance Portal', icon: ExternalLink, path: '/tutor/grievance' },
+      { label: 'Lost & Found', icon: ExternalLink, path: '/tutor/lost-found' },
     ]
   },
   // Faculty Responsibilities
@@ -140,12 +163,15 @@ const adminLinks: SidebarLink[] = [
   },
   { label: 'Approve Marks', icon: ClipboardList, path: '/admin/marks' },
   {
-    label: 'Requests',
+    label: 'Portals',
     icon: ExternalLink,
-    path: '/admin/requests',
+    path: '/admin/portals',
     children: [
       { label: 'Leave Requests', icon: ExternalLink, path: '/admin/requests/leave' },
-      { label: 'OD Requests', icon: ExternalLink, path: '/admin/requests/od' }
+      { label: 'OD Requests', icon: ExternalLink, path: '/admin/requests/od' },
+      { label: 'Feedback Portal', icon: ExternalLink, path: '/admin/feedback' },
+      { label: 'Grievance Portal', icon: ExternalLink, path: '/admin/grievance' },
+      { label: 'Lost & Found', icon: ExternalLink, path: '/admin/lost-found' },
     ]
   },
   { label: 'Circulars', icon: Bell, path: '/admin/circulars' },

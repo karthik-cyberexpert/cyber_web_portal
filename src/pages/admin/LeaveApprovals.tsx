@@ -12,47 +12,115 @@ import {
   Filter,
   Search,
   Building2,
-  ChevronRight
+  ChevronRight,
+  MapPin,
+  Eye,
+  FileDown,
+  MoreHorizontal,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getLeaveRequests, updateLeaveStatus, LeaveRequest } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LeaveApprovals() {
+export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 'leave' | 'od' }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     loadRequests();
-  }, []);
+  }, [filterType]);
 
-  const loadRequests = () => {
-    setRequests(getLeaveRequests().reverse());
-    setLoading(false);
+  const loadRequests = async () => {
+    try {
+      const endpoint = filterType === 'od' ? 'od' : 'leave';
+      const response = await fetch(`http://localhost:3007/api/${endpoint}/admin`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRequests(data);
+      }
+    } catch (error) {
+      console.error('Error loading admin requests:', error);
+      toast.error('Failed to load requests');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAction = (id: string, action: 'approve' | 'reject') => {
+  const handleAction = async (id: string, action: 'approve' | 'reject' | 'revoke', reason?: string) => {
     if (!user) return;
-    const status = action === 'approve' ? 'approved' : 'rejected';
-    updateLeaveStatus(id, status, user.name);
     
-    toast.success(action === 'approve' ? "Leave Approved" : "Leave Rejected");
-    loadRequests();
+    try {
+      const endpoint = action === 'approve' ? 'admin-approve' : (action === 'reject' ? 'reject' : 'admin-revoke');
+      const apiEndpoint = filterType === 'od' ? 'od' : 'leave';
+      
+      const response = await fetch(`http://localhost:3007/api/${apiEndpoint}/${id}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: action === 'reject' ? JSON.stringify({ rejection_reason: reason }) : undefined
+      });
+
+      if (response.ok) {
+        toast.success(`${filterType.toUpperCase()} ${action}d successfully`);
+        setIsRejectOpen(false);
+        setIsViewOpen(false);
+        setRejectionReason('');
+        loadRequests();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || `Failed to ${action} request`);
+      }
+    } catch (error) {
+      console.error(`Error during ${action}:`, error);
+      toast.error(`Error during ${action}`);
+    }
   };
 
   const filteredRequests = requests
-    .filter(r => activeTab === 'pending' ? r.status === 'pending' : r.status !== 'pending')
-    .filter(r => 
-      r.userName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      r.type.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    .filter(r => activeTab === 'pending' ? r.status === 'pending_admin' : r.status !== 'pending_admin')
+    .filter(r => {
+      const name = r.user_name || r.userName || '';
+      const roll = r.roll_number || '';
+      const type = r.type || '';
+      return name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             roll.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             type.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
+  const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString();
+  };
 
   if (loading) return <div className="p-8 text-center uppercase tracking-widest text-xs font-bold animate-pulse">Loading requests...</div>;
 
@@ -64,7 +132,7 @@ export default function LeaveApprovals() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold italic">Department Leave Portal 🏢</h1>
+          <h1 className="text-3xl font-bold italic">{filterType === 'od' ? 'OD' : 'Leave'} Approval Center 🏢</h1>
           <p className="text-muted-foreground font-medium">HOD Approval Center for Student Requests</p>
         </div>
         <div className="flex bg-muted p-1 rounded-xl">
@@ -74,7 +142,7 @@ export default function LeaveApprovals() {
             onClick={() => setActiveTab('pending')}
             className="rounded-lg font-bold"
           >
-            Pending ({requests.filter(r => r.status === 'pending').length})
+            Pending ({requests.filter(r => r.status === 'pending_admin').length})
           </Button>
           <Button 
             variant={activeTab === 'history' ? 'default' : 'ghost'} 
@@ -87,7 +155,6 @@ export default function LeaveApprovals() {
         </div>
       </motion.div>
 
-
       {/* Filters */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -98,7 +165,7 @@ export default function LeaveApprovals() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by student name or leave type..." 
+            placeholder="Search by name, roll number or type..." 
             className="pl-10 rounded-xl bg-muted/50 border-transparent focus:bg-card transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -106,108 +173,298 @@ export default function LeaveApprovals() {
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <AnimatePresence mode="popLayout">
-          {filteredRequests.map((request, index) => (
-            <motion.div
-              key={request.id}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.1 }}
-              className="glass-card rounded-2xl p-6 relative overflow-hidden group"
-            >
-              <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex items-start gap-4 flex-1">
-                  <Avatar className="w-16 h-16 border-4 border-primary/10 group-hover:border-primary/30 transition-all rounded-2xl">
-                    <AvatarFallback className="font-bold text-xl">{request.userName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-xl font-bold">{request.userName}</h3>
-                      <Badge variant="secondary" className="text-[10px] font-black uppercase bg-accent/10 text-accent border-accent/20 tracking-widest">
-                        {request.type}
-                      </Badge>
-                      {request.status !== 'pending' && (
-                          <Badge variant={request.status === 'approved' ? 'success' : 'destructive'} className="uppercase text-[9px] font-black">
-                              {request.status}
-                          </Badge>
+      <div className="glass-card rounded-2xl overflow-hidden border border-white/5">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-white/5 hover:bg-transparent">
+              <TableHead className="w-[200px] pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Student Info</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Roll Number</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch & Year</TableHead>
+              <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Forwarded</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From Date</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To Date</TableHead>
+              <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</TableHead>
+              <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <AnimatePresence mode="popLayout">
+              {filteredRequests
+                .map((request) => (
+                <motion.tr
+                  layout
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  key={request.id}
+                  className="group border-white/5 hover:bg-white/[0.02] transition-colors"
+                >
+                  <TableCell className="pl-6">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-8 h-8 rounded-lg ring-1 ring-white/10 group-hover:ring-primary/30 transition-all">
+                        <AvatarFallback className="rounded-lg text-[10px] font-bold bg-primary/10 text-primary">
+                            {(request.user_name || request.userName || '?').charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                          <p className="font-bold text-xs truncate whitespace-nowrap">{request.user_name || request.userName}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium italic">{request.type}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-[10px] font-bold tracking-tighter text-muted-foreground">{request.roll_number || 'N/A'}</TableCell>
+                  <TableCell>
+                      <div className="text-[10px]">
+                          <p className="font-black text-primary/80">{request.batch_name || request.batch_id || 'N/A'}</p>
+                          <p className="text-muted-foreground/70 font-bold uppercase tracking-tighter">Year {request.current_semester ? Math.ceil(request.current_semester / 2) : '1'}</p>
+                      </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {request.forwarded_by_name ? (
+                        <Badge variant="outline" className="text-[9px] font-black border-amber-500/20 text-amber-500 bg-amber-500/5">
+                            {request.forwarded_by_name.split(' ')[0]}
+                        </Badge>
+                    ) : (
+                        <span className="text-xs text-muted-foreground/30">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.startDate)}</TableCell>
+                  <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.endDate)}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge 
+                      variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'cancel_requested' ? 'outline' : 'outline'))} 
+                      className={`uppercase text-[9px] font-black ${
+                        request.status === 'approved' ? 'bg-emerald-500 hover:bg-emerald-600' : 
+                        request.status === 'cancel_requested' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                        request.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500 border-slate-500/20' : ''
+                      }`}
+                    >
+                        {request.status.replace('_admin', '').replace('_', ' ')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <div className="flex justify-end items-center gap-1">
+                      {request.status === 'pending_admin' && (
+                        <div className="flex gap-1 mr-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10 rounded-full transition-all"
+                            onClick={() => handleAction(request.id, 'approve')}
+                          >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7 text-red-500 hover:bg-red-500/10 rounded-full transition-all"
+                            onClick={() => {
+                                setSelectedRequest(request);
+                                setIsRejectOpen(true);
+                            }}
+                          >
+                              <XCircle className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       )}
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/10 text-muted-foreground">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="glass-card border-white/10 p-1 min-w-[120px]">
+                          <DropdownMenuItem 
+                            className="gap-2 text-[10px] font-bold uppercase tracking-wider text-primary focus:text-primary focus:bg-primary/10 rounded-lg cursor-pointer"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsViewOpen(true);
+                            }}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View Details
+                          </DropdownMenuItem>
+                          
+                          {request.status !== 'pending_admin' && (
+                            (() => {
+                              const canRevoke = new Date(request.startDate) > new Date();
+                              return (
+                                <DropdownMenuItem 
+                                  className={`gap-2 text-[10px] font-bold uppercase tracking-wider rounded-lg mt-0.5 ${canRevoke ? 'text-amber-500 focus:text-amber-500 focus:bg-amber-500/10 cursor-pointer' : 'text-muted-foreground/40 opacity-50 cursor-not-allowed'}`}
+                                  onClick={() => canRevoke && handleAction(request.id, 'revoke')}
+                                  disabled={!canRevoke}
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  Revoke Decision
+                                </DropdownMenuItem>
+                              );
+                            })()
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-4 text-xs font-bold text-muted-foreground mt-2 uppercase tracking-tight">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        <span className="text-foreground">{request.startDate}</span> <ChevronRight className="w-3 h-3" /> <span className="text-foreground">{request.endDate}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="w-4 h-4 text-purple-500" />
-                        Contact: {request.contact}
-                      </div>
-                    </div>
+                  </TableCell>
+                </motion.tr>
+              ))}
+            </AnimatePresence>
 
-                    <div className="mt-4 p-4 rounded-2xl bg-muted/30 border border-border/50 relative group/reason">
-                      <div className="flex items-center gap-2 mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                        <MessageSquare className="w-3 h-3 text-primary" />
-                        Reason for Leave
-                      </div>
-                      <p className="text-sm leading-relaxed italic text-foreground/80 font-medium">
-                        "{request.reason}"
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {request.status === 'pending' && (
-                  <div className="flex lg:flex-col justify-end gap-3 lg:min-w-[160px]">
-                    <Button 
-                      variant="gradient" 
-                      className="flex-1 lg:w-full shadow-glow-sm font-bold uppercase text-xs tracking-widest"
-                      onClick={() => handleAction(request.id, 'approve')}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      className="flex-1 lg:w-full border-destructive/20 text-destructive hover:bg-destructive/10 font-bold uppercase text-xs tracking-widest"
-                      onClick={() => handleAction(request.id, 'reject')}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                )}
-
-                {request.status !== 'pending' && (
-                    <div className="flex flex-col justify-center items-end text-right lg:min-w-[160px]">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground">Processed By</p>
-                        <p className="font-bold text-sm">{request.processedBy}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">{new Date(request.processedDate || '').toLocaleDateString()}</p>
-                    </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {filteredRequests.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20 glass-card rounded-2xl border-dashed border-2 border-white/5"
-          >
-            <div className="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-border/50">
-              <FileText className="w-10 h-10 text-muted-foreground opacity-30" />
-            </div>
-            <h3 className="text-xl font-bold text-muted-foreground/50 uppercase tracking-widest">No Requests Found</h3>
-            <p className="text-muted-foreground/60 max-w-sm mx-auto text-sm">
-              The department is currently clear of pending leave applications.
-            </p>
-          </motion.div>
-        )}
+            {filteredRequests.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                        <div className="flex flex-col items-center justify-center text-muted-foreground/40 gap-2">
+                            <FileText className="w-8 h-8 opacity-20" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No requests found</p>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* View Details Dialog */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-white/5 glass-card shadow-2xl">
+          <div className="p-1 px-1 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20">
+              <div className="bg-card/90 backdrop-blur-xl rounded-[22px] p-6 space-y-6">
+                  <DialogHeader>
+                    <div className="flex items-center gap-4 mb-2">
+                        <Avatar className="w-14 h-14 rounded-2xl border-2 border-primary/20">
+                            <AvatarFallback className="text-xl font-black bg-primary/5 text-primary">
+                                {selectedRequest ? (selectedRequest.user_name || selectedRequest.userName || '?').charAt(0) : '?'}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <DialogTitle className="text-2xl font-bold tracking-tight">
+                                {selectedRequest?.user_name || selectedRequest?.userName}
+                            </DialogTitle>
+                            <p className="text-xs text-muted-foreground font-medium">{selectedRequest?.roll_number} • {selectedRequest?.batch_id}</p>
+                        </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1 p-3 rounded-2xl bg-muted/30 border border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">From Date</p>
+                          <p className="text-sm font-bold flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-primary" />
+                            {formatDate(selectedRequest?.startDate)}
+                          </p>
+                      </div>
+                      <div className="space-y-1 p-3 rounded-2xl bg-muted/30 border border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">To Date</p>
+                          <p className="text-sm font-bold flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-primary" />
+                            {formatDate(selectedRequest?.endDate)}
+                          </p>
+                      </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
+                        <MessageSquare className="w-3 h-3 text-primary" />
+                        Details & Purpose
+                      </p>
+                      <div className="p-4 rounded-2xl bg-muted/30 border border-white/5 italic text-sm font-medium leading-relaxed text-foreground/80">
+                        "{selectedRequest?.reason}"
+                      </div>
+                  </div>
+
+                  {filterType === 'od' && (selectedRequest?.placeToVisit || selectedRequest?.place_to_visit) && (
+                    <div className="flex items-center gap-2 p-3 rounded-2xl bg-success/5 border border-success/10">
+                        <MapPin className="w-4 h-4 text-success" />
+                        <div>
+                             <p className="text-[9px] font-black uppercase tracking-widest text-success/70">Place to Visit</p>
+                             <p className="text-sm font-bold text-success">{selectedRequest.placeToVisit || selectedRequest.place_to_visit}</p>
+                        </div>
+                    </div>
+                  )}
+
+                  {selectedRequest?.proofUrl && (
+                      <div className="pt-2">
+                          <Button variant="outline" className="w-full rounded-2xl border-primary/10 hover:bg-primary/5 h-12 gap-2 text-xs font-bold" onClick={() => window.open(selectedRequest.proofUrl, '_blank')}>
+                              <FileDown className="w-4 h-4 text-primary" />
+                              View Attachment / Proof Document
+                          </Button>
+                      </div>
+                  )}
+
+                  {selectedRequest?.status === 'pending_admin' && (
+                      <DialogFooter className="pt-4 flex sm:justify-center gap-3">
+                          <Button 
+                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest shadow-glow-primary" 
+                            variant="gradient"
+                            onClick={() => handleAction(selectedRequest.id, 'approve')}
+                          >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Approve Request
+                          </Button>
+                          <Button 
+                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5" 
+                            variant="outline"
+                            onClick={() => {
+                                setIsViewOpen(false);
+                                setIsRejectOpen(true);
+                            }}
+                          >
+                              <XCircle className="w-4 h-4 mr-2" />
+                              Reject
+                          </Button>
+                      </DialogFooter>
+                  )}
+                  
+                  {selectedRequest?.status === 'rejected' && selectedRequest?.rejection_reason && (
+                    <div className="p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-destructive/70 mb-1">Rejection Reason</p>
+                        <p className="text-xs font-bold text-destructive italic">"{selectedRequest.rejection_reason}"</p>
+                    </div>
+                  )}
+              </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl border-white/5 glass-card shadow-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                Reject Request
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-muted-foreground pt-1">
+                Please provide a reason for rejecting this {filterType} request. This will be visible to the student and tutor.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Textarea 
+                placeholder="Type your reason here..." 
+                className="rounded-2xl bg-muted/30 border-white/5 focus:ring-1 focus:ring-red-500/50 min-h-[100px] text-sm font-medium italic"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+             <Button variant="ghost" onClick={() => {
+                 setIsRejectOpen(false);
+                 setRejectionReason('');
+             }} className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6">
+                Cancel
+             </Button>
+             <Button 
+                variant="destructive" 
+                onClick={() => handleAction(selectedRequest?.id!, 'reject', rejectionReason)}
+                disabled={!rejectionReason.trim()}
+                className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 shadow-glow-destructive"
+             >
+                Reject Request
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

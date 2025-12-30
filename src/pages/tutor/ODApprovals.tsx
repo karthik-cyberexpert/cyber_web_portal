@@ -13,6 +13,7 @@ import {
   ChevronRight,
   TrendingUp,
   Eye,
+  Briefcase,
   ChevronLeft,
   MapPin,
   FileDown,
@@ -20,7 +21,7 @@ import {
   MoreHorizontal,
   RotateCcw
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card'; // Added import
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -48,10 +49,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getLeaveRequests, updateLeaveStatus, LeaveRequest, getTutors, Tutor, getStudents } from '@/lib/data-store';
+import { LeaveRequest, getTutors, Tutor, getStudents } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 'od' }) {
+export default function ODApprovals() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -77,7 +78,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
 
   const loadRequests = async () => {
     try {
-      const response = await fetch('http://localhost:3007/api/leave/tutor', {
+      const response = await fetch('http://localhost:3007/api/od/tutor', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -87,8 +88,8 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
         setRequests(data);
       }
     } catch (error) {
-      console.error('Error loading leave requests:', error);
-      toast.error('Failed to load leave requests');
+      console.error('Error loading OD requests:', error);
+      toast.error('Failed to load OD requests');
     } finally {
       setLoading(false);
     }
@@ -99,9 +100,8 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
     
     try {
       let endpoint = action === 'approve' ? 'approve' : (action === 'reject' ? 'reject' : (action === 'forward' ? 'forward' : 'revoke'));
-      const apiEndpoint = filterType === 'od' ? 'od' : 'leave';
       
-      const response = await fetch(`http://localhost:3007/api/${apiEndpoint}/${id}/${endpoint}`, {
+      const response = await fetch(`http://localhost:3007/api/od/${id}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,14 +111,14 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
       });
 
       if (response.ok) {
-        toast.success(`Leave ${action.charAt(0).toUpperCase() + action.slice(1)}ed successfully`);
+        toast.success(`OD request ${action.charAt(0).toUpperCase() + action.slice(1)}ed successfully`);
         setIsRejectOpen(false);
         setIsViewOpen(false);
         setRejectionReason('');
         loadRequests();
       } else {
         const error = await response.json();
-        toast.error(error.error || `Failed to ${action} leave`);
+        toast.error(error.error || `Failed to ${action} OD request`);
       }
     } catch (error) {
       console.error(`Error during ${action}:`, error);
@@ -138,25 +138,11 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
     .filter(r => {
         // Status Filter
         if (statusFilter !== 'all' && r.status !== statusFilter) return false;
-
-        // Batch Filter (from frontend students list if needed, but backend already filters by tutor section)
+        
+        // Batch Filter (backend already filters by tutor section)
         if (batchFilter !== 'all' && r.batch_id !== batchFilter) return false;
 
         return true;
-    })
-    .filter(r => {
-      // Filter by tutor's assigned students if tutorInfo is available
-      if (!tutorInfo) return true;
-      const students = getStudents();
-      const applicant = students.find(s => s.id === r.userId);
-      if (!applicant) return true; // fallback
-      return applicant.batch === tutorInfo.batch && applicant.section === tutorInfo.section;
-    })
-    .filter(r => {
-        if (!filterType) return true;
-        // Assuming 'type' field in LeaveRequest contains 'Leave' or 'OD'.
-        // Adapting match based on data. Case insensitive check.
-        return r.type.toLowerCase().includes(filterType.toLowerCase());
     });
 
   const displayRequests = filteredRequests.map(r => ({
@@ -164,22 +150,21 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
     userName: r.user_name || r.userName || 'Unknown Student'
   }));
 
-  // Stats Calculation
-  const stats = {
-      pending: requests.filter(r => (r.status as string) === 'pending' || (r.status as string) === 'cancel_requested').length,
-      forwarded: requests.filter(r => (r.status as string) === 'pending_admin').length,
-      approved: requests.filter(r => (r.status as string) === 'approved').length,
-      rejected: requests.filter(r => (r.status as string) === 'rejected').length,
-      cancelled: requests.filter(r => (r.status as string) === 'cancelled').length,
-  };
-
-  if (loading) return <div className="p-8 text-center uppercase tracking-widest text-xs font-bold animate-pulse">Loading requests...</div>;
-
   const formatDate = (date: any) => {
     if (!date) return 'N/A';
     const d = new Date(date);
     return isNaN(d.getTime()) ? date : d.toLocaleDateString();
   };
+
+  // Stats Calculation
+  const stats = {
+      pending: requests.filter(r => r.status === 'pending').length,
+      forwarded: requests.filter(r => r.status === 'pending_admin').length,
+      approved: requests.filter(r => r.status === 'approved').length,
+      rejected: requests.filter(r => r.status === 'rejected').length,
+  };
+
+  if (loading) return <div className="p-8 text-center uppercase tracking-widest text-xs font-bold animate-pulse">Loading OD requests...</div>;
 
   return (
     <div className="space-y-6">
@@ -190,10 +175,10 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
       >
         <div>
           <h1 className="text-3xl font-bold italic tracking-tight uppercase">
-            <span className="text-primary">{filterType || 'Leave'}</span> Approval Portal 📑
+            On-Duty <span className="text-primary">(OD)</span> Portal 🏃
           </h1>
           <p className="text-muted-foreground font-medium text-xs tracking-widest uppercase">
-            Manage and Review Student Applications
+            Manage and Review Student OD Applications
           </p>
         </div>
         <div className="flex bg-muted/50 p-1 rounded-2xl border border-white/5">
@@ -216,13 +201,13 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
+       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Pending/Cancel', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
           { label: 'Forwarded', value: stats.forwarded, icon: ArrowRight, color: 'text-blue-500', bg: 'bg-blue-500/10' },
           { label: 'Approved', value: stats.approved, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Cancelled', value: stats.cancelled, icon: RotateCcw, color: 'text-slate-500', bg: 'bg-slate-500/10' },
+          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -323,45 +308,35 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                 <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.endDate)}</TableCell>
                 <TableCell className="text-center">
                   <Badge 
-                    variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'pending_admin' ? 'secondary' : (request.status === 'cancel_requested' ? 'outline' : 'outline')))} 
-                    className={`uppercase text-[9px] font-black ${
-                      request.status === 'approved' ? 'bg-emerald-500 hover:bg-emerald-600' : 
-                      request.status === 'pending_admin' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
-                      request.status === 'cancel_requested' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                      request.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500 border-slate-500/20' : ''
-                    }`}
+                    variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'pending_admin' ? 'secondary' : 'outline'))} 
+                    className={`uppercase text-[9px] font-black ${request.status === 'approved' ? 'bg-emerald-500 hover:bg-emerald-600' : (request.status === 'pending_admin' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : '')}`}
                   >
-                      {request.status === 'pending_admin' ? 'Forwarded' : request.status.replace('_', ' ')}
+                      {request.status === 'pending_admin' ? 'Forwarded' : request.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right pr-6">
                   <div className="flex justify-end items-center gap-1">
-                    {(request.status === 'pending' || request.status === 'cancel_requested') && (
+                    {request.status === 'pending' && (
                       <div className="flex gap-1 mr-1">
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          title={request.status === 'cancel_requested' ? "Approve Cancellation" : "Approve Request"}
-                          className={`h-7 w-7 rounded-full transition-all ${request.status === 'cancel_requested' ? 'text-amber-500 hover:bg-amber-500/10' : 'text-emerald-500 hover:bg-emerald-500/10'}`}
+                          className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10 rounded-full transition-all"
                           onClick={() => handleAction(request.id, 'approve')}
                         >
                             <CheckCircle className="w-3.5 h-3.5" />
                         </Button>
-                        {request.status === 'pending' && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            title="Forward to Admin"
-                            className="h-7 w-7 text-blue-500 hover:bg-blue-500/10 rounded-full transition-all"
-                            onClick={() => handleAction(request.id, 'forward')}
-                          >
-                              <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          title={request.status === 'cancel_requested' ? "Reject Cancellation" : "Reject Request"}
+                          className="h-7 w-7 text-blue-500 hover:bg-blue-500/10 rounded-full transition-all"
+                          onClick={() => handleAction(request.id, 'forward')}
+                        >
+                            <ArrowRight className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
                           className="h-7 w-7 text-red-500 hover:bg-red-500/10 rounded-full transition-all"
                           onClick={() => {
                               setSelectedRequest(request);
@@ -417,7 +392,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
             ))}
             </AnimatePresence>
 
-            {displayRequests.length === 0 && (
+            {filteredRequests.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-muted-foreground/40 gap-2">
@@ -431,7 +406,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
         </Table>
       </div>
 
-      {/* View Details Dialog */}
+       {/* View Details Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-white/5 glass-card shadow-2xl">
           <div className="p-1 px-1 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20">
@@ -479,7 +454,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                       </div>
                   </div>
 
-                  {filterType === 'od' && (selectedRequest?.placeToVisit || selectedRequest?.place_to_visit) && (
+                  {(selectedRequest?.placeToVisit || selectedRequest?.place_to_visit) && (
                     <div className="flex items-center gap-2 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                         <MapPin className="w-4 h-4 text-emerald-500" />
                         <div>

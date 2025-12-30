@@ -75,6 +75,7 @@ import assignmentSubmissionRoutes from './assignment-submission.routes.js';
 app.use('/api/assignment-submission', assignmentSubmissionRoutes);
 
 // Serve uploaded files
+// Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 import gradeSubmissionRoutes from './grade-submission.routes.js';
@@ -85,6 +86,12 @@ app.use('/api/student-resume-data', studentResumeDataRoutes);
 
 import tutorAnalyticsRoutes from './tutor-analytics.routes.js';
 app.use('/api/tutor-analytics', tutorAnalyticsRoutes);
+
+import leaveRoutes from './leave.routes.js';
+app.use('/api/leave', leaveRoutes);
+
+import odRoutes from './od.routes.js';
+app.use('/api/od', odRoutes);
 
 // Health Check
 app.get('/api/health', async (req, res) => {
@@ -105,7 +112,7 @@ app.get('/api/faculty/classes', authenticateToken, marksController.getFacultyCla
 app.get('/api/faculty/marks', authenticateToken, marksController.getMarks);
 app.post('/api/faculty/marks', authenticateToken, marksController.saveMarks);
 
-app.listen(PORT, () => {
+app.listen(PORT,  () => {
   console.log(`Server running on port ${PORT}`);
 });
 
