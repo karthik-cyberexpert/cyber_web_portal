@@ -1,16 +1,13 @@
-
 import { pool } from './server/db.js';
 
-async function checkSchema() {
-  try {
-    console.log('Checking assignments table schema...');
-    const [rows] = await pool.query('DESCRIBE assignments');
-    console.log(rows);
-    process.exit(0);
-  } catch (error) {
-    console.error('Error checking schema:', error);
-    process.exit(1);
-  }
+async function check() {
+    try {
+        const [rows]: any = await pool.query('DESCRIBE student_profiles');
+        console.log('COLUMNS:', rows.map((r: any) => r.Field).join(', '));
+        process.exit(0);
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 }
-
-checkSchema();
+check();

@@ -7,7 +7,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  ListPlus
+  ListPlus,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,9 @@ interface ResumeData {
     fullName: string;
     email: string;
     phone: string;
-    rollNumber: string;
+    linkedin: string;
+    github: string;
+    portfolio: string;
     batch: string;
     section: string;
     semester: number;
@@ -69,7 +72,11 @@ const PortraitPreview = ({ data, template }: { data: ResumeData; template: strin
       <div className="text-center border-b-2 border-black pb-3 mb-4">
         <h1 className="text-xl font-bold mb-1">{data.personalInfo.fullName}</h1>
         <p className="text-[9px]">{data.personalInfo.email} | {data.personalInfo.phone}</p>
-        <p className="text-[9px]">{data.personalInfo.rollNumber}</p>
+        <div className="flex justify-center gap-2 mt-1 text-[8px] text-gray-600">
+           {data.personalInfo.linkedin && <span>LinkedIn: {data.personalInfo.linkedin}</span>}
+           {data.personalInfo.github && <span>GitHub: {data.personalInfo.github}</span>}
+           {data.personalInfo.portfolio && <span>Portfolio: {data.personalInfo.portfolio}</span>}
+        </div>
       </div>
       
       {data.education.length > 0 && (
@@ -119,6 +126,11 @@ const PortraitPreview = ({ data, template }: { data: ResumeData; template: strin
             <p className="font-bold text-gray-400 uppercase text-[7px] mb-1">Contact</p>
             <p className="break-all">{data.personalInfo.email}</p>
             <p>{data.personalInfo.phone}</p>
+            <div className="mt-2 space-y-1 text-gray-400">
+                {data.personalInfo.linkedin && <p className="truncate">LI: {data.personalInfo.linkedin}</p>}
+                {data.personalInfo.github && <p className="truncate">GH: {data.personalInfo.github}</p>}
+                {data.personalInfo.portfolio && <p className="truncate">Web: {data.personalInfo.portfolio}</p>}
+            </div>
           </div>
           {data.skills.length > 0 && (
             <div className="mt-4">
@@ -226,6 +238,7 @@ export default function ResumeBuilder() {
   const [newAchievement, setNewAchievement] = useState({ title: '', organizer: '', level: '' });
   const [activeCustomSection, setActiveCustomSection] = useState<string | null>(null);
   const [newCustomItem, setNewCustomItem] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -390,14 +403,49 @@ export default function ResumeBuilder() {
                     <Label className="text-xs">Email</Label>
                     <Input value={resumeData.personalInfo.email} className="mt-1" readOnly />
                   </div>
-                  <div>
-                    <Label className="text-xs">Phone</Label>
-                    <Input value={resumeData.personalInfo.phone} className="mt-1" readOnly />
+                  <div className="flex-1">
+                    <Label className="text-xs">Phone Number</Label>
+                    <Input 
+                      value={resumeData.personalInfo.phone} 
+                      className="mt-1" 
+                      readOnly
+                    />
                   </div>
                 </div>
-                <div>
-                  <Label className="text-xs">Roll Number</Label>
-                  <Input value={resumeData.personalInfo.rollNumber} className="mt-1" readOnly />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-muted/50 mt-4">
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">LinkedIn</Label>
+                    <Input 
+                      value={resumeData.personalInfo.linkedin} 
+                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">GitHub</Label>
+                    <Input 
+                      value={resumeData.personalInfo.github} 
+                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Portfolio</Label>
+                    <Input 
+                      value={resumeData.personalInfo.portfolio} 
+                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="pt-2">
+                   <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                     <CheckCircle2 className="w-4 h-4 text-primary" />
+                     <p className="text-[10px] text-muted-foreground italic">
+                       These verified details are synced with your **Identity Registry**. 
+                       Go to **Personal Details** to update them.
+                     </p>
+                   </div>
                 </div>
               </div>
             )}
@@ -430,49 +478,14 @@ export default function ResumeBuilder() {
                     </div>
                   </div>
                 ))}
-                <Dialog open={showEducationDialog} onOpenChange={setShowEducationDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Education
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Education</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label>Degree</Label>
-                        <Input
-                          placeholder="e.g., B.Tech in Computer Science"
-                          value={newEducation.degree}
-                          onChange={(e) => setNewEducation({...newEducation, degree: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Institution</Label>
-                        <Input
-                          placeholder="e.g., University Name"
-                          value={newEducation.institution}
-                          onChange={(e) => setNewEducation({...newEducation, institution: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label>Year</Label>
-                        <Input
-                          placeholder="e.g., 2020-2024"
-                          value={newEducation.year}
-                          onChange={(e) => setNewEducation({...newEducation, year: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowEducationDialog(false)}>Cancel</Button>
-                      <Button onClick={addEducation}>Add</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <div className="pt-2">
+                   <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                     <CheckCircle2 className="w-4 h-4 text-primary" />
+                     <p className="text-[10px] text-muted-foreground italic">
+                       Academic credentials are verified and synced with your **Departmental Profile**.
+                     </p>
+                   </div>
+                </div>
               </div>
             )}
           </div>

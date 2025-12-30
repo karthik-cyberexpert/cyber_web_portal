@@ -4,15 +4,17 @@ import { authenticateToken } from './auth.middleware.js';
 
 const router = express.Router();
 
+// Student Self Routes
+import { getStudentProfile, getStudentMarks, updateStudentProfile } from './student.controller.js';
+router.get('/profile', authenticateToken, getStudentProfile);
+router.get('/marks', authenticateToken, getStudentMarks);
+router.put('/profile', authenticateToken, updateStudentProfile);
+
 // Public/Admin Routes
 router.get('/', authenticateToken, getStudents); // Admin uses this
 router.post('/', authenticateToken, createStudent);
 router.put('/:id', authenticateToken, updateStudent);
 router.delete('/:id', authenticateToken, deleteStudent);
 
-// Student Self Routes
-import { getStudentProfile, getStudentMarks } from './student.controller.js';
-router.get('/profile', authenticateToken, getStudentProfile);
-router.get('/marks', authenticateToken, getStudentMarks);
 
 export default router;

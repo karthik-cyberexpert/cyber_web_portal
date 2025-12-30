@@ -24,24 +24,41 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Verify role (optional, but good security)
-    if (role && user.role !== role) {
+    if (role && user.role !== role && !(user.role === 'faculty' && role === 'tutor')) {
        return res.status(403).json({ message: 'Role mismatch' });
+    }
+
+    // Role Elevation: If role is faculty, check if they are an active tutor
+    let effectiveRole = user.role;
+    console.log(`[AUTH] Checking role elevation for User: ${user.email}, Current Role: ${user.role}`);
+    
+    if (user.role === 'faculty') {
+        const [tutors]: any = await pool.query(
+            'SELECT id FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            [user.id]
+        );
+        console.log(`[AUTH] Found ${tutors.length} active tutor assignments for User ID ${user.id}`);
+        if (tutors.length > 0) {
+            effectiveRole = 'tutor';
+            console.log(`[AUTH] Role elevated to 'tutor' for user ${user.email}`);
+        }
     }
 
     // Generate Token
     const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.name },
+      { id: user.id, email: user.email, role: effectiveRole, name: user.name },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
 
+    console.log(`[AUTH] Returning user with effective role: ${effectiveRole}`);
     res.json({
       token: accessToken,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: effectiveRole,
         avatar: user.avatar_url
       }
     });

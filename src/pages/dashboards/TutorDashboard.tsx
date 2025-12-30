@@ -55,125 +55,80 @@ import { useNavigate } from 'react-router-dom';
 export default function TutorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [tutor, setTutor] = useState<any>(null);
   const [stats, setStats] = useState({
     totalStudents: 0,
     pendingApprovals: 0,
     marksToVerify: 0,
-    academicAlerts: 0
+    academicAlerts: 0,
+    avgAttendance: 0
   });
   const [alerts, setAlerts] = useState<any[]>([]);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [verifications, setVerifications] = useState<any[]>([]);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
   const [assignmentStat, setAssignmentStat] = useState({ total: 0, pending: 0 });
 
   useEffect(() => {
-    if (!user) return;
-    
-    // 1. Get Tutor Record
-    const allTutors = getTutors();
-    const currentTutor = allTutors.find(t => t.id === user.id || t.email === user.email);
-    if (!currentTutor) return;
-    setTutor(currentTutor);
+    const fetchTutorData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-    // 2. Get Students in Section
-    const allStudents = getStudents();
-    const myStudents = allStudents.filter(s => s.batch === currentTutor.batch && s.section === currentTutor.section);
+        // 1. Get Overview & Assignment
+        const ovRes = await fetch('http://localhost:3007/api/tutor-analytics/overview', { headers });
+        const overview = await ovRes.json();
+        
+        if (overview.hasAssignment) {
+          setTutor({
+            section: overview.sectionName,
+            batch: overview.batchName
+          });
+          
+          setStats(prev => ({
+            ...prev,
+            totalStudents: overview.totalStudents,
+            avgAttendance: overview.avgAttendance
+          }));
 
-    // 3. Pending Approvals
-    const allLeaves = getLeaveRequests();
-    const allAchievements = getAchievements();
-    
-    const myLeaves = allLeaves.filter(l => 
-        l.status === 'pending' && 
-        myStudents.find(s => s.id === l.userId)
-    );
-    const myAchievements = allAchievements.filter(a => 
-        a.status === 'pending' && 
-        myStudents.find(s => s.id === a.userId)
-    );
+          // 2. Fetch Class List for alerts
+          const classRes = await fetch('http://localhost:3007/api/tutors/class', { headers });
+          const classData = await classRes.json();
+          const myStudents = classData.students || [];
 
-    const pendingList = [
-        ...myLeaves.map(l => ({ id: l.id, type: 'Leave', student: l.userName, reason: l.reason, date: 'Today', original: l })),
-        ...myAchievements.map(a => ({ id: a.id, type: 'ECA', student: a.userName, reason: a.title, date: 'Recent', original: a }))
-    ].slice(0, 4);
-    setApprovals(pendingList);
-
-    // 4. Marks Verification
-    const allMarks = getMarks();
-    const mySubmittedMarks = allMarks.filter(m => 
-        m.status === 'submitted' && 
-        myStudents.find(s => s.id === m.studentId)
-    );
-    
-    // Group marks by Subject + Exam
-    const groupedMarksMap = new Map();
-    mySubmittedMarks.forEach(m => {
-        const key = `${m.subjectCode}-${m.examType}`;
-        if (!groupedMarksMap.has(key)) {
-            groupedMarksMap.set(key, { exam: `${m.examType.toUpperCase()} - ${m.subjectCode}`, count: 0, ids: [] });
+          // Alerts (Attendance < 75)
+          const myAlerts = myStudents.filter((s: any) => s.attendance < 75).map((s: any) => ({
+            student: s.name,
+            issue: `Low Attendance (${s.attendance}%)`,
+            severity: s.attendance < 65 ? 'high' : 'medium'
+          })).slice(0, 3);
+          setAlerts(myAlerts);
+          setStats(prev => ({ ...prev, academicAlerts: myAlerts.length }));
         }
-        const group = groupedMarksMap.get(key);
-        group.count += 1;
-        group.ids.push(m.id);
-    });
-    setVerifications(Array.from(groupedMarksMap.values()).slice(0, 3));
 
-    // 5. Academic Alerts
-    const myAlerts = myStudents.filter(s => s.attendance < 75).map(s => ({
-        student: s.name,
-        issue: `Low Attendance (${s.attendance}%)`,
-        severity: s.attendance < 65 ? 'high' : 'medium'
-    })).slice(0, 3);
-    setAlerts(myAlerts);
-
-    // 6. Timetable (Today)
-    const allTimetable = getTimetable();
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const today = days[new Date().getDay()];
-    const mySchedule = allTimetable
-        .filter(t => t.day === today && t.classId === currentTutor.batch && t.sectionId === currentTutor.section)
-        .sort((a, b) => a.period - b.period)
-        .map(t => ({
-            id: t.id,
-            subject: t.subject,
-            time: t.period <= 3 ? `${9+t.period-1}:00` : `${10+t.period}:00`,
-            faculty: t.facultyName,
-            type: t.type
+        // 3. Performance Trend (Mocking with real average as base)
+        const perfRes = await fetch('http://localhost:3007/api/tutor-analytics/attendance', { headers });
+        const attData = await perfRes.json();
+        const trend = attData.map((d: any) => ({
+          month: d.day,
+          attendance: Math.round((d.count / (overview.totalStudents || 1)) * 100),
+          marks: 75 + Math.floor(Math.random() * 15) // Still mock marks for dashboard trend
         }));
-    setTodaySchedule(mySchedule);
+        setPerformanceData(trend);
 
-    // 7. Assignments
-    const allAssignments = getAssignments();
-    const myAssignments = allAssignments.filter(a => a.classId === currentTutor.batch && a.sectionId === currentTutor.section);
-    setAssignmentStat({
-        total: myAssignments.length,
-        pending: myAssignments.filter(a => new Date(a.dueDate) > new Date()).length
-    });
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching tutor dashboard data:', error);
+        setLoading(false);
+      }
+    };
 
-    // 8. Stats
-    setStats({
-        totalStudents: myStudents.length,
-        pendingApprovals: myLeaves.length + myAchievements.length,
-        marksToVerify: mySubmittedMarks.length,
-        academicAlerts: myAlerts.length
-    });
-
-    // 9. Performance Trend
-    const myMarks = allMarks.filter(m => myStudents.find(s => s.id === m.studentId));
-    const avgAttendance = myStudents.length > 0 ? Math.round(myStudents.reduce((acc, s) => acc + s.attendance, 0) / myStudents.length) : 0;
-    const avgMarks = myMarks.length > 0 ? Math.round(myMarks.reduce((acc, m) => acc + (m.marks || 0), 0) / myMarks.length) : 75;
-
-    const trend = [
-        { month: 'Oct', attendance: avgAttendance - 2, marks: avgMarks - 5 },
-        { month: 'Nov', attendance: avgAttendance, marks: avgMarks },
-        { month: 'Dec', attendance: avgAttendance + 1, marks: avgMarks + 2 }
-    ];
-    setPerformanceData(trend);
-
+    if (user) {
+      fetchTutorData();
+    }
   }, [user]);
 
   const handleApproveLeave = (id: string) => {
@@ -189,7 +144,7 @@ export default function TutorDashboard() {
   };
 
   const handleVerifyMarks = (ids: string[]) => {
-    ids.forEach(id => updateMarkStatus(id, 'approved'));
+    ids.forEach(id => updateMarkStatus(id, 'approved', user?.name || 'Tutor'));
     toast.success('Marks verified for section');
     window.location.reload();
   };

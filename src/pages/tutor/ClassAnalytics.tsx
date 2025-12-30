@@ -32,69 +32,74 @@ import { getTutors, getStudents, getMarks, Tutor, Student, MarkEntry } from '@/l
 
 export default function ClassAnalytics() {
   const { user } = useAuth();
-  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [tutor, setTutor] = useState<any>(null);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   const [gradeDistribution, setGradeDistribution] = useState<any[]>([]);
   const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    const allTutors = getTutors();
-    const currentTutor = allTutors.find(t => t.id === user.id || t.email === user.email);
-    if (!currentTutor) return;
-    setTutor(currentTutor);
+    const fetchAnalytics = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-    const allStudents = getStudents();
-    const myStudents = allStudents.filter(s => s.batch === currentTutor.batch && s.section === currentTutor.section);
-    
-    // 1. Weekly Attendance (Mocked logic but based on real class size range)
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const trend = days.map(d => ({
-        day: d,
-        count: Math.floor(myStudents.length * 0.85) + Math.floor(Math.random() * (myStudents.length * 0.15))
-    }));
-    setAttendanceTrend(trend);
+        // 1. Overview
+        const ovRes = await fetch('http://localhost:3007/api/tutor-analytics/overview', { headers });
+        const overview = await ovRes.json();
+        if (overview.hasAssignment) {
+          setTutor({
+            section: overview.sectionName,
+            batch: overview.batchName,
+            studentsCount: overview.totalStudents,
+            avgAttendance: overview.avgAttendance
+          });
+        }
 
-    // 2. Grade Distribution (IA-1)
-    const allMarks = getMarks();
-    const myMarks = allMarks.filter(m => m.examType === 'ia1' && myStudents.find(s => s.id === m.studentId));
-    
-    const grades = [
-        { name: 'O (90-100)', min: 90, color: '#f59e0b', value: 0 },
-        { name: 'A+ (80-89)', min: 80, color: '#10b981', value: 0 },
-        { name: 'A (70-79)', min: 70, color: '#3b82f6', value: 0 },
-        { name: 'B+ (60-69)', min: 60, color: '#8b5cf6', value: 0 },
-        { name: 'B (50-59)', min: 50, color: '#ec4899', value: 0 },
-        { name: 'U (<50)', min: 0, color: '#ef4444', value: 0 },
-    ];
+        // 2. Attendance
+        const attRes = await fetch('http://localhost:3007/api/tutor-analytics/attendance', { headers });
+        const attendance = await attRes.json();
+        setAttendanceTrend(attendance);
 
-    if (myMarks.length > 0) {
-        myMarks.forEach(m => {
-            const percentage = (m.marks / m.maxMarks) * 100;
-            const gradeIdx = grades.findIndex(g => percentage >= g.min);
-            if (gradeIdx !== -1) grades[gradeIdx].value += 1;
-        });
-    } else {
-        // Fallback for demo if no marks exist
-        grades[0].value = Math.floor(myStudents.length * 0.2);
-        grades[1].value = Math.floor(myStudents.length * 0.3);
-        grades[2].value = Math.floor(myStudents.length * 0.25);
-        grades[3].value = Math.floor(myStudents.length * 0.15);
-        grades[4].value = Math.floor(myStudents.length * 0.05);
-        grades[5].value = Math.floor(myStudents.length * 0.05);
+        // 3. Performance
+        const perfRes = await fetch('http://localhost:3007/api/tutor-analytics/performance', { headers });
+        const performance = await perfRes.json();
+        setGradeDistribution(performance);
+
+        // 4. Subjects
+        const subRes = await fetch('http://localhost:3007/api/tutor-analytics/subjects', { headers });
+        const subjects = await subRes.json();
+        setSubjectPerformance(subjects);
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching tutor analytics:', error);
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchAnalytics();
     }
-    setGradeDistribution(grades);
-
-    // 3. Subject Performance
-    const subjects = ['Data Structures', 'DBMS', 'OS', 'Maths', 'Java'];
-    const subPerf = subjects.map(s => ({
-        subject: s,
-        avg: 65 + Math.floor(Math.random() * 25),
-        pass: 85 + Math.floor(Math.random() * 15)
-    }));
-    setSubjectPerformance(subPerf);
-
   }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!tutor) {
+      return (
+          <div className="text-center py-20 glass-card rounded-3xl">
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-20" />
+              <h2 className="text-2xl font-black uppercase italic">No Assignment Found</h2>
+              <p className="text-muted-foreground italic">You are not currently assigned as an active Class In-charge.</p>
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-6">

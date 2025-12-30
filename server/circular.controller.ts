@@ -30,13 +30,43 @@ export const getCirculars = async (req: Request | any, res: Response) => {
             // Also see circulars created by themselves
             query += ` AND (c.audience IN ('Faculty', 'All') OR c.created_by = ?)`;
             params.push(userId);
+        } else if (role === 'tutor') {
+            // See circulars for Tutors OR All
+            // Also see circulars created by themselves
+            query += ` AND (c.audience IN ('Tutors', 'All') OR c.created_by = ?)`;
+            params.push(userId);
         } else if (role === 'student') {
             // See circulars for Students OR All
-            // AND (target_batch_id IS NULL OR target_batch_id = student_batch)
-             query += ` AND (c.audience IN ('Students', 'All'))`; // Basic for now, improve later
+            // Filter by batch AND section
+            
+            // First get the student's batch_id and section_id
+            const [studentProfile]: any = await pool.query(
+                'SELECT batch_id, section_id FROM student_profiles WHERE user_id = ?',
+                [userId]
+            );
+
+            const batchId = studentProfile[0]?.batch_id;
+            const sectionId = studentProfile[0]?.section_id;
+
+            if (batchId && sectionId) {
+                // Show circulars that are:
+                // 1. Targeted to Students/All AND
+                // 2. Either no specific batch OR matching batch AND
+                // 3. Either no specific section OR matching section
+                query += ` AND c.audience IN ('Students', 'All') 
+                    AND (c.target_batch_id IS NULL OR c.target_batch_id = ?) 
+                    AND (c.target_section_id IS NULL OR c.target_section_id = ?)`;
+                params.push(batchId, sectionId);
+            } else if (batchId) {
+                query += ` AND c.audience IN ('Students', 'All') 
+                    AND (c.target_batch_id IS NULL OR c.target_batch_id = ?)`;
+                params.push(batchId);
+            } else {
+                query += ` AND c.audience IN ('Students', 'All')`;
+            }
         }
 
-        query += ` ORDER BY c.created_at DESC`;
+        query += ` ORDER BY c.published_at DESC, c.created_at DESC`;
 
         const [rows]: any = await pool.query(query, params);
         res.json(rows);
@@ -89,6 +119,28 @@ export const createCircular = async (req: Request | any, res: Response) => {
             }
         }
 
+        // Tutor Validation: Can only post to their assigned section
+        let tutorBatchId = target_batch_id;
+        let tutorSectionId = target_section_id;
+
+        if (role === 'tutor') {
+            // Get tutor's assigned section
+            const [assignment]: any = await pool.query(`
+                SELECT batch_id, section_id 
+                FROM tutor_assignments 
+                WHERE faculty_id = ? AND is_active = TRUE
+                LIMIT 1
+            `, [userId]);
+
+            if (assignment.length === 0) {
+                return res.status(403).json({ message: 'You are not assigned as a tutor to any section' });
+            }
+
+            // Auto-assign the tutor's section
+            tutorBatchId = assignment[0].batch_id;
+            tutorSectionId = assignment[0].section_id;
+        }
+
         let attachment_url = null;
         if (file) {
             attachment_url = getFileUrl(file.path);
@@ -102,8 +154,8 @@ export const createCircular = async (req: Request | any, res: Response) => {
             description || null, 
             audience || 'All', 
             priority || 'Medium', 
-            target_batch_id || null, 
-            (target_section_id && target_section_id !== 'all') ? target_section_id : null, 
+            (role === 'tutor' ? tutorBatchId : target_batch_id) || null, 
+            (role === 'tutor' ? tutorSectionId : (target_section_id && target_section_id !== 'all' ? target_section_id : null)),
             type || 'Notice', 
             attachment_url, 
             userId

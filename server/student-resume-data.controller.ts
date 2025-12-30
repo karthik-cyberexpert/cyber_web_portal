@@ -29,14 +29,17 @@ export const getStudentResumeData = async (req: Request | any, res: Response) =>
         let profileData: any = {};
         try {
             const [profile]: any = await pool.query(
-                `SELECT roll_number FROM student_profiles WHERE user_id = ?`,
+                `SELECT linkedin_url, github_url, portfolio_url, education_degree, education_institution FROM student_profiles WHERE user_id = ?`,
                 [studentId]
             );
             if (profile.length > 0) {
                 profileData = profile[0];
+                console.log('SUCCESS: Profile found:', profileData);
+            } else {
+                console.log('WARNING: No profile found for user_id:', studentId);
             }
-        } catch (err) {
-            console.log('student_profiles table may not exist or may not have expected columns');
+        } catch (err: any) {
+            console.log('ERROR: student_profiles query failed:', err.message);
         }
 
 
@@ -64,17 +67,19 @@ export const getStudentResumeData = async (req: Request | any, res: Response) =>
                 fullName: student.name || 'Student',
                 email: student.email || '',
                 phone: student.phone || '',
-                rollNumber: profileData.roll_number || 'N/A',
-                batch: 'N/A', // Will be populated when batch data is available
+                linkedin: profileData.linkedin_url || '',
+                github: profileData.github_url || '',
+                portfolio: profileData.portfolio_url || '',
+                batch: 'N/A', 
                 section: 'N/A',
                 semester: 1
             },
             education: [
                 {
-                    institution: 'Your Institution',
-                    degree: 'B.Tech in Computer Science',
+                    institution: profileData.education_institution || 'Your Institution',
+                    degree: profileData.education_degree || 'B.Tech in Computer Science',
                     batch: 'Current',
-                    year: 'In Progress'
+                    year: '2023 - 2027'
                 }
             ],
             achievements: achievements.map((a: any) => ({
@@ -99,8 +104,41 @@ export const getStudentResumeData = async (req: Request | any, res: Response) =>
         res.json(resumeData);
     } catch (error: any) {
         console.error('Get Resume Data Error:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
         res.status(500).json({ message: 'Error fetching resume data', error: error.message });
+    }
+};
+
+export const updatePersonalDetails = async (req: Request | any, res: Response) => {
+    const studentId = req.user?.id;
+    const { phone, linkedin, github, portfolio } = req.body;
+
+    if (!studentId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Update phone in users table
+        await connection.query(
+            'UPDATE users SET phone = ? WHERE id = ?',
+            [phone, studentId]
+        );
+
+        // 2. Update student_profiles table with LinkedIn, GitHub, Portfolio
+        await connection.query(
+            'UPDATE student_profiles SET linkedin_url = ?, github_url = ?, portfolio_url = ? WHERE user_id = ?',
+            [linkedin, github, portfolio, studentId]
+        );
+
+        await connection.commit();
+        res.json({ message: 'Personal details updated successfully' });
+    } catch (error: any) {
+        await connection.rollback();
+        console.error('Update Personal Details Error:', error);
+        res.status(500).json({ message: 'Error updating personal details', error: error.message });
+    } finally {
+        connection.release();
     }
 };

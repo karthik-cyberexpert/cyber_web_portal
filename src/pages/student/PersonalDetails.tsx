@@ -16,40 +16,116 @@ import {
   Heart,
   Droplets,
   Link,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { getStudents, Student } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function PersonalDetails() {
   const { user } = useAuth();
-  const [student, setStudent] = useState<Student | null>(null);
+  const [student, setStudent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<any>({});
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/students/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStudent(data);
+        setFormData({
+          phone: data.phone || '',
+          address: data.address || '',
+          dob: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : '',
+          gender: data.gender || 'male',
+          bloodGroup: data.bloodGroup || '',
+          guardianName: data.guardianName || '',
+          guardianPhone: data.guardianPhone || '',
+          linkedinUrl: data.linkedinUrl || '',
+          githubUrl: data.githubUrl || '',
+          portfolioUrl: data.portfolioUrl || '',
+        });
+      }
+    } catch (err) {
+      console.error("Error loading profile", err);
+      toast.error("Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user && user.role === 'student') {
-        const fetchProfile = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3007/api/students/profile', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setStudent(data);
-                } else {
-                    console.error("Failed to load profile");
-                }
-            } catch (err) {
-                console.error("Error loading profile", err);
-            }
-        };
-        fetchProfile();
+      fetchProfile();
     }
   }, [user]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSaving(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3007/api/students/profile', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        toast.success("Registry updated successfully!");
+        setIsEditing(false);
+        fetchProfile();
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err) {
+      console.error("Error updating profile", err);
+      toast.error("Fixed some errors and try again");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 text-left animate-pulse">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Accessing Identity Matrix...</p>
+      </div>
+    );
+  }
 
   if (!student) {
     return (
@@ -91,9 +167,9 @@ export default function PersonalDetails() {
     {
       title: "Professional Footprint",
       items: [
-        { label: "LinkedIn Profile", value: student.linkedin || "Not added", icon: Link },
-        { label: "GitHub Profile", value: student.github || "Not added", icon: Globe },
-        { label: "Portfolio URL", value: "portfolio.edu/student", icon: Sparkles },
+        { label: "LinkedIn Profile", value: student.linkedinUrl || "Not added", icon: Globe, color: "text-primary" },
+        { label: "GitHub Profile", value: student.githubUrl || "Not added", icon: Globe, color: "text-foreground" },
+        { label: "Portfolio URL", value: student.portfolioUrl || "Not added", icon: Sparkles, color: "text-accent" },
       ]
     }
   ];
@@ -109,7 +185,11 @@ export default function PersonalDetails() {
           <h1 className="text-3xl font-bold italic">Identity Matrix 🧬</h1>
           <p className="text-muted-foreground font-medium">Manage your personal information and verified credentials</p>
         </div>
-        <Button variant="gradient" className="shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest">
+        <Button 
+          variant="gradient" 
+          onClick={() => setIsEditing(true)}
+          className="shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest"
+        >
           <Sparkles className="w-4 h-4 mr-2" />
           Edit Registry
         </Button>
@@ -204,6 +284,162 @@ export default function PersonalDetails() {
           ))}
         </div>
       </div>
+
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-2xl glass-card border-white/10 rounded-[2rem] overflow-hidden p-0 gap-0">
+          <DialogHeader className="p-8 pb-0">
+            <DialogTitle className="text-2xl font-black italic tracking-tight">Edit Identity Registry</DialogTitle>
+            <DialogDescription className="font-medium text-muted-foreground">
+              Update your biological and demographic information. Core identity details verified by blockchain are read-only.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateProfile}>
+            <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Contact Info */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary italic">Contact Connectivity</h4>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black tracking-widest">Phone Number</Label>
+                    <Input 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black tracking-widest">Residential Address</Label>
+                    <Input 
+                      value={formData.address}
+                      onChange={(e) => setFormData({...formData, address: e.target.value})}
+                      className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                    />
+                  </div>
+                </div>
+
+                {/* Demographics */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-accent italic">Demographic Data</h4>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-black tracking-widest">Date of Birth</Label>
+                    <Input 
+                      type="date"
+                      value={formData.dob}
+                      onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                      className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">Gender</Label>
+                      <Select 
+                        value={formData.gender} 
+                        onValueChange={(v) => setFormData({...formData, gender: v})}
+                      >
+                        <SelectTrigger className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-white/10 rounded-xl">
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">Blood Group</Label>
+                      <Input 
+                        value={formData.bloodGroup}
+                        onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                        placeholder="e.g. O+"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guardian Network */}
+                <div className="md:col-span-2 space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary italic">Support Network</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">Guardian Name</Label>
+                      <Input 
+                        value={formData.guardianName}
+                        onChange={(e) => setFormData({...formData, guardianName: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">Guardian Phone</Label>
+                      <Input 
+                        value={formData.guardianPhone}
+                        onChange={(e) => setFormData({...formData, guardianPhone: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional Links */}
+                <div className="md:col-span-2 space-y-4 pt-2">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-accent italic">Professional Footprint</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">LinkedIn URL</Label>
+                      <Input 
+                        value={formData.linkedinUrl}
+                        onChange={(e) => setFormData({...formData, linkedinUrl: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                        placeholder="linkedin.com/in/..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">GitHub URL</Label>
+                      <Input 
+                        value={formData.githubUrl}
+                        onChange={(e) => setFormData({...formData, githubUrl: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                        placeholder="github.com/..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black tracking-widest">Portfolio URL</Label>
+                      <Input 
+                        value={formData.portfolioUrl}
+                        onChange={(e) => setFormData({...formData, portfolioUrl: e.target.value})}
+                        className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
+                        placeholder="yourportfolio.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="p-8 pt-0 gap-3">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => setIsEditing(false)}
+                className="rounded-xl font-bold italic"
+              >
+                Discard Changes
+              </Button>
+              <Button 
+                type="submit" 
+                variant="gradient" 
+                disabled={isSaving}
+                className="rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-glow-sm"
+              >
+                {isSaving && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+                Commit Updates
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

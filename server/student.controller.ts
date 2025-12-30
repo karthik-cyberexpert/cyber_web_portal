@@ -129,26 +129,29 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
                 sp.dob as dateOfBirth, 
                 sp.gender, 
                 sp.blood_group as bloodGroup,
-                'Indian' as nationality, -- Default or add to schema
-                'Pending' as address,    -- Default or add to schema
-                'Parent Name' as guardianName, -- Default or add to schema
-                '9999999999' as guardianPhone,
+                'Indian' as nationality, 
+                u.address,
+                sp.guardian_name as guardianName,
+                sp.guardian_phone as guardianPhone,
                 b.name as batch, 
                 b.id as batchId,
                 s.name as section,
                 s.id as sectionId,
                 d.name as department,
-                'B.Tech' as programme,   -- Default/Static for now
-                'Active' as status,      -- Logic can be improved
+                'B.Tech' as programme,  
+                'Active' as status,     
                 'Regular' as admissionType,
                 'Full Time' as enrollmentType,
                 IFNULL(b.start_year, 2023) as batchStartYear,
                 IFNULL(b.end_year, 2027) as batchEndYear,
                 IFNULL(b.current_semester, 1) as semester,
-                (year(curdate()) - b.start_year + 1) as year, -- Approx year calc
-                8.5 as cgpa,             -- Placeholder or implement calc
-                92 as attendance,        -- Placeholder or implement calc
-                0 as backlogs            -- Placeholder
+                (year(curdate()) - b.start_year + 1) as year, 
+                sp.cgpa,             
+                sp.attendance_percentage as attendance,
+                sp.linkedin_url as linkedinUrl,
+                sp.github_url as githubUrl,
+                sp.portfolio_url as portfolioUrl,
+                0 as backlogs            
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
             LEFT JOIN batches b ON sp.batch_id = b.id
@@ -169,7 +172,12 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
 
         res.json(profile);
     } catch (error: any) {
-        console.error('Get Profile Error:', error);
+        console.error('Detailed Get Profile Error:', {
+            error: error.message,
+            code: error.code,
+            sql: error.sql,
+            userId
+        });
         res.status(500).json({ message: 'Error fetching profile' });
     }
 };
@@ -225,5 +233,60 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
     } catch (error: any) {
         console.error('Get Student Marks Error:', error);
         res.status(500).json({ message: 'Error fetching marks' });
+    }
+};
+
+// Update Student Profile (Self)
+export const updateStudentProfile = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    const { 
+        phone, address, dob, gender, bloodGroup, 
+        guardianName, guardianPhone,
+        linkedinUrl, githubUrl, portfolioUrl 
+    } = req.body;
+
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Update users table
+        const [userUpdate]: any = await connection.query(
+            'UPDATE users SET phone = ?, address = ? WHERE id = ?',
+            [phone, address, userId]
+        );
+        console.log('User Update Result:', { userId, affectedRows: userUpdate.affectedRows });
+
+        // 2. Update student_profiles table
+        const [profileUpdate]: any = await connection.query(
+            `UPDATE student_profiles SET 
+                dob = ?, 
+                gender = ?, 
+                blood_group = ?, 
+                guardian_name = ?, 
+                guardian_phone = ?,
+                linkedin_url = ?,
+                github_url = ?,
+                portfolio_url = ? 
+             WHERE user_id = ?`,
+            [dob, gender, bloodGroup, guardianName, guardianPhone, linkedinUrl, githubUrl, portfolioUrl, userId]
+        );
+        console.log('Profile Update Result:', { userId, affectedRows: profileUpdate.affectedRows });
+
+        await connection.commit();
+        res.json({ message: 'Profile updated successfully' });
+    } catch (error: any) {
+        await connection.rollback();
+        console.error('Detailed Update Profile Error:', {
+            error: error.message,
+            code: error.code,
+            sql: error.sql,
+            userId,
+            body: req.body
+        });
+        res.status(500).json({ message: 'Error updating profile' });
+    } finally {
+        connection.release();
     }
 };

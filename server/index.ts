@@ -83,6 +83,9 @@ app.use('/api/grade-submission', gradeSubmissionRoutes);
 import studentResumeDataRoutes from './student-resume-data.routes.js';
 app.use('/api/student-resume-data', studentResumeDataRoutes);
 
+import tutorAnalyticsRoutes from './tutor-analytics.routes.js';
+app.use('/api/tutor-analytics', tutorAnalyticsRoutes);
+
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {
