@@ -54,11 +54,7 @@ export async function createLeaveRequest(req: Request, res: Response) {
             fileUrl = getFileUrl(req.file.path);
         }
 
-        // Check for file upload
-        let fileUrl = null;
-        if (req.file) {
-            fileUrl = getFileUrl(req.file.path);
-        }
+
 
         // Insert leave request
         const result = await pool.query(

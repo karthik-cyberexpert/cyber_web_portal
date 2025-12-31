@@ -29,3 +29,12 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     }
   });
 };
+
+export const authorizeRole = (allowedRoles: string[]) => {
+  return (req: Request | any, res: Response, next: NextFunction) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    next();
+  };
+};

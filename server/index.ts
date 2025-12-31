@@ -14,6 +14,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3007;
 
+console.log(`Starting Server... Time: ${new Date().toISOString()} - Restart 18`);
 import authRoutes from './auth.routes.js';
 import adminRoutes from './admin.routes.js';
 import academicRoutes from './academic.routes.js';
@@ -92,6 +93,9 @@ app.use('/api/leave', leaveRoutes);
 
 import odRoutes from './od.routes.js';
 app.use('/api/od', odRoutes);
+
+import feedbackRoutes from './feedback.routes.js';
+app.use('/api/feedback', feedbackRoutes);
 
 // Health Check
 app.get('/api/health', async (req, res) => {

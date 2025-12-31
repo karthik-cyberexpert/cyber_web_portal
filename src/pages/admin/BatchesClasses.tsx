@@ -125,7 +125,7 @@ export default function BatchesClasses() {
         return;
     }
 
-    // Default 1 (CSE) for now as we don't have department selection in UI yet
+    // Default 1 (CSS) for now as we don't have department selection in UI yet
     // In real app, Admin might select department or it's inferred from Admin's department
     const department_id = 1; 
     const end_year = year + 4;

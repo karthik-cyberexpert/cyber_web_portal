@@ -128,7 +128,14 @@ export default function ManageStudents() {
                   status: 'Active', 
                   attendance: 0,
                   cgpa: 0,
-                  avatar: s.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`
+                  avatar: s.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`,
+                  
+                  // Extended fields
+                  dateOfBirth: s.dob,
+                  gender: s.gender,
+                  address: s.address,
+                  guardianName: s.guardian_name,
+                  guardianPhone: s.guardian_phone
               }));
               setStudents(mappedStudents);
           }
@@ -348,10 +355,16 @@ export default function ManageStudents() {
       const token = localStorage.getItem('token');
       const payload = {
         name: formData.name,
+        email: formData.email,
         phone: formData.phone,
         roll_number: formData.rollNumber,
         batch_id: formData.batch, // IDs are now stored
-        section_id: formData.section
+        section_id: formData.section,
+        dob: formData.dateOfBirth,
+        gender: formData.gender,
+        address: formData.address,
+        guardian_name: formData.guardianName,
+        guardian_phone: formData.guardianPhone
       };
 
       const response = await fetch(`${API_BASE_URL}/students/${selectedStudent.id}`, {
@@ -412,7 +425,7 @@ export default function ManageStudents() {
     const templateData = [
       {
         'Full Name': 'John Doe',
-        'Roll Number': '21CSE101',
+        'Roll Number': '21CSS101',
         'Email': 'john.doe@college.edu',
         'Phone': '9876543210',
         'Batch': '2024-2028',
@@ -669,7 +682,7 @@ export default function ManageStudents() {
                     </td>
                     <td className="p-4 font-mono text-sm">{student.rollNumber}</td>
                     <td className="p-4 text-sm">{student.batch}</td>
-                    <td className="p-4 text-sm">CSE-{student.section}</td>
+                    <td className="p-4 text-sm">CSS-{student.section}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
@@ -804,7 +817,7 @@ export default function ManageStudents() {
                 id="rollNumber"
                 value={formData.rollNumber || ''}
                 onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
-                placeholder="e.g., 21CSE001"
+                placeholder="e.g., 21CSS001"
               />
             </div>
             <div className="space-y-2">
@@ -995,7 +1008,7 @@ export default function ManageStudents() {
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <p className="text-sm text-muted-foreground">Section</p>
-                  <p className="font-medium">CSE-{selectedStudent.section}</p>
+                  <p className="font-medium">CSS-{selectedStudent.section}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <p className="text-sm text-muted-foreground">Year / Semester</p>

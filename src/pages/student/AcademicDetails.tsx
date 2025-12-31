@@ -130,7 +130,7 @@ export default function AcademicDetails() {
                 { label: "Batch", value: student.batch || 'N/A', icon: Clock },
                 { label: "Curriculum Year", value: `Year ${student.year || 2}`, icon: Calendar },
                 { label: "Section", value: `Section ${student.section || 'A'}`, icon: User },
-                { label: "Department", value: student.department || 'CSE', icon: Layout },
+                { label: "Department", value: student.department || 'CSS', icon: Layout },
                 { label: "Register Number", value: student.registerNumber || 'N/A', icon: FileBadge },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-white/5 group">

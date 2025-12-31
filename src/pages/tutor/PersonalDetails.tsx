@@ -190,7 +190,7 @@ export default function PersonalDetails() {
             <div className="space-y-8">
               {(faculty?.education || [
                   { degree: 'Ph.D in CS', institution: 'Anna University', year: '2014' },
-                  { degree: 'M.Tech in CSE', institution: 'NIT Trichy', year: '2008' }
+                  { degree: 'M.Tech in Cyber Security', institution: 'NIT Trichy', year: '2008' }
               ]).map((edu, index) => (
                 <div key={index} className="flex gap-6 relative group">
                   {index !== (faculty?.education || []).length - 1 && (

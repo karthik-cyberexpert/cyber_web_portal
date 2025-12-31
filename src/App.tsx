@@ -59,7 +59,6 @@ import NotesStatus from "@/pages/tutor/NotesStatus";
 import AssignmentStatus from "@/pages/tutor/AssignmentStatus";
 import LeaveApprovals from "@/pages/tutor/LeaveApprovals";
 import ODApprovals from "@/pages/tutor/ODApprovals";
-import FeedbackPortalTutor from "@/pages/tutor/FeedbackPortal";
 import GrievancePortalTutor from "@/pages/tutor/GrievancePortal";
 import LostFoundPortalTutor from "@/pages/tutor/LostFoundPortal";
 import LMSAnalytics from "@/pages/tutor/LMSAnalytics";
@@ -82,6 +81,7 @@ import LMSManagement from "@/pages/admin/LMSManagement";
 import ECAAnalytics from "@/pages/admin/ECAAnalytics";
 import LeaveApprovalsAdmin from "@/pages/admin/LeaveApprovals";
 import FeedbackPortalAdmin from "@/pages/admin/FeedbackPortal";
+import FeedbackResults from "@/pages/admin/FeedbackResults";
 import GrievancePortalAdmin from "@/pages/admin/GrievancePortal";
 import LostFoundPortalAdmin from "@/pages/admin/LostFoundPortal";
 import Settings from "@/pages/admin/Settings";
@@ -176,7 +176,6 @@ const App = () => {
                   <Route path="assignments" element={<AssignmentStatus />} />
                   <Route path="leave" element={<LeaveApprovals />} />
                   <Route path="od" element={<ODApprovals />} />
-                  <Route path="feedback" element={<FeedbackPortalTutor />} />
                   <Route path="grievance" element={<GrievancePortalTutor />} />
                   <Route path="lost-found" element={<LostFoundPortalTutor />} />
                   <Route path="lms" element={<LMSAnalytics />} />
@@ -207,7 +206,9 @@ const App = () => {
                   <Route path="requests" element={<Navigate to="/admin/requests/leave" replace />} />
                   <Route path="requests/leave" element={<LeaveApprovalsAdmin filterType="leave" />} />
                   <Route path="requests/od" element={<LeaveApprovalsAdmin filterType="od" />} />
+                  <Route path="requests/od" element={<LeaveApprovalsAdmin filterType="od" />} />
                   <Route path="feedback" element={<FeedbackPortalAdmin />} />
+                  <Route path="feedback/:id/results" element={<FeedbackResults />} />
                   <Route path="grievance" element={<GrievancePortalAdmin />} />
                   <Route path="lost-found" element={<LostFoundPortalAdmin />} />
 

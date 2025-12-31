@@ -7,8 +7,9 @@ export const getStudents = async (req: Request, res: Response) => {
   try {
     const [rows]: any = await pool.query(`
       SELECT 
-        u.id, u.email, u.name, u.role, u.phone, u.avatar_url,
+        u.id, u.email, u.name, u.role, u.phone, u.avatar_url, u.address,
         sp.roll_number, sp.register_number, sp.dob, sp.gender, sp.blood_group,
+        sp.guardian_name, sp.guardian_phone,
         b.name as batch_name, sp.batch_id,
         s.name as section_name, sp.section_id,
         d.name as department_name
@@ -31,8 +32,11 @@ export const getStudents = async (req: Request, res: Response) => {
 export const createStudent = async (req: Request, res: Response) => {
   const { 
     email, name, password, phone, 
-    roll_number, register_number, batch_id, section_id, dob, gender 
+    roll_number, batch_id, section_id, dob, gender 
   } = req.body;
+
+  // Rule: Register Number should be same as Roll Number
+  const register_number = roll_number;
 
   const connection = await pool.getConnection();
 
@@ -74,21 +78,75 @@ export const createStudent = async (req: Request, res: Response) => {
 // Update Student
 export const updateStudent = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, phone, roll_number, batch_id, section_id } = req.body;
+  const { 
+    name, phone, email, roll_number, batch_id, section_id,
+    dob, gender, address, guardian_name, guardian_phone
+  } = req.body;
+
+  // Rule: Register Number should be same as Roll Number
+  const register_number = roll_number;
 
   const connection = await pool.getConnection();
 
   try {
+    // Check for duplicates (Email)
+    const [existingEmail]: any = await connection.query(
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [email, id]
+    );
+    if (existingEmail.length > 0) {
+        connection.release();
+        return res.status(409).json({ message: 'Email already in use by another student' });
+    }
+
+    // Check for duplicates (Roll Number / Register Number)
+    const [existingRoll]: any = await connection.query(
+        'SELECT user_id FROM student_profiles WHERE (roll_number = ? OR register_number = ?) AND user_id != ?',
+        [roll_number, register_number, id]
+    );
+    if (existingRoll.length > 0) {
+        connection.release();
+        return res.status(409).json({ message: 'Roll Number or Register Number already assigned to another student' });
+    }
+
+    // Sanitize parameters (undefined -> null)
+    const validDob = dob ? new Date(dob) : null;
+    const sanitizedDob = validDob && !isNaN(validDob.getTime()) ? dob : null;
+    
+    // Helper to ensure no undefined values pass to SQL
+    const s_address = address !== undefined ? address : null;
+    const s_gender = gender !== undefined ? gender : null;
+    const s_guardian_name = guardian_name !== undefined ? guardian_name : null;
+    const s_guardian_phone = guardian_phone !== undefined ? guardian_phone : null;
+    const s_batch_id = batch_id !== undefined ? batch_id : null;
+    const s_section_id = section_id !== undefined ? section_id : null;
+
     await connection.beginTransaction();
 
     await connection.execute(
-      'UPDATE users SET name = ?, phone = ? WHERE id = ?',
-      [name, phone, id]
+      'UPDATE users SET name = ?, phone = ?, email = ?, address = ? WHERE id = ?',
+      [name, phone, email, s_address, id]
     );
 
+    // Use INSERT ... ON DUPLICATE KEY UPDATE to handle missing profile rows
     await connection.execute(
-      'UPDATE student_profiles SET roll_number = ?, batch_id = ?, section_id = ? WHERE user_id = ?',
-      [roll_number, batch_id, section_id, id]
+      `INSERT INTO student_profiles (
+         user_id, roll_number, register_number, batch_id, section_id, 
+         dob, gender, guardian_name, guardian_phone
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         roll_number = VALUES(roll_number),
+         register_number = VALUES(register_number),
+         batch_id = VALUES(batch_id),
+         section_id = VALUES(section_id),
+         dob = VALUES(dob),
+         gender = VALUES(gender),
+         guardian_name = VALUES(guardian_name),
+         guardian_phone = VALUES(guardian_phone)`,
+      [
+        id, roll_number, register_number, s_batch_id, s_section_id, 
+        sanitizedDob, s_gender, s_guardian_name, s_guardian_phone
+      ]
     );
 
     await connection.commit();
@@ -97,7 +155,10 @@ export const updateStudent = async (req: Request, res: Response) => {
   } catch (error: any) {
      await connection.rollback();
      console.error('Update Student Error:', error);
-     res.status(500).json({ message: 'Error updating student' });
+     if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ message: error.sqlMessage || 'Duplicate entry for Email or Roll/Register Number' });
+     }
+     res.status(500).json({ message: error.message || 'Error updating student' });
   } finally {
     connection.release();
   }

@@ -115,7 +115,6 @@ const tutorLinks: SidebarLink[] = [
     children: [
       { label: 'Leave Approvals', icon: ExternalLink, path: '/tutor/leave' },
       { label: 'OD Approvals', icon: ExternalLink, path: '/tutor/od' },
-      { label: 'Feedback Portal', icon: ExternalLink, path: '/tutor/feedback' },
       { label: 'Grievance Portal', icon: ExternalLink, path: '/tutor/grievance' },
       { label: 'Lost & Found', icon: ExternalLink, path: '/tutor/lost-found' },
     ]
@@ -234,7 +233,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden"
               >
-                <p className="font-bold text-sidebar-foreground text-sm">CSE Department</p>
+                <p className="font-bold text-sidebar-foreground text-sm">Cyber Security Department</p>
                 <p className="text-xs text-sidebar-foreground/60">Your Institution</p>
               </motion.div>
             )}
