@@ -14,7 +14,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3007;
 
-console.log(`Starting Server... Time: ${new Date().toISOString()} - Restart 18`);
+console.log(`Starting Server... Time: ${new Date().toISOString()} - Restart 19`);
 import authRoutes from './auth.routes.js';
 import adminRoutes from './admin.routes.js';
 import academicRoutes from './academic.routes.js';
@@ -99,6 +99,9 @@ app.use('/api/feedback', feedbackRoutes);
 
 import grievanceRoutes from './grievance.routes.js';
 app.use('/api/grievance', grievanceRoutes);
+
+import lostAndFoundRoutes from './lost-and-found.routes.js';
+app.use('/api/lost-and-found', lostAndFoundRoutes);
 
 // Health Check
 app.get('/api/health', async (req, res) => {

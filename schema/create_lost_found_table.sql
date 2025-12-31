@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS lost_and_found_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    item_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    image_path VARCHAR(255) DEFAULT NULL,
+    status ENUM('active', 'resolved') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
