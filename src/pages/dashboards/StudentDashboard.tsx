@@ -32,6 +32,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import { useNavigate } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
+import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
+
+
 export default function StudentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -41,12 +45,20 @@ export default function StudentDashboard() {
     pendingTasks: 0,
     ecaPoints: 0
   });
+
+  const [academicState, setAcademicState] = useState({ year: 1, semester: 1 });
   
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   const [subjectDist, setSubjectDist] = useState<any[]>([]);
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
   const [studentData, setStudentData] = useState<any>(null);
+
+  useEffect(() => {
+    if (studentData && studentData.batch) {
+        setAcademicState(calculateCurrentAcademicState(studentData.batch));
+    }
+  }, [studentData]);
 
   useEffect(() => {
     if (user && user.role === 'student') {
@@ -119,7 +131,14 @@ export default function StudentDashboard() {
       >
         <div>
           <h1 className="text-3xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
-          <p className="text-muted-foreground">Here's your academic overview for today</p>
+          <div className="flex items-center gap-2 mt-1">
+             <p className="text-muted-foreground">
+                Year {academicState.year} • Semester {academicState.semester}
+             </p>
+             <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20 text-primary">
+                {studentData?.batch || 'Batch N/A'}
+             </Badge>
+          </div>
         </div>
         <Button onClick={() => navigate('/student/timetable')} variant="gradient" className="w-fit">
           <Calendar className="w-4 h-4 mr-2" />

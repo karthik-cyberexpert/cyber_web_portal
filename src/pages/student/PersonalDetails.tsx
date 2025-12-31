@@ -44,6 +44,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api-config';
+import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
 
 export default function PersonalDetails() {
   const { user } = useAuth();
@@ -52,6 +53,8 @@ export default function PersonalDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  
+  const academicState = student?.batch ? calculateCurrentAcademicState(student.batch) : { year: 1, semester: 1 };
 
   const fetchProfile = async () => {
     try {
@@ -224,7 +227,10 @@ export default function PersonalDetails() {
           
           <div>
             <h2 className="text-2xl font-black tracking-tight italic">{student.name}</h2>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 slashed-zero">{student.class} • Year {student.year}</p>
+            <h2 className="text-2xl font-black tracking-tight italic">{student.name}</h2>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 slashed-zero">
+                {student.class} • Year {academicState.year} • Sem {academicState.semester}
+            </p>
           </div>
 
           <div className="w-full space-y-3 px-4">

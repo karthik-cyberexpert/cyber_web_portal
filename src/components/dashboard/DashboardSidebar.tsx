@@ -150,6 +150,17 @@ const adminLinks: SidebarLink[] = [
       { label: 'Subjects', icon: BookOpen, path: '/admin/subjects' }
     ]
   },
+  { 
+    label: 'Manage Schedule', 
+    icon: Users, 
+    path: '/admin/parent',
+    children: [
+      { label: 'UT Schedule', icon: Calendar, path: '/admin/schedule/ut' },
+      { label: 'Model Schedule', icon: Calendar, path: '/admin/schedule/model' },
+      { label: 'Semester Schedule', icon: Calendar, path: '/admin/schedule/semester' },
+      { label: 'Holidays Schedule', icon: Calendar, path: '/admin/schedule/holidays' }
+    ]
+  },
   { label: 'Batches & Classes', icon: Users, path: '/admin/batches' },
   { 
     label: 'Timetable', 

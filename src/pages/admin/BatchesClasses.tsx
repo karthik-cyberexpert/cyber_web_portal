@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
+import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
 
 interface Batch {
     id: number;
@@ -115,6 +116,28 @@ export default function BatchesClasses() {
         setSections([]);
     }
   }, [selectedBatchId]);
+
+  // Auto-prompt for new batch creation on June 1st
+  useEffect(() => {
+     if (batches.length > 0) {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const isPastJune1 = today.getMonth() >= 5; // Month is 0-indexed (0=Jan, 5=June)
+        
+        // If we are past June 1st, we expect a batch starting in this current year
+        if (isPastJune1) {
+            const expectedBatchName = `${currentYear}-${currentYear + 4}`;
+            const exists = batches.some(b => b.name === expectedBatchName);
+            
+            if (!exists) {
+                // Pre-fill and open dialog
+                setStartYear(currentYear.toString());
+                setIsAddBatchOpen(true);
+                toast.info(`Academic Year ${currentYear} has started! Please initialize the new batch.`);
+            }
+        }
+     }
+  }, [batches]);
 
   const handleAddBatch = async () => {
     const year = parseInt(startYear);
@@ -399,8 +422,12 @@ export default function BatchesClasses() {
             </TableRow>
           </TableHeader>
           <TableBody>
+
+
+
             {filteredBatches.map((batch) => {
-                const yearNum = Math.ceil(batch.current_semester / 2);
+                const academicState = calculateCurrentAcademicState(batch.name);
+                const yearNum = academicState.year;
                 const yearLabel = yearNum > 4 ? "Graduated" : `${yearNum}${yearNum === 1 ? 'st' : yearNum === 2 ? 'nd' : yearNum === 3 ? 'rd' : 'th'} Year`;
                 
                 return (
@@ -426,7 +453,7 @@ export default function BatchesClasses() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="italic">
-                        Sem {batch.current_semester}
+                        Sem {academicState.semester}
                       </Badge>
                     </TableCell>
                     <TableCell>
