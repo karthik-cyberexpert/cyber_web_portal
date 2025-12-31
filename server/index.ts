@@ -23,8 +23,10 @@ import studentRoutes from './student.routes.js';
 app.use(cors());
 app.use(express.json());
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files statically (Corrected path)
+const uploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+app.use('/api/uploads', express.static(uploadsPath));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -75,9 +77,7 @@ app.use('/api/student-assignments', studentAssignmentsRoutes);
 import assignmentSubmissionRoutes from './assignment-submission.routes.js';
 app.use('/api/assignment-submission', assignmentSubmissionRoutes);
 
-// Serve uploaded files
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Uploads already served above
 
 import gradeSubmissionRoutes from './grade-submission.routes.js';
 app.use('/api/grade-submission', gradeSubmissionRoutes);
@@ -96,6 +96,9 @@ app.use('/api/od', odRoutes);
 
 import feedbackRoutes from './feedback.routes.js';
 app.use('/api/feedback', feedbackRoutes);
+
+import grievanceRoutes from './grievance.routes.js';
+app.use('/api/grievance', grievanceRoutes);
 
 // Health Check
 app.get('/api/health', async (req, res) => {

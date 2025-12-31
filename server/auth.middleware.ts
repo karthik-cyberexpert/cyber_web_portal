@@ -9,10 +9,17 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.sendStatus(401);
+  if (!token) {
+      console.log('Auth Middleware: No token provided');
+      return res.sendStatus(401);
+  }
 
   jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
-    if (err) return res.sendStatus(403);
+    if (err) {
+        console.error('Auth Middleware: JWT Verify Error:', err.message);
+        console.log('Received Token:', token.substring(0, 20) + '...');
+        return res.sendStatus(403);
+    }
     
     // Safety Check: Ensure user still exists in DB
     try {
