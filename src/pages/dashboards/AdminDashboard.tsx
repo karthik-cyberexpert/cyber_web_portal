@@ -36,6 +36,16 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import SemesterDatePopup from '@/components/admin/SemesterDatePopup';
+
+interface PendingBatch {
+  id: number;
+  name: string;
+  current_semester: number;
+  department_name: string;
+  semester_start_date: string | null;
+  semester_end_date: string | null;
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -50,8 +60,48 @@ export default function AdminDashboard() {
   const [batchDistribution, setBatchDistribution] = useState<any[]>([]);
   const [marksApprovalQueue, setMarksApprovalQueue] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  
+  // Semester Popup State
+  const [pendingBatches, setPendingBatches] = useState<PendingBatch[]>([]);
+  const [currentPendingBatch, setCurrentPendingBatch] = useState<PendingBatch | null>(null);
+
+  // Fetch pending semester updates
+  const fetchPendingSemesterUpdates = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/academic/pending-semester-updates`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const batches = await response.json();
+        setPendingBatches(batches);
+        if (batches.length > 0) {
+          setCurrentPendingBatch(batches[0]);
+        } else {
+          setCurrentPendingBatch(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending semester updates:', error);
+    }
+  };
+
+  const handleSemesterDateSaved = () => {
+    // Remove the saved batch from pending list and show next one
+    const remaining = pendingBatches.filter(b => b.id !== currentPendingBatch?.id);
+    setPendingBatches(remaining);
+    if (remaining.length > 0) {
+      setCurrentPendingBatch(remaining[0]);
+    } else {
+      setCurrentPendingBatch(null);
+    }
+  };
 
   useEffect(() => {
+    // Check for pending semester updates first
+    fetchPendingSemesterUpdates();
+    
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -134,6 +184,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Semester Date Popup - Shows when batch semester end date has passed */}
+      {currentPendingBatch && (
+        <SemesterDatePopup 
+          batch={currentPendingBatch} 
+          onSave={handleSemesterDateSaved}
+        />
+      )}
+      
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -1,16 +1,14 @@
-```typescript
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
   ChevronRight, 
-  BookOpen, 
   GraduationCap,
+  Clock,
   Plus,
   Save,
-  Trash2,
-  Clock
+  Trash2
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -35,12 +33,11 @@ import {
   endOfMonth, 
   eachDayOfInterval, 
   isSameMonth, 
-  isToday, 
-  addMonths, 
-  subMonths,
   startOfWeek,
   endOfWeek,
-  parseISO
+  isToday,
+  addMonths,
+  subMonths
 } from 'date-fns';
 
 interface Batch {
@@ -63,9 +60,16 @@ interface CalendarEvent {
     subject_id?: number;
     subject_name?: string;
     subject_code?: string;
+    description?: string;
 }
 
-export default function SemesterSchedule() {
+const EXAM_TYPES = [
+    { value: 'UT', label: 'Unit Test (UT)' },
+    { value: 'MODEL', label: 'Model Exam' },
+    { value: 'SEMESTER', label: 'Semester Exam' }
+];
+
+export default function ExamSchedule() {
   const { user } = useAuth();
   const token = localStorage.getItem('token');
   
@@ -83,6 +87,7 @@ export default function SemesterSchedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedExamType, setSelectedExamType] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch batches and subjects
@@ -115,14 +120,11 @@ export default function SemesterSchedule() {
 
   // Fetch Events
   const fetchEvents = useCallback(async () => {
-      if (!selectedBatchId || !selectedSemester) {
-        setEvents([]); // Clear events if batch or semester is not selected
-        return;
-      }
+      if (!selectedBatchId || !selectedSemester) return;
 
       try {
           const query = new URLSearchParams({
-              type: 'SEMESTER',
+              // type: '...', // Intentionally omitted to fetch all types
               batchId: selectedBatchId,
               semester: selectedSemester,
               month: (currentMonth.getMonth() + 1).toString(),
@@ -136,13 +138,9 @@ export default function SemesterSchedule() {
           if (res.ok) {
               const data = await res.json();
               setEvents(data);
-          } else {
-            console.error("Failed to fetch events:", res.status, res.statusText);
-            setEvents([]);
           }
       } catch (error) {
           console.error("Failed to fetch events", error);
-          setEvents([]);
       }
   }, [selectedBatchId, selectedSemester, currentMonth, token]);
 
@@ -152,6 +150,7 @@ export default function SemesterSchedule() {
 
   const handleBatchChange = (batchId: string) => {
       setSelectedBatchId(batchId);
+      
       const batch = batches.find(b => b.id.toString() === batchId);
       if (batch) {
           const { semester } = calculateCurrentAcademicState(batch.name);
@@ -165,13 +164,14 @@ export default function SemesterSchedule() {
 
   const handleDateClick = (date: Date) => {
       setSelectedDate(date);
-      setSelectedSubject(""); // Reset subject
+      setSelectedSubject("");
+      setSelectedExamType("");
       setIsDialogOpen(true);
   };
 
   const handleScheduleExam = async () => {
-      if (!selectedSubject || !selectedDate) {
-          toast.error("Please select a subject");
+      if (!selectedSubject || !selectedDate || !selectedExamType) {
+          toast.error("Please fill in all fields");
           return;
       }
 
@@ -184,18 +184,18 @@ export default function SemesterSchedule() {
                   Authorization: `Bearer ${token}` 
               },
               body: JSON.stringify({
-                  event_type: 'SEMESTER',
+                  event_type: selectedExamType,
                   date: format(selectedDate, 'yyyy-MM-dd'),
                   batch_id: selectedBatchId,
                   semester: selectedSemester,
                   subject_id: selectedSubject,
-                  description: 'Semester Exam'
+                  description: `${selectedExamType} - ${subjects.find(s => s.id.toString() === selectedSubject)?.name}`
               })
           });
 
           if (res.ok) {
               const subjectName = subjects.find(s => s.id.toString() === selectedSubject)?.name || "Exam";
-              toast.success(`Scheduled ${subjectName} Exam`);
+              toast.success(`Scheduled ${subjectName} (${selectedExamType})`);
               setIsDialogOpen(false);
               fetchEvents(); // Refresh
           } else {
@@ -220,11 +220,9 @@ export default function SemesterSchedule() {
           if (res.ok) {
               toast.success("Exam cancelled");
               fetchEvents();
-          } else {
-            toast.error("Failed to delete exam");
           }
       } catch (error) {
-           toast.error("Network error");
+           toast.error("Failed to delete");
       }
   }
 
@@ -242,6 +240,15 @@ export default function SemesterSchedule() {
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
   const weeks = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const getEventColor = (type: string) => {
+      switch(type) {
+          case 'UT': return 'bg-blue-500/10 border-blue-500/20 text-blue-200';
+          case 'MODEL': return 'bg-purple-500/10 border-purple-500/20 text-purple-200';
+          case 'SEMESTER': return 'bg-orange-500/10 border-orange-500/20 text-orange-200';
+          default: return 'bg-gray-500/10 border-gray-500/20 text-gray-200';
+      }
+  };
+
   return (
     <div className="space-y-6">
       {/* Full Width Selection Header */}
@@ -249,9 +256,9 @@ export default function SemesterSchedule() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-7xl mx-auto">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Semester Schedule
+                Exam Schedule
               </h1>
-              <p className="text-muted-foreground text-sm">Manage Semester Exam schedules and timings</p>
+              <p className="text-muted-foreground text-sm">Manage all exam schedules (UT, Model, Semester, External)</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -327,14 +334,18 @@ export default function SemesterSchedule() {
                             </Button>
                         </div>
                     </div>
-                    <Button className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Schedule Exam
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mr-4">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> UT</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500"></span> Model</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Sem</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Calendar Grid */}
                 <div className="glass-card rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+                    {/* Days Header */}
                     <div className="grid grid-cols-7 border-b border-white/10 bg-white/5">
                         {weeks.map(day => (
                             <div key={day} className="py-4 text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -343,18 +354,19 @@ export default function SemesterSchedule() {
                         ))}
                     </div>
 
+                    {/* Days Grid */}
                     <div className="grid grid-cols-7 auto-rows-[140px] divide-x divide-white/10 divide-y bg-background/30">
                         {calendarDays.map((day, dayIdx) => {
                             const isCurrentMonth = isSameMonth(day, currentMonth);
                             const isTodayDate = isToday(day);
                             const dateStr = format(day, 'yyyy-MM-dd');
-
+                            
                             // Find events for this day
                             const dayEvents = events.filter(e => {
                                 const eventDate = typeof e.date === 'string' ? e.date.split('T')[0] : format(e.date, 'yyyy-MM-dd');
                                 return eventDate === dateStr;
                             });
-                            
+
                             return (
                                 <motion.div
                                     key={day.toString()}
@@ -377,11 +389,17 @@ export default function SemesterSchedule() {
                                         </span>
                                     </div>
 
-                                     {/* Events Container */}
-                                     <div className="space-y-1">
+                                    {/* Events Container */}
+                                    <div className="space-y-1">
                                         {dayEvents.map(event => (
-                                            <div key={event.id} className="text-[10px] p-1 px-1.5 rounded bg-green-500/10 border border-green-500/20 text-green-200 truncate font-medium flex items-center justify-between group/event">
-                                                <span>{event.subject_name || event.title}</span>
+                                            <div 
+                                                key={event.id} 
+                                                className={`text-[10px] p-1 px-1.5 rounded border truncate font-medium flex items-center justify-between group/event ${getEventColor(event.event_type)}`}
+                                            >
+                                                <span>
+                                                    <span className="opacity-75 mr-1 font-bold">{event.event_type && event.event_type.charAt(0)}:</span> 
+                                                    {event.subject_name || event.title}
+                                                </span>
                                                 <button 
                                                     onClick={(e) => handleDeleteEvent(e, event.id)}
                                                     className="opacity-0 group-hover/event:opacity-100 hover:text-red-400 transition-opacity"
@@ -392,6 +410,7 @@ export default function SemesterSchedule() {
                                         ))}
                                     </div>
 
+                                    {/* Hover Add Button */}
                                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center">
                                             <Plus className="w-3 h-3" />
@@ -416,22 +435,38 @@ export default function SemesterSchedule() {
                 </div>
                 <div>
                     <h3 className="text-xl font-medium text-foreground">No Batch Selected</h3>
-                    <p className="text-muted-foreground">Select a batch and semester to view the Semester Exam schedule.</p>
+                    <p className="text-muted-foreground">Select a batch and semester from the header to view the exam schedule.</p>
                 </div>
             </motion.div>
         )}
         </AnimatePresence>
-
+      
         {/* Schedule Exam Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-[425px] bg-background/95 backdrop-blur-xl border-white/10">
                 <DialogHeader>
-                    <DialogTitle>Schedule Semester Exam</DialogTitle>
+                    <DialogTitle>Schedule Exam</DialogTitle>
                     <DialogDescription>
-                        Schedule a Semester Exam for <strong>{selectedDate ? format(selectedDate, 'MMMM do, yyyy') : ''}</strong>
+                        Schedule an exam for <strong>{selectedDate ? format(selectedDate, 'MMMM do, yyyy') : ''}</strong>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="exam-type">Exam Type</Label>
+                        <Select value={selectedExamType} onValueChange={setSelectedExamType}>
+                            <SelectTrigger id="exam-type" className="bg-white/5 border-white/10">
+                                <SelectValue placeholder="Select Exam Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXAM_TYPES.map(type => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                        {type.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="grid gap-2">
                         <Label htmlFor="subject">Subject</Label>
                         <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -450,18 +485,13 @@ export default function SemesterSchedule() {
                                 )}
                             </SelectContent>
                         </Select>
-                        {filteredSubjects.length === 0 && (
-                            <p className="text-xs text-destructive mt-1">
-                                Warning: No subjects are assigned to Semester {selectedSemester}. Please add subjects in 'Manage Subjects'.
-                            </p>
-                        )}
                     </div>
                 </div>
                 <DialogFooter>
                     <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Cancel</Button>
                     <Button onClick={handleScheduleExam} className="bg-primary text-primary-foreground" disabled={filteredSubjects.length === 0 || isSaving}>
-                         {isSaving ? <Clock className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                         {isSaving ? 'Scheduling...' : 'Schedule'}
+                        {isSaving ? <Clock className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                        {isSaving ? 'Scheduling...' : 'Schedule'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -66,20 +66,88 @@ export const createSection = async (req: Request, res: Response) => {
   }
 };
 
-// Update Batch
+// Update Batch (Fixed to accept actual semester number 1-8)
 export const updateBatch = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { currentSemester, semesterStartDate, semesterEndDate } = req.body;
+    const { semester, semester_start_date, semester_end_date } = req.body;
 
     try {
         await pool.execute(
-            'UPDATE batches SET current_semester = ?, semester_start_date = ?, semester_end_date = ? WHERE id = ?',
-            [currentSemester === 'Even' ? 2 : 1, semesterStartDate || null, semesterEndDate || null, id]
+            `UPDATE batches 
+             SET current_semester = ?, 
+                 semester_start_date = ?, 
+                 semester_end_date = ?,
+                 semester_dates_pending = FALSE 
+             WHERE id = ?`,
+            [semester, semester_start_date || null, semester_end_date || null, id]
         );
         res.json({ message: 'Batch updated successfully' });
     } catch (error: any) {
         console.error('Update Batch Error:', error);
         res.status(500).json({ message: 'Error updating batch' });
+    }
+};
+
+// Get Pending Semester Updates - Returns batches that need new semester dates
+export const getPendingSemesterUpdates = async (req: Request, res: Response) => {
+    try {
+        // First, auto-increment semesters for batches whose end date has passed
+        // and set semester_dates_pending = TRUE
+        await pool.execute(`
+            UPDATE batches 
+            SET current_semester = current_semester + 1,
+                semester_dates_pending = TRUE,
+                semester_start_date = NULL,
+                semester_end_date = NULL
+            WHERE semester_end_date IS NOT NULL 
+              AND semester_end_date < CURDATE()
+              AND semester_dates_pending = FALSE
+              AND current_semester < 8
+        `);
+
+        // Now fetch all batches that need semester date configuration
+        const [rows]: any = await pool.query(`
+            SELECT b.id, b.name, b.current_semester, b.semester_start_date, b.semester_end_date,
+                   d.name as department_name
+            FROM batches b
+            JOIN departments d ON b.department_id = d.id
+            WHERE b.semester_dates_pending = TRUE
+            ORDER BY b.name ASC
+        `);
+
+        res.json(rows);
+    } catch (error: any) {
+        console.error('Get Pending Semester Updates Error:', error);
+        res.status(500).json({ message: 'Error checking pending semester updates' });
+    }
+};
+
+// Set Semester Dates for a Batch
+export const setSemesterDates = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { semester_start_date, semester_end_date } = req.body;
+
+    if (!semester_start_date || !semester_end_date) {
+        return res.status(400).json({ message: 'Both start and end dates are required' });
+    }
+
+    if (new Date(semester_start_date) >= new Date(semester_end_date)) {
+        return res.status(400).json({ message: 'Start date must be before end date' });
+    }
+
+    try {
+        await pool.execute(
+            `UPDATE batches 
+             SET semester_start_date = ?, 
+                 semester_end_date = ?,
+                 semester_dates_pending = FALSE 
+             WHERE id = ?`,
+            [semester_start_date, semester_end_date, id]
+        );
+        res.json({ message: 'Semester dates updated successfully' });
+    } catch (error: any) {
+        console.error('Set Semester Dates Error:', error);
+        res.status(500).json({ message: 'Error setting semester dates' });
     }
 };
 

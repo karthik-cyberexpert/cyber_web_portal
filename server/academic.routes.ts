@@ -1,5 +1,9 @@
 import express from 'express';
-import { getBatches, createBatch, getSections, createSection, updateBatch, deleteBatch, updateSection, deleteSection } from './academic.controller.js';
+import { 
+  getBatches, createBatch, getSections, createSection, 
+  updateBatch, deleteBatch, updateSection, deleteSection,
+  getPendingSemesterUpdates, setSemesterDates
+} from './academic.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 
 const router = express.Router();
@@ -12,6 +16,10 @@ router.put('/batches/:id', authenticateToken, updateBatch);
 router.delete('/batches/:id', authenticateToken, deleteBatch);
 router.put('/sections/:id', authenticateToken, updateSection);
 router.delete('/sections/:id', authenticateToken, deleteSection);
+
+// Semester Management Routes
+router.get('/pending-semester-updates', authenticateToken, getPendingSemesterUpdates);
+router.post('/batches/:id/semester-dates', authenticateToken, setSemesterDates);
 
 // Subject Routes
 import { 

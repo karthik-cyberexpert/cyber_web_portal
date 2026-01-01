@@ -84,9 +84,7 @@ import FeedbackPortalAdmin from "@/pages/admin/FeedbackPortal";
 import FeedbackResults from "@/pages/admin/FeedbackResults";
 import GrievancePortalAdmin from "@/pages/admin/GrievancePortal";
 import AdminLostFoundPortal from './pages/admin/LostFoundPortal';
-import UTSchedule from './pages/admin/schedules/UTSchedule';
-import ModelSchedule from './pages/admin/schedules/ModelSchedule';
-import SemesterSchedule from './pages/admin/schedules/SemesterSchedule';
+import ExamSchedule from './pages/admin/schedules/ExamSchedule';
 import HolidaysSchedule from './pages/admin/schedules/HolidaysSchedule';
 import Settings from "@/pages/admin/Settings";
 import Profile from "@/pages/admin/Profile";
@@ -215,9 +213,7 @@ const App = () => {
                   <Route path="feedback/:id/results" element={<FeedbackResults />} />
                   <Route path="grievance" element={<GrievancePortalAdmin />} />
                   <Route path="lost-found" element={<AdminLostFoundPortal />} />
-                  <Route path="schedule/ut" element={<UTSchedule />} />
-                  <Route path="schedule/model" element={<ModelSchedule />} />
-                  <Route path="schedule/semester" element={<SemesterSchedule />} />
+                  <Route path="schedule/exams" element={<ExamSchedule />} />
                   <Route path="schedule/holidays" element={<HolidaysSchedule />} />
 
                   <Route path="marks" element={<ApproveMarks />} />

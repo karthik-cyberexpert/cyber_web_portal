@@ -1,4 +1,4 @@
-import { db } from './db';
+import { pool } from './db';
 import fs from 'fs';
 import path from 'path';
 
@@ -8,7 +8,7 @@ async function runSchema() {
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 
     console.log('Running schema migration...');
-    await db.query(schemaSql);
+    await pool.query(schemaSql);
     console.log('Schema migration completed successfully.');
   } catch (error) {
     console.error('Error running schema migration:', error);

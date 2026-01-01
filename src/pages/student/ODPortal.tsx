@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getStudents, Student } from '@/lib/data-store';
+import { getStudents, Student, LeaveRequest } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';

@@ -103,8 +103,8 @@ app.use('/api/grievance', grievanceRoutes);
 import lostAndFoundRoutes from './lost-and-found.routes.js';
 app.use('/api/lost-and-found', lostAndFoundRoutes);
 
-import calendarRoutes from './calendar.routes.js';
-app.use('/api/calendar', calendarRoutes);
+import { calendarRouter } from './calendar.routes.js';
+app.use('/api/calendar', calendarRouter);
 
 // Health Check
 app.get('/api/health', async (req, res) => {
@@ -127,6 +127,7 @@ app.post('/api/faculty/marks', authenticateToken, marksController.saveMarks);
 
 app.listen(PORT,  () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Calendar Routes registered at /api/calendar');
 });
 
 

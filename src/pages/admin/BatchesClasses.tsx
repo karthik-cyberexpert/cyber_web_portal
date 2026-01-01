@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Users, Plus, Edit2, Trash2, 
-  Search, BookOpen, Settings2, MoreHorizontal, ArrowUpCircle
+  Search, BookOpen, Settings2, MoreHorizontal, ArrowUpCircle, Calendar
 } from 'lucide-react';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
 import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
+import SemesterDatePopup from '@/components/admin/SemesterDatePopup';
 
 interface Batch {
     id: number;
@@ -76,6 +77,9 @@ export default function BatchesClasses() {
   const [editBatchSemester, setEditBatchSemester] = useState<number>(1);
   const [editBatchStartDate, setEditBatchStartDate] = useState('');
   const [editBatchEndDate, setEditBatchEndDate] = useState('');
+
+  // Semester Date Popup State
+  const [semesterEditBatch, setSemesterEditBatch] = useState<Batch | null>(null);
 
   const fetchBatches = async () => {
       try {
@@ -237,28 +241,6 @@ export default function BatchesClasses() {
                   Authorization: `Bearer ${token}`
               },
               body: JSON.stringify({
-                  currentSemester: editBatchSemester, // Logic handles conversion if needed, but we pass raw number/string? Controller expects 'Even'/'Odd' map?
-                  // Controller: currentSemester === 'Even' ? 2 : 1. 
-                  // Wait, controller logic was rigid. Let's send what controller expects OR update controller.
-                  // Controller expects string "Odd" or "Even"? No, let's fix controller or send mapped value.
-                  // Revised Controller line: UPDATE batches SET current_semester = ?, ...
-                  // We should probably just Update `current_semester` directly to the number. 
-                  // For now, let's respect the existing controller logic: `currentSemester === 'Even' ? 2 : 1`. 
-                  // Actually I should have updated controller to accept number.
-                  // Let's assume I send "Even" if `editBatchSemester % 2 === 0` and "Odd" otherwise?
-                  // Or better, let's just assume the controller logic I wrote was: `[currentSemester === 'Even' ? 2 : 1, ...]`
-                  // That logic is flawed for higher semesters (3, 4, 5...).
-                  // I should fix the controller to accept raw number.
-                  // But I can't edit controller right in this file. 
-                  // I'll send "Even" or "Odd" for now to just toggle 1 vs 2, OR
-                  // I will rely on my Plan to *fix* the controller properly. 
-                  // ACTUALLY, I wrote the controller to accept number in my mind but the code said: 
-                  // `currentSemester === 'Even' ? 2 : 1`. This is bad for sem 3, 4. 
-                  // I MUST FIX CONTROLLER. 
-                  // For now, I will write this frontend to send "Even" or "Odd" knowing it is limited to 1/2, 
-                  // OR I will simply accept that I need to do another tool call to fix controller.
-                  
-                  // Let's try to send what I can.
                   currentSemester: editBatchSemester % 2 === 0 ? 'Even' : 'Odd', 
                   semesterStartDate: editBatchStartDate,
                   semesterEndDate: editBatchEndDate
@@ -353,6 +335,25 @@ export default function BatchesClasses() {
 
   return (
     <div className="space-y-6">
+      {/* Semester Date Edit Popup */}
+      {semesterEditBatch && (
+        <SemesterDatePopup 
+          batch={{
+            id: semesterEditBatch.id,
+            name: semesterEditBatch.name,
+            current_semester: semesterEditBatch.current_semester,
+            department_name: semesterEditBatch.department_name,
+            semester_start_date: semesterEditBatch.semester_start_date,
+            semester_end_date: semesterEditBatch.semester_end_date
+          }}
+          onSave={() => {
+            setSemesterEditBatch(null);
+            fetchBatches();
+          }}
+          onClose={() => setSemesterEditBatch(null)}
+          readOnly={true}
+        />
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent italic">
@@ -474,6 +475,10 @@ export default function BatchesClasses() {
                            <DropdownMenuItem onClick={() => openBatchEdit(batch)}>
                              <Settings2 className="w-4 h-4 mr-2" />
                              Settings
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => setSemesterEditBatch(batch)}>
+                             <Calendar className="w-4 h-4 mr-2" />
+                             Edit Semester Dates
                            </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => {
                              setSelectedBatchId(batch.id);

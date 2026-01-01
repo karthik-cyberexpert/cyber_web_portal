@@ -155,9 +155,7 @@ const adminLinks: SidebarLink[] = [
     icon: Users, 
     path: '/admin/parent',
     children: [
-      { label: 'UT Schedule', icon: Calendar, path: '/admin/schedule/ut' },
-      { label: 'Model Schedule', icon: Calendar, path: '/admin/schedule/model' },
-      { label: 'Semester Schedule', icon: Calendar, path: '/admin/schedule/semester' },
+      { label: 'Exam Schedule', icon: Calendar, path: '/admin/schedule/exams' },
       { label: 'Holidays Schedule', icon: Calendar, path: '/admin/schedule/holidays' }
     ]
   },

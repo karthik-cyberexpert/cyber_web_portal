@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 import { 
-    calculateWorkingDays, 
+    calculateWorkingDaysWithHolidays, 
     validateNotPastDate, 
-    checkOverlappingRequests 
+    checkOverlappingRequests,
+    checkExamDatesInRange
 } from './leave-od.utils.js';
+import { getFileUrl } from './upload.config.js';
 
 // Create a new OD request (Student)
 export async function createODRequest(req: Request, res: Response) {
@@ -29,8 +31,17 @@ export async function createODRequest(req: Request, res: Response) {
             return res.status(400).json({ error: 'You already have a leave/OD request for these dates' });
         }
 
-        // Calculate working days
-        const working_days = calculateWorkingDays(start_date, end_date);
+        // Check for exam dates in the requested range
+        const examCheck = await checkExamDatesInRange(userId, start_date, end_date);
+        if (examCheck.hasExams) {
+            return res.status(400).json({ 
+                error: 'Cannot apply for OD on exam dates',
+                examDates: examCheck.examDates 
+            });
+        }
+
+        // Calculate working days (excluding Sundays and holidays)
+        const working_days = await calculateWorkingDaysWithHolidays(start_date, end_date);
 
         // Map duration_type to session for database
         let mappedSession = 'Full Day';
