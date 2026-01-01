@@ -100,7 +100,7 @@ export default function Circulars() {
             const formatted = data.map((c: any) => ({
                 ...c,
                 category: c.type, // Map type to category for UI
-                date: new Date(c.created_at).toLocaleDateString()
+                date: new Date(c.created_at).toLocaleDateString('en-GB')
             }));
             setCirculars(formatted);
         }

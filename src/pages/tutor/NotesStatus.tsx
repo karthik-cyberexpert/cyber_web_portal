@@ -42,7 +42,7 @@ export default function NotesStatus() {
             faculty: 'Assigned Faculty',
             totalUnits: 5,
             completedUnits: completedUnits,
-            lastUpdate: relatedResources.length > 0 ? new Date(relatedResources[0].createdAt).toLocaleDateString() : 'N/A',
+            lastUpdate: relatedResources.length > 0 ? new Date(relatedResources[0].createdAt).toLocaleDateString('en-GB') : 'N/A',
             status: completedUnits >= 5 ? 'Completed' : completedUnits > 0 ? 'In Progress' : 'Pending'
         };
     });

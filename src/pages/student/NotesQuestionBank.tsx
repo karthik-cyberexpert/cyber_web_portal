@@ -409,7 +409,7 @@ const ResourceCard = ({ note, idx }: { note: any, idx: number }) => {
         <span>{note.fileSize} ({note.fileType})</span>
         <span className="flex items-center gap-1 text-[8px]">
           <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-          {new Date(note.uploadedAt).toLocaleDateString()}
+          {new Date(note.uploadedAt).toLocaleDateString('en-GB')}
         </span>
       </div>
     </motion.div>

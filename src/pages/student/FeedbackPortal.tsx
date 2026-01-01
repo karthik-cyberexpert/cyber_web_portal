@@ -244,7 +244,7 @@ export default function FeedbackPortalStudent() {
                   <div className="space-y-4">
                     <div className="flex items-center text-sm text-muted-foreground">
                         <CalendarIcon className="w-4 h-4 mr-2" />
-                        Closes: {new Date(item.closing_date).toLocaleDateString()}
+                        Closes: {new Date(item.closing_date).toLocaleDateString('en-GB')}
                     </div>
                     
                     {item.is_completed === 1 ? (

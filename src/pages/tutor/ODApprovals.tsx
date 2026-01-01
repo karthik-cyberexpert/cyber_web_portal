@@ -154,7 +154,7 @@ export default function ODApprovals() {
   const formatDate = (date: any) => {
     if (!date) return 'N/A';
     const d = new Date(date);
-    return isNaN(d.getTime()) ? date : d.toLocaleDateString();
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   // Stats Calculation

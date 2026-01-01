@@ -342,7 +342,7 @@ export default function ManageTutors() {
                         <div className="text-xs text-muted-foreground">Section {tutor.section_name}</div>
                     </td>
                     <td className="p-4 text-sm">{tutor.department_name}</td>
-                    <td className="p-4 text-sm">{new Date(tutor.assigned_at).toLocaleDateString()}</td>
+                    <td className="p-4 text-sm">{new Date(tutor.assigned_at).toLocaleDateString('en-GB')}</td>
                     <td className="p-4 text-right">
                         <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(tutor)}>
                             <Trash2 className="w-4 h-4 text-destructive" />

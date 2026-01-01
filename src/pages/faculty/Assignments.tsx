@@ -689,7 +689,7 @@ export default function Assignments() {
                            <h4 className="text-lg font-black group-hover:text-primary transition-colors">{assignment.title}</h4>
                            <div className="flex items-center justify-center lg:justify-start gap-6 text-xs font-bold text-muted-foreground">
                               <span className="flex items-center gap-1.5 uppercase tracking-tighter"><Users className="w-3.5 h-3.5" /> {assignment.batch_name} - {assignment.section_name}</span>
-                              <span className="flex items-center gap-1.5 uppercase tracking-tighter"><Clock className="w-3.5 h-3.5 text-orange-500" /> Due: {new Date(assignment.due_date).toLocaleDateString()}</span>
+                              <span className="flex items-center gap-1.5 uppercase tracking-tighter"><Clock className="w-3.5 h-3.5 text-orange-500" /> Due: {new Date(assignment.due_date).toLocaleDateString('en-GB')}</span>
                            </div>
                         </div>
  

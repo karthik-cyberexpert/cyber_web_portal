@@ -460,7 +460,7 @@ export default function BatchesClasses() {
                     <TableCell>
                        {batch.semester_start_date ? (
                          <div className="text-xs text-muted-foreground italic">
-                            {new Date(batch.semester_start_date).toLocaleDateString()} — {batch.semester_end_date ? new Date(batch.semester_end_date).toLocaleDateString() : '...'}
+                            {new Date(batch.semester_start_date).toLocaleDateString('en-GB')} — {batch.semester_end_date ? new Date(batch.semester_end_date).toLocaleDateString('en-GB') : '...'}
                          </div>
                        ) : <span className="text-xs text-muted-foreground italic">Not Set</span>}
                     </TableCell>

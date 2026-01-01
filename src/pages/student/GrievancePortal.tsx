@@ -205,7 +205,7 @@ export default function GrievancePortal() {
                                       <TableCell>
                                           <Badge variant="outline">{g.target_role}</Badge>
                                       </TableCell>
-                                      <TableCell>{new Date(g.created_at).toLocaleDateString()}</TableCell>
+                                      <TableCell>{new Date(g.created_at).toLocaleDateString('en-GB')}</TableCell>
                                       <TableCell>
                                           <Badge variant="secondary" className={getStatusColor(g.status)}>
                                               {g.status}

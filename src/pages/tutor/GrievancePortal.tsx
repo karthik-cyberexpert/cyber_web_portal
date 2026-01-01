@@ -206,7 +206,7 @@ export default function GrievancePortalTutor() {
                                       </TableCell>
                                       <TableCell>
                                         <div className="flex flex-col">
-                                            <span>{new Date(g.created_at).toLocaleDateString()}</span>
+                                            <span>{new Date(g.created_at).toLocaleDateString('en-GB')}</span>
                                             <span className="text-xs text-muted-foreground">{new Date(g.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                         </div>
                                       </TableCell>

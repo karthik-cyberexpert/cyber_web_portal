@@ -455,7 +455,7 @@ export default function NotesUpload() {
                                  <h4 className="font-bold text-sm truncate mb-3">{note.title}</h4>
                                  <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
                                     <span className="flex items-center gap-1 uppercase tracking-widest"><Users className="w-3 h-3" /> {note.section_name || 'All'}</span>
-                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Clock className="w-3 h-3" /> {new Date(note.created_at).toLocaleDateString()}</span>
+                                    <span className="flex items-center gap-1 uppercase tracking-widest"><Clock className="w-3 h-3" /> {new Date(note.created_at).toLocaleDateString('en-GB')}</span>
                                     <span className="ml-auto text-primary px-2 py-0.5 rounded-full bg-primary/10">{note.download_count} dl</span>
                                  </div>
                               </div>
@@ -536,7 +536,7 @@ export default function NotesUpload() {
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-widest text-muted-foreground">Uploaded</Label>
-                <p className="mt-1 text-sm font-bold">{selectedNote?.created_at ? new Date(selectedNote.created_at).toLocaleDateString() : 'N/A'}</p>
+                <p className="mt-1 text-sm font-bold">{selectedNote?.created_at ? new Date(selectedNote.created_at).toLocaleDateString('en-GB') : 'N/A'}</p>
               </div>
             </div>
             {!selectedNote?.file_url && (

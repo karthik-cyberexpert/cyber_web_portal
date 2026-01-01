@@ -290,7 +290,7 @@ const FlipCard = ({ item, currentUserId, onMarkFound }: { item: LostItem, curren
                         </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 text-right">
-                        {new Date(item.created_at).toLocaleDateString()}
+                        {new Date(item.created_at).toLocaleDateString('en-GB')}
                     </p>
                 </div>
             </Card>
@@ -348,7 +348,7 @@ const FlipCard = ({ item, currentUserId, onMarkFound }: { item: LostItem, curren
                             </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2 text-right">
-                            {new Date(item.created_at).toLocaleDateString()}
+                            {new Date(item.created_at).toLocaleDateString('en-GB')}
                         </p>
                     </div>
                     

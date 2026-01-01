@@ -314,7 +314,7 @@ export default function Circulars() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-xl whitespace-nowrap tracking-widest border border-white/5">
                   <Calendar className="w-3.5 h-3.5 text-primary" />
-                  {new Date(circular.created_at).toLocaleDateString()}
+                  {new Date(circular.created_at).toLocaleDateString('en-GB')}
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

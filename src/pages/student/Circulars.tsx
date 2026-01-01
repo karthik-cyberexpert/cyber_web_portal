@@ -103,7 +103,7 @@ export default function Circulars() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredCirculars.slice(indexOfFirstItem, indexOfLastItem);
 
-  const categories = ['All Notices', 'Academic', 'Examination', 'Placement', 'Events', 'Notice', 'Circular'];
+  const categories = ['All Notices', 'Circular', 'Notice', 'Event', 'News'];
 
   const formatDateTime = (dateStr: string) => {
     try {

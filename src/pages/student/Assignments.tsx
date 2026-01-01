@@ -196,7 +196,7 @@ export default function Assignments() {
                     <Clock className="w-3 h-3" />
                     DEADLINE
                   </div>
-                  <p className="text-sm font-black tracking-tight">{new Date(assignment.dueDate).toLocaleDateString()}</p>
+                  <p className="text-sm font-black tracking-tight">{new Date(assignment.dueDate).toLocaleDateString('en-GB')}</p>
                 </div>
               </div>
 
@@ -367,7 +367,7 @@ export default function Assignments() {
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                   <div className="flex-1">
                     <p className="text-xs font-bold truncate">{a.title}</p>
-                    <p className="text-[10px] text-muted-foreground">Due: {new Date(a.dueDate).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Due: {new Date(a.dueDate).toLocaleDateString('en-GB')}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
