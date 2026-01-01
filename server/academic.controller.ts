@@ -91,8 +91,36 @@ export const updateBatch = async (req: Request, res: Response) => {
 // Get Pending Semester Updates - Returns batches that need new semester dates
 export const getPendingSemesterUpdates = async (req: Request, res: Response) => {
     try {
-        // First, auto-increment semesters for batches whose end date has passed
-        // and set semester_dates_pending = TRUE
+        // First, find batches that need semester increment
+        const [batchesToIncrement]: any = await pool.query(`
+            SELECT id, current_semester 
+            FROM batches 
+            WHERE semester_end_date IS NOT NULL 
+              AND semester_end_date < CURDATE()
+              AND semester_dates_pending = FALSE
+              AND current_semester < 8
+        `);
+
+        // For each batch being incremented, deactivate old semester subject allocations
+        for (const batch of batchesToIncrement) {
+            const oldSemester = batch.current_semester;
+            
+            // Deactivate all subject_allocations where subject.semester = oldSemester
+            // and the allocation is for a section in this batch
+            await pool.execute(`
+                UPDATE subject_allocations sa
+                JOIN subjects s ON sa.subject_id = s.id
+                JOIN sections sec ON sa.section_id = sec.id
+                SET sa.is_active = FALSE
+                WHERE sec.batch_id = ?
+                  AND s.semester = ?
+                  AND sa.is_active = TRUE
+            `, [batch.id, oldSemester]);
+            
+            console.log(`Deactivated allocations for batch ${batch.id}, semester ${oldSemester}`);
+        }
+
+        // Now increment the semesters for those batches
         await pool.execute(`
             UPDATE batches 
             SET current_semester = current_semester + 1,

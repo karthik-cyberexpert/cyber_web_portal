@@ -11,9 +11,9 @@ export const getStudentsByAllocation = async (req: Request | any, res: Response)
     }
 
     try {
-        // Verify this allocation belongs to the faculty
+        // Verify this allocation belongs to the faculty AND is active
         const [allocation]: any = await pool.query(
-            'SELECT * FROM subject_allocations WHERE id = ? AND faculty_id = ?',
+            'SELECT * FROM subject_allocations WHERE id = ? AND faculty_id = ? AND is_active = TRUE',
             [allocationId, facultyId]
         );
 

@@ -106,6 +106,9 @@ app.use('/api/lost-and-found', lostAndFoundRoutes);
 import { calendarRouter } from './calendar.routes.js';
 app.use('/api/calendar', calendarRouter);
 
+import attendanceTrendRoutes from './attendance-trend.routes.js';
+app.use('/api/attendance-trend', attendanceTrendRoutes);
+
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {

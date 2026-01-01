@@ -30,7 +30,7 @@ export const getFacultyAssignments = async (req: Request | any, res: Response) =
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? AND sa.is_active = TRUE
             ORDER BY a.created_at DESC
         `, [userId]);
 
@@ -57,7 +57,9 @@ export const getFacultySubjectAllocations = async (req: Request | any, res: Resp
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? 
+              AND sa.is_active = TRUE
+              AND s.semester = b.current_semester
         `, [userId]);
 
         res.json(rows);

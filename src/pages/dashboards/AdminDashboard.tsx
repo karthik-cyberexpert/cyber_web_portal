@@ -113,21 +113,38 @@ export default function AdminDashboard() {
           const data = await response.json();
           setStats(data);
           
-          // Mocking graphs for now until we build specific complex queries
-           setDepartmentStats([
-            { month: 'Jan', students: 120, faculty: 10 },
-            { month: 'Feb', students: 135, faculty: 12 },
-            { month: 'Mar', students: 150, faculty: 15 },
-            { month: 'Apr', students: 180, faculty: 18 },
-            { month: 'May', students: 220, faculty: 20 },
-            { month: 'Jun', students: 250, faculty: 25 },
-           ]);
-           setBatchDistribution([
-            { name: 'Batch 2021', value: 40, fill: 'hsl(var(--primary))' },
-            { name: 'Batch 2022', value: 55, fill: 'hsl(var(--accent))' },
-            { name: 'Batch 2023', value: 70, fill: 'hsl(var(--success))' },
-            { name: 'Batch 2024', value: 85, fill: 'hsl(var(--warning))' },
-           ]);
+          // Fetch attendance trend for active batches
+          try {
+            const trendResponse = await fetch(`${API_BASE_URL}/attendance-trend/admin`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (trendResponse.ok) {
+              const trendData = await trendResponse.json();
+              // Transform trend data for the chart
+              const chartData = trendData.trend?.map((t: any) => ({
+                month: t.month,
+                students: t.leaves || 0, // Using leaves as primary
+                faculty: t.ods || 0 // Using ODs as secondary
+              })) || [];
+              setDepartmentStats(chartData.length > 0 ? chartData : [
+                { month: 'Jan', students: 0, faculty: 0 },
+                { month: 'Feb', students: 0, faculty: 0 },
+                { month: 'Mar', students: 0, faculty: 0 }
+              ]);
+              
+              // Set batch distribution from ALL batches with real student counts
+              const colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--info))', 'hsl(var(--destructive))'];
+              const batchData = trendData.batches?.map((b: any, i: number) => ({
+                name: b.name,
+                value: b.studentCount || 0,  // Use actual student count
+                fill: colors[i % colors.length]
+              })) || [];
+              setBatchDistribution(batchData);
+            }
+          } catch (trendError) {
+            console.error('Failed to fetch attendance trend:', trendError);
+          }
+          
            setRecentActivities([
             { id: 1, type: 'Registration', message: 'New Student Registered', time: '2 mins ago', icon: Users, color: 'text-blue-500', bg: 'bg-blue-100' },
             { id: 2, type: 'Leave', message: 'Leave Request Approved', time: '15 mins ago', icon: Clock, color: 'text-green-500', bg: 'bg-green-100' },
@@ -265,8 +282,8 @@ export default function AdminDashboard() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold">Institution Overview</h3>
-              <p className="text-sm text-muted-foreground">Student & Faculty trends</p>
+              <h3 className="text-lg font-semibold">Attendance Trend</h3>
+              <p className="text-sm text-muted-foreground">Leave & OD Days (Active Semesters)</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
               // In a real application, this would export the report
@@ -287,8 +304,8 @@ export default function AdminDashboard() {
                     borderRadius: '8px',
                   }}
                 />
-                <Bar yAxisId="left" dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Students" />
-                <Bar yAxisId="right" dataKey="faculty" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Faculty" />
+                <Bar yAxisId="left" dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Leave Days" />
+                <Bar yAxisId="right" dataKey="faculty" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="OD Days" />
               </BarChart>
             </ResponsiveContainer>
           </div>

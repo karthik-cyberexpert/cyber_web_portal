@@ -53,7 +53,7 @@ export const getFacultyProfile = async (req: Request | any, res: Response) => {
             { degree: profile.qualification || 'PhD', institution: 'University', year: '2015' } 
         ];
 
-        // 3. Fetch Subject Allocations (What they teach)
+        // 3. Fetch Subject Allocations (What they teach) - Only active ones
         const [allocations]: any = await pool.query(`
             SELECT 
                 s.name as subject,
@@ -64,7 +64,7 @@ export const getFacultyProfile = async (req: Request | any, res: Response) => {
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? AND sa.is_active = TRUE
         `, [userId]);
         
         profile.allocations = allocations;
@@ -124,7 +124,7 @@ export const getFacultyTimetable = async (req: Request | any, res: Response) => 
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? AND sa.is_active = TRUE
             ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), ts.period_number
         `, [userId]);
 

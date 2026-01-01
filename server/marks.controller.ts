@@ -10,18 +10,23 @@ export const getFacultyClasses = async (req: Request | any, res: Response) => {
     const connection = await pool.getConnection();
     try {
         // Fetch allocations: Subject Name, Code, Section Name, Batch Name
+        // Only show subjects where subject.semester matches batch.current_semester
         const [rows]: any = await connection.query(`
             SELECT 
                 s.name as subjectName, 
                 s.code as subjectCode,
                 sec.id as sectionId,
                 sec.name as sectionName,
-                b.name as batchName
+                b.name as batchName,
+                s.semester as subjectSemester,
+                b.current_semester as batchCurrentSemester
             FROM subject_allocations sa
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? 
+              AND sa.is_active = TRUE
+              AND s.semester = b.current_semester
         `, [userId]);
 
         // Transform for frontend

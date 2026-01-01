@@ -47,7 +47,9 @@ export const getFacultySubjects = async (req: Request | any, res: Response) => {
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON sa.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            WHERE sa.faculty_id = ?
+            WHERE sa.faculty_id = ? 
+              AND sa.is_active = TRUE
+              AND s.semester = b.current_semester
         `, [userId]);
 
         res.json(rows);

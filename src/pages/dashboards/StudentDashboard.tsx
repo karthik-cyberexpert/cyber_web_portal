@@ -90,19 +90,25 @@ export default function StudentDashboard() {
 
         setStudentData(data.studentInfo);
 
-        // Generate attendance trend (placeholder with constant value for now)
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const now = new Date();
-        const trendData = [];
-        for (let i = 5; i >= 0; i--) {
-          const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const monthName = months[monthDate.getMonth()];
-          trendData.push({
-            month: monthName,
-            attendance: data.attendance || 0
+        // Fetch semester-based attendance trend from new API
+        try {
+          const trendResponse = await fetch(`${API_BASE_URL}/attendance-trend/student`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
           });
+          if (trendResponse.ok) {
+            const trendData = await trendResponse.json();
+            // Map to expected format - using leaves + ods for chart
+            const chartData = trendData.map((t: any) => ({
+              month: t.month,
+              attendance: (t.leaves || 0) + (t.ods || 0) // Total absence days
+            }));
+            setAttendanceTrend(chartData);
+          }
+        } catch (trendError) {
+          console.error('Error fetching attendance trend:', trendError);
         }
-        setAttendanceTrend(trendData);
       } else {
         console.error('Failed to load student stats');
       }

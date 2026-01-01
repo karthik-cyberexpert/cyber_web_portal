@@ -110,13 +110,14 @@ export default function TutorDashboard() {
           setStats(prev => ({ ...prev, academicAlerts: myAlerts.length }));
         }
 
-        // 3. Performance Trend (Mocking with real average as base)
-        const perfRes = await fetch(`${API_BASE_URL}/tutor-analytics/attendance`, { headers });
-        const attData = await perfRes.json();
-        const trend = attData.map((d: any) => ({
-          month: d.day,
-          attendance: Math.round((d.count / (overview.totalStudents || 1)) * 100),
-          marks: 75 + Math.floor(Math.random() * 15) // Still mock marks for dashboard trend
+        // 3. Attendance Trend (Semester-based from new API)
+        const trendRes = await fetch(`${API_BASE_URL}/attendance-trend/tutor`, { headers });
+        const trendData = await trendRes.json();
+        // Map to expected format for chart
+        const trend = trendData.map((d: any) => ({
+          month: d.month,
+          attendance: d.absences || 0,  // Using absences as primary metric
+          marks: d.ods || 0  // Using ODs as secondary metric
         }));
         setPerformanceData(trend);
 
@@ -256,7 +257,7 @@ export default function TutorDashboard() {
         >
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight italic">Performance Dynamics</h3>
+              <h3 className="text-xl font-black uppercase tracking-tight italic">Attendance Trend</h3>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">Class Average Trends</p>
             </div>
             <Button onClick={() => navigate('/tutor/analytics')} variant="outline" size="sm" className="rounded-xl font-black uppercase text-[9px] tracking-widest border-white/10 italic px-4">Insights</Button>
@@ -291,7 +292,7 @@ export default function TutorDashboard() {
                   stroke="hsl(var(--primary))"
                   strokeWidth={4}
                   fill="url(#attendanceGrad)"
-                  name="Attendance %"
+                  name="Absences"
                 />
                 <Area
                   type="monotone"
@@ -299,7 +300,7 @@ export default function TutorDashboard() {
                   stroke="hsl(var(--accent))"
                   strokeWidth={4}
                   fill="url(#marksGrad)"
-                  name="Avg Marks"
+                  name="OD Days"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -307,11 +308,11 @@ export default function TutorDashboard() {
           <div className="flex justify-center gap-8 mt-6">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-primary shadow-glow shadow-primary/50" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Attendance</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Absences</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-accent shadow-glow shadow-accent/50" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Academic Avg</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">OD Days</span>
             </div>
           </div>
         </motion.div>
