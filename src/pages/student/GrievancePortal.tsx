@@ -8,7 +8,7 @@ import {
   AlertCircle, 
   CheckCircle, 
   Clock, 
-  upload,
+  Upload,
   Paperclip,
   X
 } from 'lucide-react';
@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api-config';
-import JSZip from 'jszip'; // Not needed for single file, but standard import pattern
+// No jszip needed
 
 export default function GrievancePortal() {
   const token = localStorage.getItem('token');
@@ -137,23 +137,23 @@ export default function GrievancePortal() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Grievance Portal</h1>
-          <p className="text-muted-foreground">Register and track your complaints</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Grievance Portal</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Register and track your complaints</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+        <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto gap-2">
           <Plus className="w-4 h-4" /> Register Complaint
         </Button>
       </div>
 
       <div className="grid gap-6">
-          <Card>
-              <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+          <Card className="overflow-hidden">
+              <CardHeader className="pb-3 px-4 sm:px-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <CardTitle>My Grievances</CardTitle>
-                      <div className="relative w-64">
+                      <div className="relative w-full sm:w-64">
                           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input
                               placeholder="Search..."
@@ -164,68 +164,69 @@ export default function GrievancePortal() {
                       </div>
                   </div>
               </CardHeader>
-              <CardContent>
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead className="w-[50px]">S.No</TableHead>
-                              <TableHead>Title</TableHead>
-                              <TableHead>Target</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Remarks</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {isLoading ? (
+              <CardContent className="p-0 sm:p-6">
+                  <div className="overflow-x-auto">
+                      <Table>
+                          <TableHeader>
                               <TableRow>
-                                  <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
+                                  <TableHead className="w-[50px] whitespace-nowrap">S.No</TableHead>
+                                  <TableHead className="whitespace-nowrap">Title</TableHead>
+                                  <TableHead className="whitespace-nowrap">Target</TableHead>
+                                  <TableHead className="whitespace-nowrap">Date</TableHead>
+                                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                                  <TableHead className="whitespace-nowrap">Remarks</TableHead>
                               </TableRow>
-                          ) : filteredGrievances.length === 0 ? (
-                              <TableRow>
-                                  <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No grievances found</TableCell>
-                              </TableRow>
-                          ) : (
-                              filteredGrievances.map((g, idx) => (
-                                  <TableRow key={g.id}>
-                                      <TableCell>{idx + 1}</TableCell>
-                                      <TableCell className="font-medium">
-                                          <div>{g.title}</div>
-                                          {g.attachment_path && (
-                                              <a 
-                                                href={`${API_BASE_URL}/${g.attachment_path}`} 
-                                                target="_blank" 
-                                                rel="noreferrer"
-                                                className="text-xs text-blue-600 flex items-center gap-1 mt-1 hover:underline"
-                                              >
-                                                  <Paperclip className="w-3 h-3"/> View Attachment
-                                              </a>
-                                          )}
-                                      </TableCell>
-                                      <TableCell>
-                                          <Badge variant="outline">{g.target_role}</Badge>
-                                      </TableCell>
-                                      <TableCell>{new Date(g.created_at).toLocaleDateString('en-GB')}</TableCell>
-                                      <TableCell>
-                                          <Badge variant="secondary" className={getStatusColor(g.status)}>
-                                              {g.status}
-                                          </Badge>
-                                      </TableCell>
-                                      <TableCell className="max-w-[200px] truncate" title={g.action_reason}>
-                                          {g.action_reason || '-'}
-                                      </TableCell>
+                          </TableHeader>
+                          <TableBody>
+                              {isLoading ? (
+                                  <TableRow>
+                                      <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
                                   </TableRow>
-                              ))
-                          )}
-                      </TableBody>
-                  </Table>
+                              ) : filteredGrievances.length === 0 ? (
+                                  <TableRow>
+                                      <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No grievances found</TableCell>
+                                  </TableRow>
+                              ) : (
+                                  filteredGrievances.map((g, idx) => (
+                                      <TableRow key={g.id}>
+                                          <TableCell className="whitespace-nowrap">{idx + 1}</TableCell>
+                                          <TableCell className="font-medium min-w-[150px]">
+                                              <div>{g.title}</div>
+                                              {g.attachment_path && (
+                                                  <a 
+                                                    href={`${API_BASE_URL}/${g.attachment_path}`} 
+                                                    target="_blank" 
+                                                    rel="noreferrer"
+                                                    className="text-xs text-blue-600 flex items-center gap-1 mt-1 hover:underline"
+                                                  >
+                                                      <Paperclip className="w-3 h-3"/> View Attachment
+                                                  </a>
+                                              )}
+                                          </TableCell>
+                                          <TableCell className="whitespace-nowrap">
+                                              <Badge variant="outline">{g.target_role}</Badge>
+                                          </TableCell>
+                                          <TableCell className="whitespace-nowrap">{new Date(g.created_at).toLocaleDateString('en-GB')}</TableCell>
+                                          <TableCell className="whitespace-nowrap">
+                                              <Badge variant="secondary" className={getStatusColor(g.status)}>
+                                                  {g.status}
+                                              </Badge>
+                                          </TableCell>
+                                          <TableCell className="max-w-[200px] truncate" title={g.action_reason}>
+                                              {g.action_reason || '-'}
+                                          </TableCell>
+                                      </TableRow>
+                                  ))
+                              )}
+                          </TableBody>
+                      </Table>
+                  </div>
               </CardContent>
           </Card>
       </div>
 
-      {/* Create Grievance Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>Register Complaint</DialogTitle>
                 <CardDescription>Submit your grievance to the appropriate authority.</CardDescription>
@@ -259,6 +260,7 @@ export default function GrievancePortal() {
                     <Textarea 
                         placeholder="Detailed description of your grievance..." 
                         rows={4}
+                        className="min-h-[100px]"
                         value={formData.description}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
                     />
@@ -269,14 +271,14 @@ export default function GrievancePortal() {
                         <Input 
                             type="file" 
                             onChange={handleFileChange}
-                            className="cursor-pointer"
+                            className="cursor-pointer text-xs"
                         />
                     </div>
                 </div>
             </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                <Button onClick={handleSubmit}>Submit Complaint</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+                <Button onClick={handleSubmit} className="w-full sm:w-auto">Submit Complaint</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -45,3 +45,8 @@ The application is built using the following technologies:
     *   Do not introduce new color variables that clash with or attempt to replace the existing design system.
 *   **Maintain Aesthetic:** Any new UI components must strictly adhere to the existing look and feel. Use the existing `primary`, `secondary`, `accent`, `muted`, and `card` colors.
 *   **Gradients and Shadows:** Preserve the existing specific shadow and gradient definitions (e.g., `glow`, `glass`, `mesh-gradient`) found in the tailwind config.
+48: 
+49: ## 5. Project Rules & Constraints
+50: 
+51: *   **Port Number:** The website is running on port **3000**.
+52: *   **No Preview Constraint:** Do **NOT** preview the website or open the browser unless explicitly asked by the user to "make a preview by opening the browser".

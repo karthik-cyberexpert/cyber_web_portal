@@ -100,17 +100,17 @@ export default function Timetable() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
              Academic Timetable 🗓️
           </h1>
-          <p className="text-muted-foreground mt-1">Your weekly teaching schedule and lab sessions</p>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Your weekly teaching schedule and lab sessions</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline"><Download className="w-4 h-4 mr-2" /> Download PDF</Button>
-          <Button variant="gradient">Sync Calendar</Button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto"><Download className="w-4 h-4 mr-2" /> Download PDF</Button>
+          <Button variant="gradient" className="w-full sm:w-auto">Sync Calendar</Button>
         </div>
       </motion.div>
 
@@ -135,15 +135,15 @@ export default function Timetable() {
       </div>
 
       <Card className="glass-card border-white/10 overflow-hidden">
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="border-b border-white/10 px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Calendar className="w-5 h-5 text-primary" />
             Weekly Schedule
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-hidden">
-            <table className="w-full table-fixed">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
                   <thead>
                     <tr className="border-b border-white/10">
                       <th className="p-2 text-left text-sm font-semibold text-muted-foreground w-32 sticky left-0 bg-background/95 backdrop-blur z-10">
@@ -271,14 +271,14 @@ export default function Timetable() {
       
       {/* Subject Summary */}
       <Card className="glass-card border-white/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <BookOpen className="w-5 h-5 text-primary" />
             Teaching Load Summary
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <CardContent className="px-4 sm:px-6 pb-6">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-4">
              {Array.from(new Set(timetable.map(t => t.subjectCode))).map((code, index) => {
                  const subjectSlots = timetable.filter(t => t.subjectCode === code);
                  if (subjectSlots.length === 0) return null;

@@ -139,8 +139,8 @@ export default function TimetableSyllabus() {
                 </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                <div className="overflow-hidden">
-                    <table className="w-full table-fixed">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px]">
                         <thead>
                             <tr className="border-b border-white/10">
                             <th className="p-2 text-left text-sm font-semibold text-muted-foreground w-32 sticky left-0 bg-background/95 backdrop-blur z-10">

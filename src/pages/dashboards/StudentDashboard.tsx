@@ -133,27 +133,27 @@ export default function StudentDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
+          <h1 className="text-2xl sm:text-3xl 3xl:text-4xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
           <div className="flex items-center gap-2 mt-1">
-             <p className="text-muted-foreground">
+             <p className="text-sm sm:text-base text-muted-foreground">
                 Year {academicState.year} • Semester {academicState.semester}
              </p>
-             <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20 text-primary">
+             <Badge variant="outline" className="text-[10px] sm:text-xs bg-primary/5 border-primary/20 text-primary">
                 {studentData?.batch || 'Batch N/A'}
              </Badge>
           </div>
         </div>
-        <Button onClick={() => navigate('/student/timetable')} variant="gradient" className="w-fit">
+        <Button onClick={() => navigate('/student/timetable')} variant="gradient" size="sm" className="w-fit sm:size-default">
           <Calendar className="w-4 h-4 mr-2" />
           View Timetable
         </Button>
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 4xl:grid-cols-8 gap-4">
         <StatCard
           title="Attendance"
           value={`${studentStats.attendance}%`}
@@ -188,14 +188,15 @@ export default function StudentDashboard() {
         />
       </div>
 
+
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 4xl:grid-cols-4 gap-6">
         {/* Attendance Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 glass-card rounded-2xl p-6"
+          className="lg:col-span-2 4xl:col-span-3 glass-card rounded-2xl p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -203,7 +204,7 @@ export default function StudentDashboard() {
               <p className="text-sm text-muted-foreground">Monthly attendance percentage</p>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-64 sm:h-80 3xl:h-96">
             {attendanceTrend.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={attendanceTrend}>
@@ -245,10 +246,10 @@ export default function StudentDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card rounded-2xl p-6"
+          className="glass-card rounded-2xl p-4 sm:p-6"
         >
-          <h3 className="text-lg font-semibold mb-4">Subject Distribution</h3>
-          <div className="h-48">
+          <h3 className="text-lg font-semibold mb-4 text-center lg:text-left">Subject Distribution</h3>
+          <div className="h-48 sm:h-64 3xl:h-80">
              {subjectDist.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -283,6 +284,7 @@ export default function StudentDashboard() {
           </div>
         </motion.div>
       </div>
+
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -386,24 +388,24 @@ export default function StudentDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-primary p-6 text-white"
+        className="relative overflow-hidden rounded-2xl bg-gradient-primary p-4 sm:p-6 text-white"
       >
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Award className="w-7 h-7" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Award className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Level Up Your Profile!</h3>
-              <p className="text-white/80">Add your ECA achievements and build your resume</p>
+              <h3 className="text-lg sm:text-xl font-bold">Level Up Your Profile!</h3>
+              <p className="text-sm sm:text-base text-white/80">Add your ECA achievements and build your resume</p>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={() => navigate('/student/eca')} variant="glass" className="bg-white/20 hover:bg-white/30 text-white border-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button onClick={() => navigate('/student/eca')} variant="glass" size="sm" className="sm:size-default bg-white/20 hover:bg-white/30 text-white border-0">
               <Sparkles className="w-4 h-4 mr-2" />
               Add Achievement
             </Button>
-            <Button onClick={() => navigate('/student/resume')} variant="glass" className="bg-white/20 hover:bg-white/30 text-white border-0">
+            <Button onClick={() => navigate('/student/resume')} variant="glass" size="sm" className="sm:size-default bg-white/20 hover:bg-white/30 text-white border-0">
               Build Resume
             </Button>
           </div>

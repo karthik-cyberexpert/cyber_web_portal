@@ -154,14 +154,14 @@ export default function Assignments() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Assignments</h1>
-          <p className="text-muted-foreground">Keep track of your coursework and submission deadlines</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assignments</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Keep track of your coursework and submission deadlines</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">History</Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto">History</Button>
         </div>
       </motion.div>
 
@@ -173,7 +173,7 @@ export default function Assignments() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className="glass-card rounded-2xl p-5 group hover:border-primary/20 transition-all"
+              className="glass-card rounded-2xl p-4 sm:p-5 group hover:border-primary/20 transition-all"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -201,15 +201,15 @@ export default function Assignments() {
               </div>
 
               {/* Assignment Details */}
-              <div className="grid grid-cols-3 gap-3 mb-3 p-3 rounded-xl bg-muted/20 border border-white/5">
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 mb-3 p-3 rounded-xl bg-muted/20 border border-white/5">
                 <div>
                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Subject</p>
-                  <p className="text-xs font-bold">{assignment.subjectName}</p>
+                  <p className="text-xs font-bold truncate">{assignment.subjectName}</p>
                   <p className="text-[10px] text-muted-foreground">{assignment.subjectCode}</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Assigned By</p>
-                  <p className="text-xs font-bold">{assignment.assignedBy || 'Faculty'}</p>
+                  <p className="text-xs font-bold truncate">{assignment.assignedBy || 'Faculty'}</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Max Marks</p>
@@ -223,66 +223,67 @@ export default function Assignments() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2">
-                {assignment.statusStr !== 'pending' ? (
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
-                      className="rounded-xl h-8 text-xs font-bold"
-                      onClick={() => setPreviewAssignment(assignment)}
-                    >
-                      View Submission
-                      <CheckCircle2 className="w-3 h-3 ml-2" />
-                    </Button>
-                ) : (
-                    <Dialog open={selectedAssignment === assignment.id} onOpenChange={(open) => setSelectedAssignment(open ? assignment.id : null)}>
-                      <DialogTrigger asChild>
-                          <Button variant="default" size="sm" className="rounded-xl h-8 text-xs font-bold">
-                              Upload Assignment
-                              <Upload className="w-3 h-3 ml-2" />
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+                      {assignment.statusStr !== 'pending' ? (
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="w-full sm:w-auto rounded-xl h-9 text-xs font-bold"
+                            onClick={() => setPreviewAssignment(assignment)}
+                          >
+                            View Submission
+                            <CheckCircle2 className="w-3 h-3 ml-2" />
                           </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                          <DialogHeader>
-                              <DialogTitle>Submit Assignment</DialogTitle>
-                              <DialogDescription>Upload your solution for {assignment.title}.</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                              <input
-                                type="file"
-                                id={`file-upload-${assignment.id}`}
-                                className="hidden"
-                                onChange={handleFileChange}
-                                accept=".pdf,.doc,.docx,.zip"
-                              />
-                              <label
-                                htmlFor={`file-upload-${assignment.id}`}
-                                className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-10 flex flex-col items-center justify-center bg-muted/5 cursor-pointer hover:bg-muted/10 transition-colors block"
-                              >
-                                  <Upload className="w-10 h-10 text-muted-foreground mb-2" />
-                                  {selectedFile ? (
-                                    <>
-                                      <p className="text-sm text-primary font-medium">{selectedFile.name}</p>
-                                      <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <p className="text-sm text-muted-foreground font-medium">Click to upload file</p>
-                                      <p className="text-xs text-muted-foreground/50">PDF, DOC, DOCX, or ZIP</p>
-                                    </>
-                                  )}
-                              </label>
-                          </div>
-                          <DialogFooter>
-                              <Button onClick={() => handleSubmit(assignment.id)} disabled={isSubmitting || !selectedFile}>
-                                  {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                  {isSubmitting ? 'Submitting...' : 'Submit'}
-                              </Button>
-                          </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                )}
-              </div>
+                      ) : (
+                          <Dialog open={selectedAssignment === assignment.id} onOpenChange={(open) => setSelectedAssignment(open ? assignment.id : null)}>
+                            <DialogTrigger asChild>
+                                <Button variant="default" size="sm" className="w-full sm:w-auto rounded-xl h-9 text-xs font-bold">
+                                    Upload Assignment
+                                    <Upload className="w-3 h-3 ml-2" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-lg w-[calc(100%-2rem)]">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl font-black">Submit Assignment</DialogTitle>
+                                    <DialogDescription className="text-sm">Upload your solution for {assignment.title}.</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    <input
+                                      type="file"
+                                      id={`file-upload-${assignment.id}`}
+                                      className="hidden"
+                                      onChange={handleFileChange}
+                                      accept=".pdf,.doc,.docx,.zip"
+                                    />
+                                    <label
+                                      htmlFor={`file-upload-${assignment.id}`}
+                                      className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center bg-muted/5 cursor-pointer hover:bg-muted/10 transition-colors block text-center"
+                                    >
+                                        <Upload className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground mb-2" />
+                                        {selectedFile ? (
+                                          <>
+                                            <p className="text-sm text-primary font-medium">{selectedFile.name}</p>
+                                            <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <p className="text-sm text-muted-foreground font-medium">Click to upload file</p>
+                                            <p className="text-xs text-muted-foreground/50">PDF, DOC, DOCX, or ZIP</p>
+                                          </>
+                                        )}
+                                    </label>
+                                </div>
+                                <DialogFooter className="flex flex-col sm:flex-row gap-3">
+                                    <Button variant="outline" onClick={() => setSelectedAssignment(null)} className="w-full sm:w-auto">Cancel</Button>
+                                    <Button onClick={() => handleSubmit(assignment.id)} disabled={isSubmitting || !selectedFile} className="w-full sm:w-auto">
+                                        {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                        {isSubmitting ? 'Submitting...' : 'Submit Now'}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                      )}
+                    </div>
             </motion.div>
           )) : (
               <div className="text-center py-12 text-muted-foreground">
@@ -292,38 +293,40 @@ export default function Assignments() {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="rounded-xl"
-              >
-                Previous
-              </Button>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+              <div className="flex items-center gap-2 order-2 sm:order-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-xl"
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-xl"
+                >
+                  Next
+                </Button>
+              </div>
+              <div className="flex gap-2 order-1 sm:order-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <Button
                     key={page}
                     variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className="rounded-xl w-10"
+                    className="rounded-xl w-10 shrink-0"
                   >
                     {page}
                   </Button>
                 ))}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="rounded-xl"
-              >
-                Next
-              </Button>
             </div>
           )}
         </div>
@@ -382,12 +385,12 @@ export default function Assignments() {
 
       {/* Submission Preview/View Dialog */}
       <Dialog open={!!previewAssignment} onOpenChange={(open) => !open && setPreviewAssignment(null)}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-lg w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl font-black italic">
               {previewAssignment?.submittedFile ? 'Submission Successful! 🎉' : 'Submission Details'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm font-medium">
               {previewAssignment?.submittedFile 
                 ? 'Your assignment has been submitted successfully.'
                 : 'View your submitted assignment details.'
@@ -456,8 +459,8 @@ export default function Assignments() {
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setPreviewAssignment(null)} className="w-full">
-              Close
+            <Button onClick={() => setPreviewAssignment(null)} className="w-full rounded-xl font-bold">
+              Dismiss
             </Button>
           </DialogFooter>
         </DialogContent>

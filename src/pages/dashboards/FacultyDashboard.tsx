@@ -181,18 +181,18 @@ export default function FacultyDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Good Morning, {user?.name?.split(' ')[0]}! 👨‍🏫</h1>
-          <p className="text-muted-foreground">You have {stats.todayClasses} classes scheduled for today</p>
+          <h1 className="text-2xl sm:text-3xl 3xl:text-4xl font-bold">Good Morning, {user?.name?.split(' ')[0]}! 👨‍🏫</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">You have {stats.todayClasses} classes scheduled for today</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate('/faculty/timetable')}>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" className="w-fit sm:size-default" onClick={() => navigate('/faculty/timetable')}>
             <Calendar className="w-4 h-4 mr-2" />
             My Timetable
           </Button>
-          <Button variant="gradient" onClick={() => navigate('/faculty/notes')}>
+          <Button variant="gradient" size="sm" className="w-fit sm:size-default" onClick={() => navigate('/faculty/notes')}>
             <Upload className="w-4 h-4 mr-2" />
             Upload Notes
           </Button>
@@ -200,7 +200,7 @@ export default function FacultyDashboard() {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 4xl:grid-cols-8 gap-4">
         <StatCard
           title="Today's Classes"
           value={stats.todayClasses}
@@ -235,21 +235,22 @@ export default function FacultyDashboard() {
         />
       </div>
 
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 4xl:grid-cols-4 gap-6">
         {/* Today's Schedule */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 glass-card rounded-2xl p-6"
+          className="lg:col-span-2 4xl:col-span-3 glass-card rounded-2xl p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-lg font-semibold">Today's Schedule</h3>
               <p className="text-sm text-muted-foreground">Your classes for today</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => navigate('/faculty/timetable')}>Full Timetable</Button>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/faculty/timetable')}>Full Timetable</Button>
           </div>
           <div className="space-y-4">
             {classesData.length > 0 ? classesData.map((cls, index) => (
@@ -258,21 +259,21 @@ export default function FacultyDashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + index * 0.1 }}
-                className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all cursor-pointer group"
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all cursor-pointer group"
               >
-                <div className="w-16 text-center">
-                  <p className="text-sm font-bold text-primary">{cls.time}</p>
+                <div className="w-14 sm:w-16 text-center">
+                  <p className="text-xs sm:text-sm font-bold text-primary">{cls.time}</p>
                 </div>
-                <div className="w-1 h-12 bg-gradient-primary rounded-full" />
-                <div className="flex-1">
-                  <p className="font-semibold">{cls.subject}</p>
-                  <p className="text-sm text-muted-foreground">{cls.section} • Room {cls.room}</p>
+                <div className="w-1 h-10 sm:h-12 bg-gradient-primary rounded-full" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm sm:text-base truncate">{cls.subject}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{cls.section} • Room {cls.room}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                  <span className="hidden xs:inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium">
                     Upcoming
                   </span>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </div>
               </motion.div>
             )) : (
@@ -280,16 +281,16 @@ export default function FacultyDashboard() {
             )}
           </div>
         </motion.div>
-
+ 
         {/* Weekly Overview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card rounded-2xl p-6"
+          className="glass-card rounded-2xl p-4 sm:p-6"
         >
-          <h3 className="text-lg font-semibold mb-4">Weekly Overview</h3>
-          <div className="h-48">
+          <h3 className="text-lg font-semibold mb-4 text-center lg:text-left">Weekly Overview</h3>
+          <div className="h-48 sm:h-64 3xl:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyStats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -314,6 +315,7 @@ export default function FacultyDashboard() {
           </div>
         </motion.div>
       </div>
+
 
       {/* Second Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -364,10 +366,10 @@ export default function FacultyDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="glass-card rounded-2xl p-6"
+        className="glass-card rounded-2xl p-4 sm:p-6"
       >
-        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 className="text-lg font-semibold mb-4 text-center sm:text-left">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 4xl:grid-cols-4 gap-3 sm:gap-4">
           {[
             { icon: Upload, label: 'Upload Notes', color: 'primary', path: '/faculty/notes' },
             { icon: FileText, label: 'Create Assignment', color: 'accent', path: '/faculty/assignments' },
@@ -381,17 +383,18 @@ export default function FacultyDashboard() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(action.path)}
-                className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group"
+                className="p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group"
               >
-                <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 bg-${action.color}/10 text-${action.color} group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6" />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-xl flex items-center justify-center mb-2 sm:mb-3 bg-${action.color}/10 text-${action.color} group-hover:scale-110 transition-transform`}>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-sm font-medium">{action.label}</p>
+                <p className="text-xs sm:text-sm font-medium">{action.label}</p>
               </motion.button>
             );
           })}
         </div>
       </motion.div>
+
     </div>
   );
 }

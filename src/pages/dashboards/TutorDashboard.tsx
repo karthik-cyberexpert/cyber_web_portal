@@ -156,22 +156,22 @@ export default function TutorDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase">
+          <h1 className="text-2xl sm:text-3xl 3xl:text-4xl font-black italic tracking-tighter uppercase">
             Good Morning, {user?.name?.split(' ')[0]}! 👩‍🏫
           </h1>
-          <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+          <p className="text-muted-foreground font-black uppercase tracking-widest text-[9px] sm:text-[10px]">
             Section In-Charge • {tutor?.section} Section • {tutor?.batch}
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => navigate('/tutor/analytics')} variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic px-6">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button onClick={() => navigate('/tutor/analytics')} variant="outline" size="sm" className="w-fit sm:size-default rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic px-6">
             <BarChart3 className="w-4 h-4 mr-2 text-primary" />
             Class Analytics
           </Button>
-          <Button onClick={() => navigate('/tutor/class')} variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8">
+          <Button onClick={() => navigate('/tutor/class')} variant="gradient" size="sm" className="w-fit sm:size-default rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8">
             <Users className="w-4 h-4 mr-2" />
             Attendance
           </Button>
@@ -183,41 +183,41 @@ export default function TutorDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card p-6 rounded-3xl border-none bg-white/[0.02] shadow-xl"
+        className="glass-card p-4 sm:p-6 rounded-3xl border-none bg-white/[0.02] shadow-xl"
       >
          <h3 className="text-lg font-black uppercase tracking-tight italic mb-4 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-accent" />
             Faculty Responsibilities
          </h3>
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             <Button onClick={() => navigate('/faculty/marks')} variant="outline" className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-primary/50 hover:bg-primary/5 rounded-2xl group">
-                 <div className="w-10 h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <ClipboardCheck className="w-5 h-5 text-primary" />
+         <div className="grid grid-cols-2 md:grid-cols-4 4xl:grid-cols-4 gap-3 sm:gap-4">
+             <Button onClick={() => navigate('/faculty/marks')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-primary/50 hover:bg-primary/5 rounded-2xl group">
+                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                  </div>
-                 <span className="font-black uppercase text-[10px] tracking-widest">Marks Entry</span>
+                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Marks Entry</span>
              </Button>
-             <Button onClick={() => navigate('/faculty/notes')} variant="outline" className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-accent/50 hover:bg-accent/5 rounded-2xl group">
-                 <div className="w-10 h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <FileText className="w-5 h-5 text-accent" />
+             <Button onClick={() => navigate('/faculty/notes')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-accent/50 hover:bg-accent/5 rounded-2xl group">
+                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                  </div>
-                 <span className="font-black uppercase text-[10px] tracking-widest">Upload Notes</span>
+                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Upload Notes</span>
              </Button>
-             <Button onClick={() => navigate('/faculty/assignments')} variant="outline" className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-success/50 hover:bg-success/5 rounded-2xl group">
-                 <div className="w-10 h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <FileCheck className="w-5 h-5 text-success" />
+             <Button onClick={() => navigate('/faculty/assignments')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-success/50 hover:bg-success/5 rounded-2xl group">
+                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <FileCheck className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                  </div>
-                 <span className="font-black uppercase text-[10px] tracking-widest">Assignments</span>
+                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Assignments</span>
              </Button>
-             <Button onClick={() => navigate('/faculty/timetable')} variant="outline" className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-warning/50 hover:bg-warning/5 rounded-2xl group">
-                 <div className="w-10 h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <Clock className="w-5 h-5 text-warning" />
+             <Button onClick={() => navigate('/faculty/timetable')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-warning/50 hover:bg-warning/5 rounded-2xl group">
+                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
                  </div>
-                 <span className="font-black uppercase text-[10px] tracking-widest">My Timetable</span>
+                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">My Timetable</span>
              </Button>
          </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 4xl:grid-cols-8 gap-4">
         <GlassStatCard
           title="Class Strength"
           value={stats.totalStudents.toString()}
@@ -248,21 +248,22 @@ export default function TutorDashboard() {
         />
       </div>
 
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 glass-card rounded-3xl p-8 border-none shadow-2xl relative overflow-hidden bg-white/[0.02]"
+          className="lg:col-span-2 4xl:col-span-3 glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl relative overflow-hidden bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight italic">Attendance Trend</h3>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">Class Average Trends</p>
             </div>
-            <Button onClick={() => navigate('/tutor/analytics')} variant="outline" size="sm" className="rounded-xl font-black uppercase text-[9px] tracking-widest border-white/10 italic px-4">Insights</Button>
+            <Button onClick={() => navigate('/tutor/analytics')} variant="outline" size="sm" className="w-full sm:w-auto rounded-xl font-black uppercase text-[9px] tracking-widest border-white/10 italic px-4">Insights</Button>
           </div>
-          <div className="h-64">
+          <div className="h-64 sm:h-80 3xl:h-96">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={performanceData}>
                 <defs>
@@ -321,7 +322,7 @@ export default function TutorDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card rounded-3xl p-8 border-none shadow-2xl bg-white/[0.02]"
+          className="glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl bg-white/[0.02]"
         >
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xl font-black uppercase tracking-tight italic">Today's Schedule</h3>
@@ -336,21 +337,21 @@ export default function TutorDashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 + index * 0.1 }}
-                className="p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group"
+                className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-background/50 flex items-center justify-center border border-white/5">
-                      <Clock className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-background/50 flex items-center justify-center border border-white/5 flex-shrink-0">
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <div>
-                      <p className="font-black text-sm italic">{slot.subject}</p>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">
+                    <div className="min-w-0">
+                      <p className="font-black text-sm italic truncate">{slot.subject}</p>
+                      <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1 truncate">
                         {slot.faculty} • {slot.time}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-white/10">{slot.type}</Badge>
+                  <Badge variant="outline" className="hidden xs:inline-flex text-[8px] font-black uppercase tracking-widest border-white/10 shrink-0">{slot.type}</Badge>
                 </div>
               </motion.div>
             )) : (
@@ -368,7 +369,7 @@ export default function TutorDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="glass-card rounded-3xl p-8 border-none shadow-2xl bg-white/[0.02]"
+          className="glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl bg-white/[0.02]"
         >
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xl font-black uppercase tracking-tight italic">Approval Queue</h3>
@@ -381,32 +382,32 @@ export default function TutorDashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6 + index * 0.1 }}
-                className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group"
+                className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group"
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-glow ${
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-glow flex-shrink-0 ${
                     item.type === 'Leave' ? 'bg-info/10 text-info shadow-info/20' : 'bg-success/10 text-success shadow-success/20'
                   }`}>
-                    {item.type === 'Leave' ? <Clock className="w-6 h-6" /> : <Trophy className="w-6 h-6" />}
+                    {item.type === 'Leave' ? <Clock className="w-5 h-5 sm:w-6 sm:h-6" /> : <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />}
                   </div>
-                  <div>
-                    <p className="font-black text-sm italic group-hover:text-primary transition-colors">{item.student}</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">
+                  <div className="min-w-0">
+                    <p className="font-black text-sm italic group-hover:text-primary transition-colors truncate">{item.student}</p>
+                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1 truncate">
                       {item.type}: {item.reason}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   <Button 
                     onClick={() => item.type === 'Leave' ? handleApproveLeave(item.id) : handleApproveAchievement(item.id)}
                     variant="ghost" 
                     size="icon" 
-                    className="w-10 h-10 rounded-xl text-success hover:bg-success/10 hover:scale-110 transition-all"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-success hover:bg-success/10 hover:scale-110 transition-all"
                   >
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl text-destructive hover:bg-destructive/10 hover:scale-110 transition-all">
-                    <XCircle className="w-5 h-5" />
+                  <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-destructive hover:bg-destructive/10 hover:scale-110 transition-all">
+                    <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 </div>
               </motion.div>
@@ -420,9 +421,9 @@ export default function TutorDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="glass-card rounded-3xl p-8 border-none shadow-2xl bg-white/[0.02]"
+          className="glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="text-xl font-black uppercase tracking-tight italic">Quality Control</h3>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground italic">Marks Verification</p>
           </div>
@@ -433,18 +434,18 @@ export default function TutorDashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
-                className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group"
+                className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-glow shadow-primary/20">
-                    <FileCheck className="w-6 h-6" />
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-glow shadow-primary/20 flex-shrink-0">
+                    <FileCheck className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div>
-                    <p className="font-black text-sm italic group-hover:text-primary transition-colors">{item.exam}</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Pending Audit: {item.count} Records</p>
+                  <div className="min-w-0">
+                    <p className="font-black text-sm italic group-hover:text-primary transition-colors truncate">{item.exam}</p>
+                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1 truncate">Pending Audit: {item.count} Records</p>
                   </div>
                 </div>
-                <Button onClick={() => handleVerifyMarks(item.ids)} variant="gradient" size="sm" className="rounded-xl font-black uppercase text-[10px] tracking-widest italic px-6 shadow-lg shadow-primary/20">Verify</Button>
+                <Button onClick={() => handleVerifyMarks(item.ids)} variant="gradient" size="sm" className="rounded-xl font-black uppercase text-[10px] tracking-widest italic px-4 sm:px-6 shadow-lg shadow-primary/20 shrink-0">Verify</Button>
               </motion.div>
             )) : (
                 <div className="text-center py-10 opacity-50 italic text-sm">No marks pending verification</div>
@@ -458,21 +459,21 @@ export default function TutorDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="glass-card rounded-3xl p-8 border-none shadow-2xl bg-white/[0.02]"
+          className="glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="text-xl font-black uppercase tracking-tight italic">Class Alerts</h3>
-            <Badge className="bg-destructive/20 text-destructive border-none font-black text-[9px] uppercase tracking-widest px-3">
+            <Badge className="w-fit bg-destructive/20 text-destructive border-none font-black text-[9px] uppercase tracking-widest px-3">
               {alerts.length} Critical
             </Badge>
           </div>
           <div className="space-y-4">
             {alerts.length > 0 ? alerts.map((alert, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-destructive/10">
-                <AlertTriangle className="w-5 h-5 text-destructive" />
-                <div>
-                  <p className="text-sm font-black italic uppercase">{alert.student}</p>
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">{alert.issue}</p>
+              <div key={index} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl bg-white/5 border border-destructive/10">
+                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-black italic uppercase truncate">{alert.student}</p>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1 truncate">{alert.issue}</p>
                 </div>
               </div>
             )) : (
@@ -485,9 +486,9 @@ export default function TutorDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="glass-card rounded-3xl p-8 border-none shadow-2xl bg-white/[0.02]"
+          className="glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="text-xl font-black uppercase tracking-tight italic">Assignment Activity</h3>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success shadow-glow" />
@@ -506,19 +507,20 @@ export default function TutorDashboard() {
                     className="h-full bg-primary shadow-glow shadow-primary/20"
                 />
              </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+             <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/5">
                    <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Total Active</p>
-                   <p className="text-xl font-black italic uppercase mt-1">{assignmentStat.total}</p>
+                   <p className="text-lg sm:text-xl font-black italic uppercase mt-1">{assignmentStat.total}</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/5">
                    <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Pending</p>
-                   <p className="text-xl font-black italic uppercase mt-1 text-warning">{assignmentStat.pending}</p>
+                   <p className="text-lg sm:text-xl font-black italic uppercase mt-1 text-warning">{assignmentStat.pending}</p>
                 </div>
              </div>
           </div>
         </motion.div>
       </div>
+
     </div>
   );
 }

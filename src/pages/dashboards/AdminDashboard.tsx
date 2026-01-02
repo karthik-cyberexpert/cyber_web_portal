@@ -213,18 +213,18 @@ export default function AdminDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold font-display">Welcome Back, Admin! 🎓</h1>
-          <p className="text-muted-foreground">Manage your institution efficiently</p>
+          <h1 className="text-2xl sm:text-3xl 3xl:text-4xl font-bold font-display">Welcome Back, Admin! 🎓</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your institution efficiently</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate('/admin/circulars')}>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" className="xs:size-default" onClick={() => navigate('/admin/circulars')}>
             <Bell className="w-4 h-4 mr-2" />
             Post Circular
           </Button>
-          <Button variant="gradient" onClick={() => navigate('/admin/settings')}>
+          <Button variant="gradient" size="sm" className="xs:size-default" onClick={() => navigate('/admin/settings')}>
             <Settings className="w-4 h-4 mr-2" />
             System Settings
           </Button>
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-4 4xl:grid-cols-8 gap-4">
         <StatCard
           title="Total Students"
           value={stats.students}
@@ -271,26 +271,27 @@ export default function AdminDashboard() {
         />
       </div>
 
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 4xl:grid-cols-4 gap-6">
         {/* Department Overview Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 glass-card rounded-2xl p-6"
+          className="lg:col-span-2 4xl:col-span-3 glass-card rounded-2xl p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <div>
               <h3 className="text-lg font-semibold">Attendance Trend</h3>
               <p className="text-sm text-muted-foreground">Leave & OD Days (Active Semesters)</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
               // In a real application, this would export the report
               alert('Report export functionality would be implemented here');
             }}>Export Report</Button>
           </div>
-          <div className="h-64">
+          <div className="h-64 sm:h-80 3xl:h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={departmentStats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -316,18 +317,18 @@ export default function AdminDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card rounded-2xl p-6"
+          className="glass-card rounded-2xl p-4 sm:p-6"
         >
-          <h3 className="text-lg font-semibold mb-4">Batch Distribution</h3>
-          <div className="h-48">
+          <h3 className="text-lg font-semibold mb-4 text-center lg:text-left">Batch Distribution</h3>
+          <div className="h-48 sm:h-64 3xl:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={batchDistribution}
                   cx="50%"
                   cy="50%"
-                  innerRadius={45}
-                  outerRadius={65}
+                  innerRadius={50}
+                  outerRadius={75}
                   paddingAngle={5}
                   dataKey="value"
                 >
@@ -339,14 +340,15 @@ export default function AdminDashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
+
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2 gap-2 mt-4">
             {batchDistribution.map((batch, index) => (
               <div key={index} className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: batch.color }}
                 />
-                <span className="text-xs text-muted-foreground">{batch.name}</span>
+                <span className="text-xs text-muted-foreground truncate">{batch.name}</span>
               </div>
             ))}
             {batchDistribution.length === 0 && (
@@ -355,6 +357,7 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
       </div>
+
 
       {/* Second Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -455,27 +458,27 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="glass-card rounded-2xl p-6"
+        className="glass-card rounded-2xl p-4 sm:p-6"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h3 className="text-lg font-semibold">Semester Progress (Active Batch)</h3>
-          <Button variant="outline" size="sm" onClick={() => navigate('/admin/settings')}>Configure Dates</Button>
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/admin/settings')}>Configure Dates</Button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
           {semesterProgress.map((sem, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.8 + index * 0.05 }}
-              className={`p-4 rounded-xl text-center ${
+              className={`p-3 sm:p-4 rounded-xl text-center flex flex-col justify-center ${
                 sem.status === 'completed' ? 'bg-success/10' :
                 sem.status === 'active' ? 'bg-primary/10 ring-2 ring-primary' :
                 'bg-muted/50'
               }`}
             >
-              <p className="text-sm font-medium mb-2">{sem.semester}</p>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <p className="text-xs sm:text-sm font-medium mb-2">{sem.semester}</p>
+              <div className="h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${
                     sem.status === 'completed' ? 'bg-success' :
@@ -485,7 +488,7 @@ export default function AdminDashboard() {
                   style={{ width: `${sem.progress}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
                 {sem.status === 'completed' ? 'Done' :
                  sem.status === 'active' ? `${sem.progress}%` :
                  'Upcoming'}
@@ -500,16 +503,16 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9 }}
-        className="glass-card rounded-2xl p-6"
+        className="glass-card rounded-2xl p-4 sm:p-6"
       >
-        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <h3 className="text-lg font-semibold mb-4 text-center sm:text-left">Quick Actions</h3>
+        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
           {[
-            { icon: Users, label: 'Manage Students', color: 'primary', path: '/admin/students' },
-            { icon: GraduationCap, label: 'Manage Faculty', color: 'accent', path: '/admin/faculty' },
-            { icon: ExternalLink, label: 'Leave Approvals', color: 'success', path: '/admin/leave' },
-            { icon: ClipboardCheck, label: 'Approve Marks', color: 'warning', path: '/admin/marks' },
-            { icon: Bell, label: 'Post Circular', color: 'info', path: '/admin/circulars' },
+            { icon: Users, label: 'Students', color: 'primary', path: '/admin/students' },
+            { icon: GraduationCap, label: 'Faculty', color: 'accent', path: '/admin/faculty' },
+            { icon: ExternalLink, label: 'Leaves', color: 'success', path: '/admin/leave' },
+            { icon: ClipboardCheck, label: 'Marks', color: 'warning', path: '/admin/marks' },
+            { icon: Bell, label: 'Circular', color: 'info', path: '/admin/circulars' },
             { icon: BarChart3, label: 'Analytics', color: 'primary', path: '/admin/settings' },
           ].map((action, index) => {
             const Icon = action.icon;
@@ -526,12 +529,12 @@ export default function AdminDashboard() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(action.path)}
-                className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group"
+                className="p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px]"
               >
-                <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 ${colorMap[action.color]} group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6" />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${colorMap[action.color]} group-hover:scale-110 transition-transform`}>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-sm font-medium">{action.label}</p>
+                <p className="text-xs sm:text-sm font-medium leading-tight">{action.label}</p>
               </motion.button>
             );
           })}

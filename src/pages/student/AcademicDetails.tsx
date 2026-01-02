@@ -69,12 +69,12 @@ export default function AcademicDetails() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold italic">Academic Details 🎓</h1>
-        <p className="text-muted-foreground font-medium">Detailed track record of your academic journey and achievements</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight italic">Academic Details 🎓</h1>
+        <p className="text-sm sm:text-base text-muted-foreground font-medium">Detailed track record of your academic journey and achievements</p>
       </motion.div>
 
       {/* High-level Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <GlassStatCard
           title="Current CGPA"
           value={Number(academicData.cgpa || 0).toFixed(2)}
@@ -111,7 +111,7 @@ export default function AcademicDetails() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
-          className="lg:col-span-1 glass-card rounded-2xl p-6 space-y-6"
+          className="lg:col-span-1 glass-card rounded-2xl p-4 sm:p-6 space-y-6"
         >
           <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
             <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
@@ -125,24 +125,26 @@ export default function AcademicDetails() {
 
             <div className="space-y-4">
               <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1 italic">Academic Identity</h3>
-              {[
-                { label: "Current Status", value: student.currentStatus || 'Active', icon: ShieldCheck, color: "text-success" },
-                { label: "Batch", value: student.batch || 'N/A', icon: Clock },
-                { label: "Curriculum Year", value: `Year ${student.year || 2}`, icon: Calendar },
-                { label: "Section", value: `Section ${student.section || 'A'}`, icon: User },
-                { label: "Department", value: student.department || 'CSS', icon: Layout },
-                { label: "Register Number", value: student.registerNumber || 'N/A', icon: FileBadge },
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-white/5 group">
-                  <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <item.icon className={cn("w-4 h-4 text-muted-foreground", item.color)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-4 lg:gap-0">
+                {[
+                  { label: "Current Status", value: student.currentStatus || 'Active', icon: ShieldCheck, color: "text-success" },
+                  { label: "Batch", value: student.batch || 'N/A', icon: Clock },
+                  { label: "Curriculum Year", value: `Year ${student.year || 2}`, icon: Calendar },
+                  { label: "Section", value: `Section ${student.section || 'A'}`, icon: User },
+                  { label: "Department", value: student.department || 'CSS', icon: Layout },
+                  { label: "Register Number", value: student.registerNumber || 'N/A', icon: FileBadge },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-white/5 group lg:mb-0">
+                    <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors shrink-0">
+                      <item.icon className={cn("w-4 h-4 text-muted-foreground", item.color)} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest leading-none truncate">{item.label}</p>
+                      <p className="text-xs font-bold mt-1 italic truncate">{item.value}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest leading-none">{item.label}</p>
-                    <p className="text-xs font-bold mt-1 italic">{item.value}</p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
         </motion.div>
 
@@ -151,7 +153,7 @@ export default function AcademicDetails() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.6 }}
-          className="lg:col-span-2 glass-card rounded-2xl p-6"
+          className="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1 italic">
             <span>Semester Breakdown</span>
@@ -168,15 +170,15 @@ export default function AcademicDetails() {
                 transition={{ delay: 0.7 + idx * 0.1 }}
                 className="group flex items-center justify-between p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 border border-white/5 hover:border-primary/20 transition-all cursor-default"
               >
-                <div className="flex items-center gap-4 text-left">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black italic text-lg ${
+                <div className="flex items-center gap-3 sm:gap-4 text-left min-w-0">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-black italic text-base sm:text-lg shrink-0 ${
                     s.status === "Completed" ? "bg-success/10 text-success" : "bg-warning/10 text-warning animate-pulse"
                   }`}>
                     S{s.sem || idx + 1}
                   </div>
-                  <div>
-                    <p className="text-sm font-black italic">Semester {s.sem || idx + 1}</p>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{s.credits} Credits • {s.status || 'Completed'}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black italic truncate">Semester {s.sem || idx + 1}</p>
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-widest truncate">{s.credits} Credits • {s.status || 'Completed'}</p>
                   </div>
                 </div>
 

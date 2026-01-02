@@ -52,6 +52,7 @@ export default function ECAAchievements() {
     date: '',
     category: 'Technical',
     customCategory: '',
+    level: 'College',
     link: ''
   });
 
@@ -78,6 +79,7 @@ export default function ECAAchievements() {
         organization: newAch.organization,
         date: newAch.date,
         category: finalCategory,
+        level: newAch.level,
         link: newAch.link
     });
 
@@ -90,6 +92,7 @@ export default function ECAAchievements() {
         date: '',
         category: 'Technical',
         customCategory: '',
+        level: 'College',
         link: ''
     });
     setSelectedProofImage(null);
@@ -122,45 +125,47 @@ export default function ECAAchievements() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold italic">ECA & Achievements 🏆</h1>
-          <p className="text-muted-foreground font-medium">Document your extracurricular activities and earn academic credits</p>
+          <h1 className="text-2xl sm:text-3xl font-bold italic tracking-tight">ECA & Achievements 🏆</h1>
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">Document your extracurricular activities and earn academic credits</p>
         </div>
         
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-                <Button variant="gradient" className="rounded-xl shadow-glow-sm hover:scale-105 transition-all uppercase font-black tracking-widest text-[10px] h-10">
+                <Button variant="gradient" className="w-full sm:w-auto rounded-xl shadow-glow-sm hover:scale-[1.02] transition-all uppercase font-black tracking-widest text-[10px] h-11 sm:h-10">
                 <Plus className="w-4 h-4 mr-2" />
                 Add New Achievement
                 </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-white/10">
+            <DialogContent className="glass-card border-white/10 max-w-lg w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="italic font-bold">New Achievement Submission</DialogTitle>
+                    <DialogTitle className="text-xl italic font-black">New Achievement Submission</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label>Achievement Title</Label>
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Achievement Title</Label>
                         <Input 
                             placeholder="e.g. 1st Place - National Hackathon" 
                             value={newAch.title}
                             onChange={e => setNewAch({...newAch, title: e.target.value})}
+                            className="rounded-xl"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Organization / Issuer</Label>
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Organization / Issuer</Label>
                         <Input 
                             placeholder="IEEE, Google, Sports Club etc." 
                             value={newAch.organization}
                             onChange={e => setNewAch({...newAch, organization: e.target.value})}
+                            className="rounded-xl"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Category</Label>
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</Label>
                         <Select value={newAch.category} onValueChange={(val: any) => setNewAch({...newAch, category: val})}>
-                            <SelectTrigger>
+                            <SelectTrigger className="rounded-xl">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -174,6 +179,22 @@ export default function ECAAchievements() {
                         </Select>
                     </div>
 
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Participation Level</Label>
+                        <Select value={newAch.level} onValueChange={(val: any) => setNewAch({...newAch, level: val})}>
+                            <SelectTrigger className="rounded-xl">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="International">International</SelectItem>
+                                <SelectItem value="National">National</SelectItem>
+                                <SelectItem value="State">State</SelectItem>
+                                <SelectItem value="University">University</SelectItem>
+                                <SelectItem value="College">College</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
 
                 {newAch.category === 'Other' && (
                   <motion.div 
@@ -181,36 +202,39 @@ export default function ECAAchievements() {
                     animate={{ opacity: 1, height: 'auto' }}
                     className="space-y-2"
                   >
-                    <Label>Specify Category</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Specify Category</Label>
                     <Input 
                         placeholder="Please specify the category..." 
                         value={newAch.customCategory}
                         onChange={e => setNewAch({...newAch, customCategory: e.target.value})}
+                        className="rounded-xl"
                     />
                   </motion.div>
                 )}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Date</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</Label>
                             <Input 
                                 type="date"
                                 value={newAch.date}
                                 onChange={e => setNewAch({...newAch, date: e.target.value})}
+                                className="rounded-xl"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Proof Link (Optional)</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Proof Link (Optional)</Label>
                             <Input 
                                 placeholder="GitHub, LinkedIn etc." 
                                 value={newAch.link}
                                 onChange={e => setNewAch({...newAch, link: e.target.value})}
+                                className="rounded-xl"
                             />
                         </div>
                     </div>
 
                     {/* Proof Image Upload */}
                     <div className="space-y-2">
-                        <Label>Proof Image (Max 5MB)</Label>
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Proof Image (Max 5MB)</Label>
                         <input
                           type="file"
                           id="proof-image-upload"
@@ -230,7 +254,7 @@ export default function ECAAchievements() {
                         />
                         <label
                           htmlFor="proof-image-upload"
-                          className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 flex flex-col items-center justify-center bg-muted/5 cursor-pointer hover:bg-muted/10 transition-colors block"
+                          className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 flex flex-col items-center justify-center bg-muted/5 cursor-pointer hover:bg-muted/10 transition-colors block text-center"
                         >
                             <Upload className="w-8 h-8 text-muted-foreground mb-2" />
                             {selectedProofImage ? (
@@ -246,10 +270,15 @@ export default function ECAAchievements() {
                             )}
                         </label>
                     </div>
-                    <Button className="w-full gap-2 shadow-glow-sm font-black uppercase tracking-widest text-xs h-11" onClick={handleAdd}>
-                        <Send className="w-4 h-4" />
-                        Submit for Verification
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      <Button variant="outline" onClick={() => setIsAddOpen(false)} className="w-full sm:w-1/3 rounded-xl h-11">
+                          Cancel
+                      </Button>
+                      <Button className="w-full sm:w-2/3 gap-2 shadow-glow-sm font-black uppercase tracking-widest text-xs h-11 rounded-xl" onClick={handleAdd}>
+                          <Send className="w-4 h-4" />
+                          Submit Verification
+                      </Button>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>
@@ -277,7 +306,7 @@ export default function ECAAchievements() {
               </motion.div>
             </div>
             <div>
-              <p className="text-4xl font-black text-primary font-mono tracking-tighter">{totalPoints}</p>
+              <p className="text-4xl sm:text-5xl font-black text-primary font-mono tracking-tighter">{totalPoints}</p>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">ECA Points Earned</p>
             </div>
             <div className="w-full space-y-2 pt-4">
@@ -320,8 +349,8 @@ export default function ECAAchievements() {
                     className="group glass-card rounded-2xl overflow-hidden hover:border-primary/20 transition-all flex flex-col shadow-xl border-white/5 relative bg-primary/[0.01]"
                   >
                     <div className="absolute top-4 right-4 z-20">
-                      <Badge className={`${status.bg} ${status.color} ${status.border} backdrop-blur-md shadow-lg font-black text-[9px] px-3 py-1 border`}>
-                        <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
+                      <Badge className={`${status.bg} ${status.color} ${status.border} backdrop-blur-md shadow-lg font-black text-[8px] sm:text-[9px] px-2 sm:px-3 py-0.5 sm:py-1 border`}>
+                        <StatusIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
                         {item.status.toUpperCase()}
                       </Badge>
                     </div>

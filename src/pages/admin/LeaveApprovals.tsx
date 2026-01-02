@@ -130,18 +130,18 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold italic">{filterType === 'od' ? 'OD' : 'Leave'} Approval Center 🏢</h1>
-          <p className="text-muted-foreground font-medium">HOD Approval Center for Student Requests</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight italic">{filterType === 'od' ? 'OD' : 'Leave'} Approval Center 🏢</h1>
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">HOD Approval Center for Student Requests</p>
         </div>
-        <div className="flex bg-muted p-1 rounded-xl">
+        <div className="flex bg-muted p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
           <Button 
             variant={activeTab === 'pending' ? 'default' : 'ghost'} 
             size="sm"
             onClick={() => setActiveTab('pending')}
-            className="rounded-lg font-bold"
+            className="flex-1 sm:flex-none rounded-lg font-bold whitespace-nowrap"
           >
             Pending ({requests.filter(r => r.status === 'pending_admin').length})
           </Button>
@@ -149,7 +149,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
             variant={activeTab === 'history' ? 'default' : 'ghost'} 
             size="sm"
             onClick={() => setActiveTab('history')}
-            className="rounded-lg font-bold"
+            className="flex-1 sm:flex-none rounded-lg font-bold whitespace-nowrap"
           >
             History
           </Button>
@@ -161,13 +161,13 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="flex flex-col md:flex-row gap-4"
+        className="flex flex-col sm:flex-row gap-4"
       >
-        <div className="relative flex-1">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Search by name, roll number or type..." 
-            className="pl-10 rounded-xl bg-muted/50 border-transparent focus:bg-card transition-all"
+            className="pl-10 rounded-xl bg-muted/50 border-transparent focus:bg-card transition-all w-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -175,19 +175,20 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
       </motion.div>
 
       <div className="glass-card rounded-2xl overflow-hidden border border-white/5">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-white/5 hover:bg-transparent">
-              <TableHead className="w-[200px] pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Student Info</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Roll Number</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Batch & Year</TableHead>
-              <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Forwarded</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From Date</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To Date</TableHead>
-              <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</TableHead>
-              <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-white/5 hover:bg-transparent">
+                <TableHead className="w-[180px] sm:w-[200px] pl-4 sm:pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Student Info</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Roll Number</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Batch & Year</TableHead>
+                <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Forwarded</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">From Date</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">To Date</TableHead>
+                <TableHead className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-right pr-4 sm:pr-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             <AnimatePresence mode="popLayout">
               {filteredRequests
@@ -200,16 +201,16 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                   key={request.id}
                   className="group border-white/5 hover:bg-white/[0.02] transition-colors"
                 >
-                  <TableCell className="pl-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-8 h-8 rounded-lg ring-1 ring-white/10 group-hover:ring-primary/30 transition-all">
+                   <TableCell className="pl-4 sm:pl-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Avatar className="w-8 h-8 rounded-lg ring-1 ring-white/10 group-hover:ring-primary/30 transition-all shrink-0">
                         <AvatarFallback className="rounded-lg text-[10px] font-bold bg-primary/10 text-primary">
                             {(request.user_name || request.userName || '?').charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                          <p className="font-bold text-xs truncate whitespace-nowrap">{request.user_name || request.userName}</p>
-                          <p className="text-[10px] text-muted-foreground font-medium italic">{request.type}</p>
+                          <p className="font-bold text-xs truncate max-w-[100px] sm:max-w-none">{request.user_name || request.userName}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium italic truncate">{request.type}</p>
                       </div>
                     </div>
                   </TableCell>
@@ -229,8 +230,8 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                         <span className="text-xs text-muted-foreground/30">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.startDate)}</TableCell>
-                  <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.endDate)}</TableCell>
+                  <TableCell className="text-[10px] font-bold text-foreground/70 whitespace-nowrap">{formatDate(request.startDate)}</TableCell>
+                  <TableCell className="text-[10px] font-bold text-foreground/70 whitespace-nowrap">{formatDate(request.endDate)}</TableCell>
                   <TableCell className="text-center">
                     <Badge 
                       variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'cancel_requested' ? 'outline' : 'outline'))} 
@@ -320,24 +321,25 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                     </TableCell>
                 </TableRow>
             )}
-          </TableBody>
-        </Table>
+           </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* View Details Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-white/5 glass-card shadow-2xl">
+        <DialogContent className="max-w-lg w-[calc(100%-2rem)] rounded-3xl p-0 overflow-hidden border-white/5 glass-card shadow-2xl">
           <div className="p-1 px-1 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20">
               <div className="bg-card/90 backdrop-blur-xl rounded-[22px] p-6 space-y-6">
                   <DialogHeader>
-                    <div className="flex items-center gap-4 mb-2">
-                        <Avatar className="w-14 h-14 rounded-2xl border-2 border-primary/20">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 mb-2">
+                        <Avatar className="w-16 h-16 rounded-2xl border-2 border-primary/20 shrink-0">
                             <AvatarFallback className="text-xl font-black bg-primary/5 text-primary">
                                 {selectedRequest ? (selectedRequest.user_name || selectedRequest.userName || '?').charAt(0) : '?'}
                             </AvatarFallback>
                         </Avatar>
                         <div>
-                            <DialogTitle className="text-2xl font-bold tracking-tight">
+                            <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                                 {selectedRequest?.user_name || selectedRequest?.userName}
                             </DialogTitle>
                             <p className="text-xs text-muted-foreground font-medium">{selectedRequest?.roll_number} • {selectedRequest?.batch_id}</p>
@@ -345,7 +347,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                     </div>
                   </DialogHeader>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1 p-3 rounded-2xl bg-muted/30 border border-white/5">
                           <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">From Date</p>
                           <p className="text-sm font-bold flex items-center gap-2">
@@ -392,9 +394,9 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                   )}
 
                   {selectedRequest?.status === 'pending_admin' && (
-                      <DialogFooter className="pt-4 flex sm:justify-center gap-3">
+                      <DialogFooter className="pt-4 flex flex-col sm:flex-row items-stretch sm:justify-center gap-3">
                           <Button 
-                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest shadow-glow-primary" 
+                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest shadow-glow-primary w-full" 
                             variant="gradient"
                             onClick={() => handleAction(selectedRequest.id, 'approve')}
                           >
@@ -402,7 +404,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                               Approve Request
                           </Button>
                           <Button 
-                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5" 
+                            className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5 w-full" 
                             variant="outline"
                             onClick={() => {
                                 setIsViewOpen(false);
@@ -428,7 +430,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
 
       {/* Rejection Dialog */}
       <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
-        <DialogContent className="sm:max-w-[400px] rounded-3xl border-white/5 glass-card shadow-2xl p-6">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] rounded-3xl border-white/5 glass-card shadow-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500" />
@@ -448,18 +450,18 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
             />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
              <Button variant="ghost" onClick={() => {
                  setIsRejectOpen(false);
                  setRejectionReason('');
-             }} className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6">
+             }} className="w-full sm:w-auto rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6">
                 Cancel
              </Button>
              <Button 
                 variant="destructive" 
                 onClick={() => handleAction(selectedRequest?.id!, 'reject', rejectionReason)}
                 disabled={!rejectionReason.trim()}
-                className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 shadow-glow-destructive"
+                className="w-full sm:w-auto rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 shadow-glow-destructive"
              >
                 Reject Request
              </Button>

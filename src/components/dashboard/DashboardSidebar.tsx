@@ -210,9 +210,11 @@ const getLinksByRole = (role: UserRole): SidebarLink[] => {
 interface DashboardSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  onNavigate?: () => void;
+  isMobile: boolean;
 }
 
-export default function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps) {
+export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMobile }: DashboardSidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -251,8 +253,8 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto custom-scrollbar py-4 px-2">
-        <ul className="space-y-1">
+      <nav className="flex-1 overflow-y-auto custom-scrollbar py-2 short:py-1 px-2">
+        <ul className="space-y-1 short:space-y-0.5">
           {links.map((link, index) => {
             const Icon = link.icon;
             const isActive = location.pathname === link.path;
@@ -334,6 +336,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
                              <li key={child.path}>
                                <NavLink 
                                  to={child.path}
+                                 onClick={onNavigate}
                                  className={cn(
                                    'flex items-center gap-3 pl-11 pr-3 py-2 text-sm transition-colors',
                                    isChildLinkActive 
@@ -362,6 +365,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
               >
                 <NavLink
                   to={link.path}
+                  onClick={onNavigate}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative',
                     isActive
@@ -462,10 +466,10 @@ export default function DashboardSidebar({ collapsed, onToggle }: DashboardSideb
         </Button>
       </div>
 
-      {/* Collapse Toggle */}
+      {/* Collapse Toggle - Hidden on Mobile */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 bg-sidebar rounded-full border border-sidebar-border flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors shadow-sm"
+        className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 bg-sidebar rounded-full border border-sidebar-border items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors shadow-sm"
       >
         {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>

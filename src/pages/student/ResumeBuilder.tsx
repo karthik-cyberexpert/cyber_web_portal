@@ -368,13 +368,13 @@ export default function ResumeBuilder() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl font-bold">Resume Builder</h1>
-          <p className="text-sm text-muted-foreground">Build your professional resume</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Resume Builder</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Build your professional resume</p>
         </div>
-        <Button variant="gradient" className="rounded-xl shadow-glow-sm">
+        <Button variant="gradient" className="w-full sm:w-auto rounded-xl shadow-glow-sm">
           <Download className="w-4 h-4 mr-2" />
           Export PDF
         </Button>
@@ -399,12 +399,12 @@ export default function ResumeBuilder() {
                   <Label className="text-xs">Full Name</Label>
                   <Input value={resumeData.personalInfo.fullName} className="mt-1" readOnly />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Email</Label>
-                    <Input value={resumeData.personalInfo.email} className="mt-1" readOnly />
+                    <Input value={resumeData.personalInfo.email} className="mt-1 truncate" readOnly />
                   </div>
-                  <div className="flex-1">
+                  <div>
                     <Label className="text-xs">Phone Number</Label>
                     <Input 
                       value={resumeData.personalInfo.phone} 
@@ -413,12 +413,12 @@ export default function ResumeBuilder() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-muted/50 mt-4">
+                <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-muted/50 mt-4">
                   <div>
                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">LinkedIn</Label>
                     <Input 
                       value={resumeData.personalInfo.linkedin} 
-                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      className="mt-1 h-9 text-xs bg-muted/30 truncate" 
                       readOnly
                     />
                   </div>
@@ -426,7 +426,7 @@ export default function ResumeBuilder() {
                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">GitHub</Label>
                     <Input 
                       value={resumeData.personalInfo.github} 
-                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      className="mt-1 h-9 text-xs bg-muted/30 truncate" 
                       readOnly
                     />
                   </div>
@@ -434,15 +434,15 @@ export default function ResumeBuilder() {
                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Portfolio</Label>
                     <Input 
                       value={resumeData.personalInfo.portfolio} 
-                      className="mt-1 h-9 text-xs bg-muted/30" 
+                      className="mt-1 h-9 text-xs bg-muted/30 truncate" 
                       readOnly
                     />
                   </div>
                 </div>
                 <div className="pt-2">
-                   <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
-                     <CheckCircle2 className="w-4 h-4 text-primary" />
-                     <p className="text-[10px] text-muted-foreground italic">
+                   <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                     <p className="text-[10px] text-muted-foreground italic leading-tight">
                        These verified details are synced with your **Identity Registry**. 
                        Go to **Personal Details** to update them.
                      </p>
@@ -480,9 +480,9 @@ export default function ResumeBuilder() {
                   </div>
                 ))}
                 <div className="pt-2">
-                   <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
-                     <CheckCircle2 className="w-4 h-4 text-primary" />
-                     <p className="text-[10px] text-muted-foreground italic">
+                   <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                     <p className="text-[10px] text-muted-foreground italic leading-tight">
                        Academic credentials are verified and synced with your **Departmental Profile**.
                      </p>
                    </div>
@@ -515,14 +515,14 @@ export default function ResumeBuilder() {
                 )}
                 <Dialog open={showAchievementDialog} onOpenChange={setShowAchievementDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button variant="outline" size="sm" className="w-full h-10 rounded-xl">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Achievement
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-lg w-[calc(100%-2rem)]">
                     <DialogHeader>
-                      <DialogTitle>Add Achievement</DialogTitle>
+                      <DialogTitle className="text-xl font-black">Add Achievement</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
@@ -531,6 +531,7 @@ export default function ResumeBuilder() {
                           placeholder="e.g., First Prize in Hackathon"
                           value={newAchievement.title}
                           onChange={(e) => setNewAchievement({...newAchievement, title: e.target.value})}
+                          className="rounded-xl"
                         />
                       </div>
                       <div>
@@ -539,12 +540,13 @@ export default function ResumeBuilder() {
                           placeholder="e.g., IEEE, ACM, University"
                           value={newAchievement.organizer}
                           onChange={(e) => setNewAchievement({...newAchievement, organizer: e.target.value})}
+                          className="rounded-xl"
                         />
                       </div>
                       <div>
                         <Label>Level</Label>
                         <Select value={newAchievement.level} onValueChange={(val) => setNewAchievement({...newAchievement, level: val})}>
-                          <SelectTrigger>
+                          <SelectTrigger className="rounded-xl">
                             <SelectValue placeholder="Select level" />
                           </SelectTrigger>
                           <SelectContent>
@@ -557,9 +559,9 @@ export default function ResumeBuilder() {
                         </Select>
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowAchievementDialog(false)}>Cancel</Button>
-                      <Button onClick={addAchievement}>Add</Button>
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                      <Button variant="outline" onClick={() => setShowAchievementDialog(false)} className="w-full sm:w-auto rounded-xl">Cancel</Button>
+                      <Button onClick={addAchievement} className="w-full sm:w-auto rounded-xl">Add Now</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -593,14 +595,14 @@ export default function ResumeBuilder() {
                 </div>
                 <Dialog open={showSkillDialog} onOpenChange={setShowSkillDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button variant="outline" size="sm" className="w-full h-10 rounded-xl">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Skill
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md w-[calc(100%-2rem)]">
                     <DialogHeader>
-                      <DialogTitle>Add Skill</DialogTitle>
+                      <DialogTitle className="text-xl font-black">Add Skill</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
@@ -610,12 +612,13 @@ export default function ResumeBuilder() {
                           value={newSkill}
                           onChange={(e) => setNewSkill(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                          className="rounded-xl"
                         />
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowSkillDialog(false)}>Cancel</Button>
-                      <Button onClick={addSkill}>Add</Button>
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                      <Button variant="outline" onClick={() => setShowSkillDialog(false)} className="w-full sm:w-auto rounded-xl">Cancel</Button>
+                      <Button onClick={addSkill} className="w-full sm:w-auto rounded-xl">Add Skill</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -644,14 +647,14 @@ export default function ResumeBuilder() {
                   )}
                   <Dialog open={activeCustomSection === section.key} onOpenChange={(open) => !open && setActiveCustomSection(null)}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => setActiveCustomSection(section.key)}>
+                      <Button variant="outline" size="sm" className="w-full h-10 rounded-xl" onClick={() => setActiveCustomSection(section.key)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Item
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-md w-[calc(100%-2rem)]">
                       <DialogHeader>
-                        <DialogTitle>Add Item to {section.name}</DialogTitle>
+                        <DialogTitle className="text-xl font-black">Add Item to {section.name}</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div>
@@ -661,12 +664,13 @@ export default function ResumeBuilder() {
                             value={newCustomItem}
                             onChange={(e) => setNewCustomItem(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && addCustomItem()}
+                            className="rounded-xl mt-1"
                           />
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setActiveCustomSection(null)}>Cancel</Button>
-                        <Button onClick={addCustomItem}>Add</Button>
+                      <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                        <Button variant="outline" onClick={() => setActiveCustomSection(null)} className="w-full sm:w-auto rounded-xl">Cancel</Button>
+                        <Button onClick={addCustomItem} className="w-full sm:w-auto rounded-xl">Add Item</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -678,34 +682,34 @@ export default function ResumeBuilder() {
           {/* Add Section Button */}
           <Dialog open={showSectionDialog} onOpenChange={setShowSectionDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full rounded-2xl border-dashed border-2">
-                <ListPlus className="w-4 h-4 mr-2" />
+              <Button variant="outline" className="w-full h-12 rounded-2xl border-dashed border-2 hover:border-primary/50 transition-colors">
+                <ListPlus className="w-4 h-4 mr-2 text-primary" />
                 Add Custom Section
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md w-[calc(100%-2rem)]">
               <DialogHeader>
-                <DialogTitle>Add Custom Section</DialogTitle>
+                <DialogTitle className="text-xl font-black">Add Custom Section</DialogTitle>
                 <DialogDescription>
-                  Create a new section for your resume like Projects, Certifications, Languages, etc.
+                  Create a new section like Projects, Certifications, or Languages.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <Label className="text-sm">Section Name</Label>
+                  <Label className="text-sm font-bold">Section Name</Label>
                   <Input
-                    placeholder="e.g., Projects, Certifications, Languages..."
+                    placeholder="e.g., Projects, Languages..."
                     value={newSectionName}
                     onChange={(e) => setNewSectionName(e.target.value)}
-                    className="mt-2"
+                    className="mt-2 rounded-xl"
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowSectionDialog(false)}>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                <Button variant="outline" onClick={() => setShowSectionDialog(false)} className="w-full sm:w-auto rounded-xl">
                   Cancel
                 </Button>
-                <Button onClick={addCustomSection} disabled={!newSectionName.trim()}>
+                <Button onClick={addCustomSection} disabled={!newSectionName.trim()} className="w-full sm:w-auto rounded-xl">
                   Add Section
                 </Button>
               </DialogFooter>
@@ -730,12 +734,15 @@ export default function ResumeBuilder() {
           </div>
           
           {/* Portrait A4 Preview */}
-          <div className="glass-card rounded-2xl p-4 bg-gray-100 sticky top-4">
-            <div className="bg-white rounded-lg shadow-2xl overflow-hidden mx-auto" style={{ aspectRatio: '1 / 1.414', maxHeight: '600px' }}>
-              <div className="h-full overflow-y-auto">
+          <div className="glass-card rounded-2xl p-4 bg-muted/20 sticky top-4 lg:top-24">
+            <div className="bg-white rounded-xl shadow-2xl overflow-hidden mx-auto w-full max-w-[350px] sm:max-w-none shadow-glow-sm" style={{ aspectRatio: '1 / 1.414', minHeight: '400px', maxHeight: '70vh' }}>
+              <div className="h-full overflow-y-auto preview-scrollbar">
                 <PortraitPreview data={resumeData} template={selectedTemplate} />
               </div>
             </div>
+            <p className="text-[10px] text-center text-muted-foreground mt-3 italic">
+              Scroll to preview full layout
+            </p>
           </div>
 
           {/* Stats */}

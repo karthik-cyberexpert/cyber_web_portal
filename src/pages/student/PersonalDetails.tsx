@@ -183,16 +183,16 @@ export default function PersonalDetails() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold italic">Identity Matrix 🧬</h1>
-          <p className="text-muted-foreground font-medium">Manage your personal information and verified credentials</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight italic">Identity Matrix 🧬</h1>
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">Manage your personal information and verified credentials</p>
         </div>
         <Button 
           variant="gradient" 
           onClick={() => setIsEditing(true)}
-          className="shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest"
+          className="w-full sm:w-auto shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest"
         >
           <Sparkles className="w-4 h-4 mr-2" />
           Edit Registry
@@ -226,8 +226,7 @@ export default function PersonalDetails() {
           </div>
           
           <div>
-            <h2 className="text-2xl font-black tracking-tight italic">{student.name}</h2>
-            <h2 className="text-2xl font-black tracking-tight italic">{student.name}</h2>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight italic break-words">{student.name}</h2>
             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 slashed-zero">
                 {student.class} • Year {academicState.year} • Sem {academicState.semester}
             </p>
@@ -242,12 +241,12 @@ export default function PersonalDetails() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 w-full pt-4">
-            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
-              <p className="text-xl font-black text-primary font-mono leading-none slashed-zero">{Number(student.cgpa || 0).toFixed(2)}</p>
+            <div className="bg-muted/30 p-3 sm:p-4 rounded-2xl border border-white/5 group hover:border-primary/20 transition-all">
+              <p className="text-lg sm:text-xl font-black text-primary font-mono leading-none slashed-zero">{Number(student.cgpa || 0).toFixed(2)}</p>
               <p className="text-[9px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Global GPA</p>
             </div>
-            <div className="bg-muted/30 p-4 rounded-2xl border border-white/5 group hover:border-accent/20 transition-all">
-              <p className="text-xl font-black text-accent font-mono leading-none slashed-zero">{student.attendance}%</p>
+            <div className="bg-muted/30 p-3 sm:p-4 rounded-2xl border border-white/5 group hover:border-accent/20 transition-all">
+              <p className="text-lg sm:text-xl font-black text-accent font-mono leading-none slashed-zero">{student.attendance}%</p>
               <p className="text-[9px] font-black text-muted-foreground uppercase mt-2 tracking-widest">Attendance</p>
             </div>
           </div>
@@ -266,17 +265,17 @@ export default function PersonalDetails() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 * gIdx }}
-              className="glass-card rounded-3xl p-8 shadow-xl border-white/5"
+              className="glass-card rounded-3xl p-4 sm:p-8 shadow-xl border-white/5"
             >
-              <h3 className="text-sm font-black uppercase tracking-widest mb-8 flex items-center gap-3 italic">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-3 italic">
                 <div className="w-2 h-2 bg-primary rounded-full shadow-glow-sm" />
                 {group.title}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 sm:gap-y-8 gap-x-12">
                 {group.items.map((item, iIdx) => (
-                  <div key={iIdx} className="group flex flex-col items-start text-left">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all shadow-inner border border-white/5">
+                  <div key={iIdx} className="group flex flex-col items-start text-left min-w-0">
+                    <div className="flex items-start gap-4 w-full">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all shadow-inner border border-white/5 shrink-0">
                         <item.icon className={cn("w-5 h-5", item.color)} />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -293,10 +292,10 @@ export default function PersonalDetails() {
       </div>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 rounded-[2rem] overflow-hidden p-0 gap-0">
-          <DialogHeader className="p-8 pb-0">
-            <DialogTitle className="text-2xl font-black italic tracking-tight">Edit Identity Registry</DialogTitle>
-            <DialogDescription className="font-medium text-muted-foreground">
+        <DialogContent className="max-w-2xl w-[calc(100%-2rem)] glass-card border-white/10 rounded-[2rem] overflow-hidden p-0 gap-0">
+          <DialogHeader className="p-6 sm:p-8 pb-0">
+            <DialogTitle className="text-xl sm:text-2xl font-black italic tracking-tight">Edit Identity Registry</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground">
               Update your biological and demographic information. Core identity details verified by blockchain are read-only.
             </DialogDescription>
           </DialogHeader>
@@ -425,12 +424,12 @@ export default function PersonalDetails() {
               </div>
             </div>
 
-            <DialogFooter className="p-8 pt-0 gap-3">
+            <DialogFooter className="p-6 sm:p-8 pt-0 flex flex-col sm:flex-row gap-3">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setIsEditing(false)}
-                className="rounded-xl font-bold italic"
+                className="w-full sm:w-auto rounded-xl font-bold italic"
               >
                 Discard Changes
               </Button>
@@ -438,7 +437,7 @@ export default function PersonalDetails() {
                 type="submit" 
                 variant="gradient" 
                 disabled={isSaving}
-                className="rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-glow-sm"
+                className="w-full sm:w-auto rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-glow-sm"
               >
                 {isSaving && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
                 Commit Updates

@@ -943,6 +943,7 @@ export interface Achievement {
   organization: string;
   date: string;
   category: string;
+  level: string;
   status: 'pending' | 'approved' | 'rejected';
   points: number;
   certificateUrl?: string;

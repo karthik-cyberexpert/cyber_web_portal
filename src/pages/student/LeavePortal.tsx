@@ -229,15 +229,15 @@ export default function LeavePortal() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Leave Portal</h1>
-          <p className="text-muted-foreground">Request leave and track approval status</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Leave Portal</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Request leave and track approval status</p>
         </div>
         <Button 
           variant={showApply ? "outline" : "gradient"} 
-          className="rounded-xl shadow-lg shadow-primary/20"
+          className="w-full sm:w-auto rounded-xl shadow-lg shadow-primary/20"
           onClick={() => !isGraduated && setShowApply(!showApply)}
           disabled={isGraduated}
         >
@@ -274,14 +274,14 @@ export default function LeavePortal() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="lg:col-span-2 glass-card rounded-2xl p-8 border-primary/20 bg-primary/[0.02]"
+              className="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-8 border-primary/20 bg-primary/[0.02]"
             >
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-bold mb-6 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
                 New Leave Application
               </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Type of Leave</Label>
                     <select 
@@ -309,7 +309,7 @@ export default function LeavePortal() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">From Date</Label>
                     <Input 
@@ -344,9 +344,10 @@ export default function LeavePortal() {
                   <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                       Attach Document {isFileUploadRequired ? <span className="text-destructive">* (Required)</span> : <span className="text-muted-foreground">(Optional)</span>}
                   </Label>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <Input 
                       type="file" 
+                      id="file-upload"
                       accept=".png,.jpg,.jpeg"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -363,14 +364,13 @@ export default function LeavePortal() {
                             setFileAttached(false);
                             return;
                           }
-                          // In a real app, you'd handle the file upload here
                           toast.success("File attached successfully");
                           setFileAttached(true);
                         } else {
                             setFileAttached(false);
                         }
                       }}
-                      className="bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" 
+                      className="bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs sm:text-sm" 
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground">
@@ -426,17 +426,18 @@ export default function LeavePortal() {
             <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6 px-2">Application History</h3>
             
             <div className="rounded-xl border border-white/5 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="w-[60px] text-[10px] font-black uppercase tracking-widest">S.No</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase tracking-widest">Leave Type</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase tracking-widest">From Date</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase tracking-widest">To Date</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase tracking-widest">Status</TableHead>
-                    <TableHead className="text-right text-[10px] font-black uppercase tracking-widest">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableHead className="w-[60px] text-[10px] font-black uppercase tracking-widest whitespace-nowrap">S.No</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Leave Type</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">From Date</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">To Date</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Status</TableHead>
+                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {paginatedHistory.map((leave: any, idx) => {
                     const type = leave.type || leave.category || 'Leave';
@@ -502,6 +503,7 @@ export default function LeavePortal() {
                   })}
                 </TableBody>
               </Table>
+             </div>
 
               {leaveHistory.length === 0 && (
                 <div className="text-center py-20 bg-muted/10">

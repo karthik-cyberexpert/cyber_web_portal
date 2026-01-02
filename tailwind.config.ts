@@ -5,6 +5,20 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
+    screens: {
+      'xs': '480px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1400px',
+      '3xl': '1920px',
+      '4xl': '2560px',
+      'short': { 'raw': '(max-height: 600px)' },
+      'tall': { 'raw': '(min-height: 900px)' },
+      'portrait': { 'raw': '(orientation: portrait)' },
+      'landscape': { 'raw': '(orientation: landscape)' },
+    },
     container: {
       center: true,
       padding: "2rem",

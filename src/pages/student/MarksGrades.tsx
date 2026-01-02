@@ -107,42 +107,44 @@ export default function MarksGrades() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold">Marks & Grades</h1>
-          <p className="text-muted-foreground">Track your academic performance and assessment results</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marks & Grades</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Track your academic performance and assessment results</p>
         </div>
-          <div className="flex gap-2">
-            <Select value={viewType} onValueChange={(v: "internal" | "external") => setViewType(v)}>
-              <SelectTrigger className="w-[180px] bg-background/50 border-white/10 rounded-xl">
-                <SelectValue placeholder="View Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="internal">Internal Marks</SelectItem>
-                <SelectItem value="external">External Result</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select defaultValue="sem5">
-              <SelectTrigger className="w-[180px] bg-background/50 border-white/10 rounded-xl">
-                <SelectValue placeholder="Select Semester" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sem1">Semester 1</SelectItem>
-                <SelectItem value="sem2">Semester 2</SelectItem>
-                <SelectItem value="sem3">Semester 3</SelectItem>
-                <SelectItem value="sem4">Semester 4</SelectItem>
-                <SelectItem value="sem5">Semester 5</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="gradient" size="sm" disabled>
+          <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex gap-2 w-full xs:w-auto">
+              <Select value={viewType} onValueChange={(v: "internal" | "external") => setViewType(v)}>
+                <SelectTrigger className="flex-1 xs:w-[150px] bg-background/50 border-white/10 rounded-xl">
+                  <SelectValue placeholder="View Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">Internal Marks</SelectItem>
+                  <SelectItem value="external">External Result</SelectItem>
+                </SelectContent>
+              </Select>
+  
+              <Select defaultValue="sem5">
+                <SelectTrigger className="flex-1 xs:w-[150px] bg-background/50 border-white/10 rounded-xl">
+                  <SelectValue placeholder="Select Semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sem1">Semester 1</SelectItem>
+                  <SelectItem value="sem2">Semester 2</SelectItem>
+                  <SelectItem value="sem3">Semester 3</SelectItem>
+                  <SelectItem value="sem4">Semester 4</SelectItem>
+                  <SelectItem value="sem5">Semester 5</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="gradient" size="sm" className="w-full sm:w-auto" disabled>
               Download Grade Sheet
             </Button>
           </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <GlassStatCard
           title="Current CGPA"
           value={stats.cgpa === 0 ? "0.00" : stats.cgpa.toFixed(2)}
@@ -164,6 +166,7 @@ export default function MarksGrades() {
           icon={BarChart3}
           iconColor="text-success"
           delay={0.3}
+          className="sm:col-span-2 lg:col-span-1"
         />
       </div>
 
@@ -175,36 +178,36 @@ export default function MarksGrades() {
           transition={{ delay: 0.4 }}
           className="lg:col-span-2 glass-card rounded-2xl overflow-hidden"
         >
-          <div className="p-6 border-b border-white/10 flex items-center justify-between bg-primary/5">
-            <h3 className="text-lg font-bold flex items-center gap-2">
+          <div className="p-4 sm:p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 gap-3">
+            <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-primary" />
               {viewType === 'internal' ? 'Internal Assessment Details' : 'University Results'}
             </h3>
-            <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">
+            <span className="w-fit text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">
                 {viewType === 'internal' ? 'In Progress' : 'Published'}
             </span>
           </div>
           
-          <div className="p-0">
+          <div className="p-0 overflow-x-auto">
             {viewType === 'internal' ? (
                 <Table>
                     <TableHeader>
                     <TableRow className="hover:bg-transparent border-white/10">
-                    <TableHead className="w-[60px] font-bold text-muted-foreground pl-6">S.No</TableHead>
-                        <TableHead className="font-bold text-muted-foreground">Subject Name and Code</TableHead>
-                        <TableHead className="font-bold text-muted-foreground text-center">CIA-1</TableHead>
-                        <TableHead className="font-bold text-muted-foreground text-center">CIA-2</TableHead>
-                        <TableHead className="font-bold text-muted-foreground text-center">CIA-3</TableHead>
-                        <TableHead className="font-bold text-muted-foreground text-center">Model</TableHead>
-                        <TableHead className="font-bold text-muted-foreground text-center">Assignment</TableHead>
-                        <TableHead className="font-bold text-primary text-right pr-6">Total</TableHead>
+                    <TableHead className="w-[60px] font-bold text-muted-foreground pl-6 whitespace-nowrap">S.No</TableHead>
+                        <TableHead className="font-bold text-muted-foreground whitespace-nowrap">Subject Name and Code</TableHead>
+                        <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">CIA-1</TableHead>
+                        <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">CIA-2</TableHead>
+                        <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">CIA-3</TableHead>
+                        <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">Model</TableHead>
+                        <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">Assignment</TableHead>
+                        <TableHead className="font-bold text-primary text-right pr-6 whitespace-nowrap">Total</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {marksData.length > 0 ? marksData.map((item, idx) => (
                         <TableRow key={idx} className="group border-white/5 hover:bg-white/5 transition-colors">
                         <TableCell className="pl-6 font-medium text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                             <p className="font-bold text-sm tracking-tight">{item.subject}</p>
                             <p className="text-[10px] text-muted-foreground font-medium uppercase">{item.code}</p>
                         </TableCell>
@@ -219,7 +222,7 @@ export default function MarksGrades() {
                         </TableRow>
                     )) : (
                         <TableRow>
-                        <TableCell colSpan={7} className="text-center py-20 text-muted-foreground italic">
+                        <TableCell colSpan={8} className="text-center py-20 text-muted-foreground italic">
                             <div className="flex flex-col items-center gap-2">
                                 <AlertCircle className="w-8 h-8 opacity-20" />
                                 <p>No assessment records or marks released yet for this semester.</p>
@@ -233,18 +236,18 @@ export default function MarksGrades() {
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent border-white/10">
-                            <TableHead className="w-[60px] font-bold text-muted-foreground pl-6">S.No</TableHead>
-                            <TableHead className="font-bold text-muted-foreground">Subject Name</TableHead>
-                            <TableHead className="font-bold text-muted-foreground text-center">Subject Code</TableHead>
-                            <TableHead className="font-bold text-muted-foreground text-center">Grade</TableHead>
-                            <TableHead className="font-bold text-success text-center border-l border-white/5">GPA</TableHead>
+                            <TableHead className="w-[60px] font-bold text-muted-foreground pl-6 whitespace-nowrap">S.No</TableHead>
+                            <TableHead className="font-bold text-muted-foreground whitespace-nowrap">Subject Name</TableHead>
+                            <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">Subject Code</TableHead>
+                            <TableHead className="font-bold text-muted-foreground text-center whitespace-nowrap">Grade</TableHead>
+                            <TableHead className="font-bold text-success text-center border-l border-white/5 whitespace-nowrap">GPA</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {marksData.length > 0 ? marksData.map((item, idx) => (
                             <TableRow key={idx} className="group border-white/5 hover:bg-white/5 transition-colors">
                                 <TableCell className="pl-6 font-medium text-muted-foreground">{idx + 1}</TableCell>
-                                <TableCell className="font-bold text-sm tracking-tight">{item.subject}</TableCell>
+                                <TableCell className="font-bold text-sm tracking-tight whitespace-nowrap">{item.subject}</TableCell>
                                 <TableCell className="text-center text-xs font-mono text-muted-foreground">{item.code}</TableCell>
                                 <TableCell className="text-center">
                                     <Badge variant="outline" className={cn("font-bold", getGradeColor(item.external))}>
@@ -254,13 +257,13 @@ export default function MarksGrades() {
                                 {idx === 0 && (
                                     <TableCell 
                                         rowSpan={marksData.length} 
-                                        className="text-center border-l border-white/5 bg-white/[0.02]"
+                                        className="text-center border-l border-white/5 bg-white/[0.02] p-4 min-w-[120px]"
                                     >
                                         <div className="flex flex-col items-center justify-center gap-1 h-full">
-                                            <span className="text-3xl font-black text-success tracking-tighter">
-                                                {stats.gpa > 0 ? stats.gpa.toFixed(2) : '-'}
+                                            <span className="text-2xl sm:text-3xl font-black text-success tracking-tighter">
+                                                {stats.cgpa > 0 ? stats.cgpa.toFixed(2) : '-'}
                                             </span>
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Semester GPA</span>
+                                            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center">Semester GPA</span>
                                         </div>
                                     </TableCell>
                                 )}

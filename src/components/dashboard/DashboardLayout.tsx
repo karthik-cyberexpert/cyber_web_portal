@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
@@ -7,20 +7,38 @@ import { Bell, Search, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+// Hook to track if screen is desktop size (lg breakpoint = 1024px)
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return isDesktop;
+}
+
 export default function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <div className="hidden lg:block">
+      {/* Desktop Sidebar - Only rendered on desktop */}
+      {isDesktop && (
         <DashboardSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          isMobile={false}
         />
-      </div>
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
@@ -30,24 +48,31 @@ export default function DashboardLayout() {
         />
       )}
 
-      {/* Mobile Sidebar */}
-      <div className={`lg:hidden fixed left-0 top-0 h-screen z-50 transform transition-transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <DashboardSidebar
-          collapsed={false}
-          onToggle={() => setMobileMenuOpen(false)}
-        />
-      </div>
+      {/* Mobile Sidebar - Only rendered when open */}
+      {!isDesktop && mobileMenuOpen && (
+        <div className="fixed left-0 top-0 h-screen z-50">
+          <DashboardSidebar
+            collapsed={false}
+            onToggle={() => setMobileMenuOpen(false)}
+            onNavigate={() => setMobileMenuOpen(false)}
+            isMobile={true}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <motion.main
         initial={false}
-        animate={{ marginLeft: sidebarCollapsed ? 80 : 280 }}
+        animate={{ 
+          marginLeft: sidebarCollapsed ? 80 : 280,
+          paddingLeft: sidebarCollapsed ? 0 : 0 // Managed by margin
+        }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="min-h-screen hidden lg:block"
+        className="min-h-screen hidden lg:block landscape:block"
       >
         {/* Header */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -57,28 +82,28 @@ export default function DashboardLayout() {
               >
                 <Menu className="w-5 h-5" />
               </Button>
-              <div className="relative hidden md:block">
+              <div className="relative hidden md:block 3xl:w-[500px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search..."
-                  className="w-80 pl-10 h-10 bg-muted/50 border-0"
+                  className="w-full pl-10 h-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
               </Button>
-              <div className="hidden md:flex items-center gap-3 pl-3 border-l border-border">
-                <div className="text-right">
+              <div className="hidden xs:flex items-center gap-3 pl-3 border-l border-border">
+                <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium">{user?.name}</p>
                   <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                 </div>
                 <img
                   src={user?.avatar}
                   alt={user?.name}
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-primary/20"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-primary/20"
                 />
               </div>
             </div>
@@ -92,10 +117,10 @@ export default function DashboardLayout() {
       </motion.main>
 
       {/* Mobile Main Content */}
-      <main className="lg:hidden min-h-screen">
+      <main className="lg:hidden min-h-screen portrait:block">
         {/* Mobile Header */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center justify-between px-4 py-3 xs:px-6">
             <Button
               variant="ghost"
               size="icon"
@@ -103,7 +128,7 @@ export default function DashboardLayout() {
             >
               <Menu className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
@@ -111,7 +136,7 @@ export default function DashboardLayout() {
               <img
                 src={user?.avatar}
                 alt={user?.name}
-                className="w-9 h-9 rounded-xl object-cover"
+                className="w-8 h-8 xs:w-9 xs:h-9 rounded-xl object-cover"
               />
             </div>
           </div>
