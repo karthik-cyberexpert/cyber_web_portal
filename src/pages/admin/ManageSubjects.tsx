@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, Edit2, Trash2, Users, MoreHorizontal, X, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import { BookOpen, Plus, Search, Edit2, Trash2, Users, MoreHorizontal, X, Check, Upload, FileSpreadsheet, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
@@ -68,7 +69,10 @@ export default function ManageSubjects() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isFacultyOpen, setIsFacultyOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [tempSelectedFaculties, setTempSelectedFaculties] = useState<number[]>([]);
@@ -249,6 +253,87 @@ export default function ManageSubjects() {
       }
   };
 
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        'Subject Code': 'CS101',
+        'Subject Name': 'Introduction to Computer Science',
+        'Credits': 4,
+        'Semester': 1,
+        'Type': 'theory'
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Subjects");
+    XLSX.writeFile(wb, "subject_upload_template.xlsx");
+    toast.info("Template downloaded");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const reader = new FileReader();
+
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        let addedCount = 0;
+        let errorCount = 0;
+
+        for (const row of data as any[]) {
+          // Validation
+          if (!row['Subject Code'] || !row['Subject Name']) {
+            errorCount++;
+            continue;
+          }
+
+          try {
+            const res = await fetch(`${API_BASE_URL}/academic/subjects`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                code: row['Subject Code'].toString(),
+                name: row['Subject Name'],
+                credits: parseInt(row['Credits']) || 3,
+                semester: parseInt(row['Semester']) || 1,
+                type: row['Type']?.toLowerCase() || 'theory'
+              })
+            });
+
+            if (res.ok) addedCount++;
+            else errorCount++;
+          } catch (e) {
+            errorCount++;
+          }
+        }
+
+        toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
+        fetchData();
+        setIsBulkUploadModalOpen(false);
+      } catch (error) {
+        console.error("Error parsing file:", error);
+        toast.error("Failed to parse file");
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
   const filteredSubjects = subjects.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     s.code.toLowerCase().includes(searchQuery.toLowerCase())
@@ -264,10 +349,20 @@ export default function ManageSubjects() {
           </h1>
           <p className="text-muted-foreground mt-1">Add and manage course curriculum</p>
         </div>
-        <Button onClick={handleAddClick} className="gap-2 bg-gradient-to-r from-primary to-accent">
-          <Plus className="w-4 h-4" />
-          Add Subject
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsBulkUploadModalOpen(true)}
+            className="gap-2 border-primary/20 hover:border-primary/50"
+          >
+            <Upload className="w-4 h-4" />
+            Bulk Upload
+          </Button>
+          <Button onClick={handleAddClick} className="gap-2 bg-gradient-to-r from-primary to-accent">
+            <Plus className="w-4 h-4" />
+            Add Subject
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -520,6 +615,77 @@ export default function ManageSubjects() {
              <Button onClick={handleSaveFaculties} disabled={isSaving}>
                  {isSaving ? 'Saving...' : 'Save Changes'}
              </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={isBulkUploadModalOpen} onOpenChange={setIsBulkUploadModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Subjects</DialogTitle>
+            <DialogDescription>
+              Upload multiple subjects using an Excel file. Download the template to ensure correct formatting.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6 py-4">
+            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl border-muted-foreground/25 bg-muted/50 gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <FileSpreadsheet className="w-6 h-6 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                <p className="text-xs text-muted-foreground mt-1">XLSX or CSV files only</p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".xlsx, .xls, .csv"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+              />
+              <Button 
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={isUploading}
+                variant="secondary"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Select File'
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Instructions:</h4>
+              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                <li>Use the provided template for best results.</li>
+                <li><strong>Subject Code</strong> and <strong>Subject Name</strong> are mandatory.</li>
+                <li>Credits should be a number (default: 3).</li>
+                <li>Semester should be between 1-8 (default: 1).</li>
+              </ul>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full gap-2" 
+                onClick={handleDownloadTemplate}
+              >
+                <Download className="w-4 h-4" />
+                Download Template
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsBulkUploadModalOpen(false)} disabled={isUploading}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
