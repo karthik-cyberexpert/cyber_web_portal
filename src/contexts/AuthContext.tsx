@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/login');
   };
 
+  const updateUser = (data: Partial<User>) => {
+    if (authState.user) {
+      const updatedUser = { ...authState.user, ...data };
+      const updatedState = { ...authState, user: updatedUser };
+      setStoredAuth(updatedState);
+      setAuthState(updatedState);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -72,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

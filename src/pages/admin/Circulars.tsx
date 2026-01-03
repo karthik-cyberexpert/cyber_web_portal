@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, Plus, Edit2, Trash2, Pin, Send, Eye,
@@ -29,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getCirculars, saveCirculars, addCircular, Circular, getStudents } from '@/lib/data-store';
 import { toast } from 'sonner';
+import { DatePicker } from '@/components/ui/date-picker';
 
 const getCategoryIcon = (category: string) => {
   switch (category.toLowerCase()) {
@@ -244,10 +246,9 @@ export default function Circulars() {
 
                 <div className="space-y-2">
                     <Label>Date</Label>
-                    <Input 
-                        type="date"
-                        value={newCircular.date}
-                        onChange={(e) => setNewCircular({ ...newCircular, date: e.target.value })}
+                    <DatePicker 
+                        date={newCircular.date ? new Date(newCircular.date) : undefined}
+                        onChange={date => setNewCircular({ ...newCircular, date: date ? format(date, "yyyy-MM-dd") : '' })}
                     />
                 </div>
               </div>

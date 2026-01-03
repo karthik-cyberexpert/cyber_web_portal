@@ -1,5 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -54,6 +54,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
+import { DatePicker } from '@/components/ui/date-picker';
 import { API_BASE_URL } from '@/lib/api-config';
 import { FACULTY_FEEDBACK_QUESTIONS } from './feedback-constants';
 
@@ -403,10 +404,9 @@ export default function FeedbackPortalAdmin() {
 
                     <div className="space-y-2">
                         <Label>Closing Date & Time (23:59)</Label>
-                        <Input 
-                            type="date" 
-                            value={closingDate}
-                            onChange={(e) => setClosingDate(e.target.value)}
+                        <DatePicker 
+                            date={closingDate ? new Date(closingDate) : undefined}
+                            onChange={date => setClosingDate(date ? format(date, "yyyy-MM-dd") : '')}
                         />
                     </div>
 

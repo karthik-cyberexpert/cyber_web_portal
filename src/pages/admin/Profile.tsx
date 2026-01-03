@@ -1,573 +1,350 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, Mail, Phone, MapPin, Building2, Calendar,
-  Edit2, Camera, Save, Shield, Award, BookOpen,
-  Clock, Activity, Key, LogOut
+  User, Mail, Phone, MapPin, 
+  Camera, Save, Shield, 
+  Activity, Clock, Loader2,
+  CheckCircle2, AlertCircle, Edit2, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter 
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFaculty, getStudents, getTutors, Faculty, Student, Tutor } from '@/lib/data-store';
+import { API_BASE_URL } from '@/lib/api-config';
+import { cn } from '@/lib/utils';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [profile, setProfile] = useState<any>(null);
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
-    designation: '',
-    department: '',
-    employeeId: '',
-    joinDate: '',
-    qualification: '',
-    specialization: '',
-    address: '',
-    bio: '',
+    phone: ''
   });
 
-  useEffect(() => {
-    if (user) {
-      if (user.role === 'admin') {
-        // For admin, use default admin profile data
-        setProfile({
-          name: user.name,
-          email: user.email,
-          phone: '+91 98765 43210', // Default admin phone
-          designation: 'Administrator',
-          department: user.department || 'Administration',
-          employeeId: 'ADMIN001',
-          joinDate: '2010-06-15',
-          qualification: 'System Administrator',
-          specialization: 'System Management',
-          address: 'Tamil Nadu Engineering College, Chennai - 600001',
-          bio: 'System Administrator with extensive experience in managing educational systems. Currently serving as the Administrator for the Academic Management System.',
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/admin/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        setFormData({
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || ''
         });
-      } else if (user.role === 'faculty') {
-        // For faculty, fetch real faculty data
-        const facultyList = getFaculty();
-        const faculty = facultyList.find(f => f.email === user.email);
-        if (faculty) {
-          setProfile({
-            name: faculty.name,
-            email: faculty.email,
-            phone: faculty.phone,
-            designation: faculty.designation,
-            department: faculty.specialization,
-            employeeId: faculty.employeeId,
-            joinDate: faculty.dateOfJoining,
-            qualification: faculty.qualification,
-            specialization: faculty.specialization,
-            address: faculty.address,
-            bio: `Experienced academician with ${faculty.experience} years in teaching and research. Currently serving as a ${faculty.designation} for ${faculty.specialization}.`,
-          });
-        }
-      } else if (user.role === 'tutor') {
-        // For tutor, fetch real tutor data
-        const tutorList = getTutors();
-        const tutor = tutorList.find(t => t.email === user.email);
-        if (tutor) {
-          setProfile({
-            name: tutor.name,
-            email: tutor.email,
-            phone: tutor.phone,
-            designation: tutor.designation,
-            department: 'Class In-Charge',
-            employeeId: tutor.id,
-            joinDate: '2020-01-01', // Default date
-            qualification: 'Class Management',
-            specialization: `Tutor for Batch ${tutor.batch}, Section ${tutor.section}`,
-            address: 'Tamil Nadu Engineering College, Chennai - 600001',
-            bio: `Class In-Charge for Batch ${tutor.batch}, Section ${tutor.section} with responsibility for student mentoring and academic guidance.`,
-          });
-        }
-      } else if (user.role === 'student') {
-        // For student, fetch real student data
-        const studentList = getStudents();
-        const student = studentList.find(s => s.email === user.email);
-        if (student) {
-          setProfile({
-            name: student.name,
-            email: student.email,
-            phone: student.phone,
-            designation: 'Student',
-            department: student.programme,
-            employeeId: student.rollNumber,
-            joinDate: student.createdAt.split('T')[0],
-            qualification: 'Undergraduate Student',
-            specialization: student.class,
-            address: student.address,
-            bio: `Student enrolled in ${student.programme} program. Currently in ${student.year} year, ${student.semester} semester, Section ${student.section}.`,
-          });
-        }
       }
+    } catch (err) {
+      console.error("Error loading profile", err);
+      toast.error("Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchProfile();
     }
   }, [user]);
 
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const handleUpdateProfile = async () => {
+    try {
+      setIsSaving(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/admin/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast.success('Profile updated successfully!');
+      if (res.ok) {
+        toast.success("Profile updated successfully!");
+        updateUser({ name: formData.name, email: formData.email });
+        setIsEditing(false);
+        fetchProfile();
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err) {
+      console.error("Error updating profile", err);
+      toast.error("Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Generate recent activities based on user role
-  const recentActivities = [];
-  if (user) {
-    if (user.role === 'admin') {
-      recentActivities.push(
-        { action: 'Approved marks for CS301', time: '2 hours ago', type: 'approval' },
-        { action: 'Published new circular', time: '5 hours ago', type: 'circular' },
-        { action: 'Added new faculty member', time: '1 day ago', type: 'user' },
-        { action: 'Updated semester dates', time: '2 days ago', type: 'settings' },
-        { action: 'Reviewed ECA submission', time: '3 days ago', type: 'approval' },
-      );
-    } else if (user.role === 'faculty') {
-      recentActivities.push(
-        { action: 'Updated marks for CS201', time: '1 hour ago', type: 'marks' },
-        { action: 'Uploaded notes for CS201', time: '3 hours ago', type: 'notes' },
-        { action: 'Created assignment for CS201', time: '1 day ago', type: 'assignment' },
-        { action: 'Updated class attendance', time: '2 days ago', type: 'attendance' },
-        { action: 'Reviewed student submissions', time: '3 days ago', type: 'review' },
-      );
-    } else if (user.role === 'tutor') {
-      recentActivities.push(
-        { action: 'Verified marks for CS301', time: '2 hours ago', type: 'approval' },
-        { action: 'Updated student attendance', time: '4 hours ago', type: 'attendance' },
-        { action: 'Reviewed leave request', time: '1 day ago', type: 'leave' },
-        { action: 'Updated class schedule', time: '2 days ago', type: 'schedule' },
-        { action: 'Reviewed student performance', time: '3 days ago', type: 'review' },
-      );
-    } else if (user.role === 'student') {
-      recentActivities.push(
-        { action: 'Submitted assignment for CS201', time: '1 hour ago', type: 'assignment' },
-        { action: 'Checked marks for CS201', time: '3 hours ago', type: 'marks' },
-        { action: 'Downloaded notes for CS201', time: '1 day ago', type: 'notes' },
-        { action: 'Updated profile information', time: '2 days ago', type: 'profile' },
-        { action: 'Applied for leave', time: '3 days ago', type: 'leave' },
-      );
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size must be less than 2MB");
+      return;
     }
+
+    try {
+      setIsUploading(true);
+      const token = localStorage.getItem('token');
+      const formDataUpload = new FormData();
+      formDataUpload.append('avatar', file);
+
+      const res = await fetch(`${API_BASE_URL}/admin/profile/avatar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formDataUpload
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success("Avatar updated successfully!");
+        updateUser({ avatar: data.avatarUrl });
+        fetchProfile();
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (err) {
+       console.error("Error uploading avatar", err);
+       toast.error("Failed to upload avatar");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 animate-pulse">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-muted-foreground font-black uppercase tracking-widest text-xs italic">Synchronizing Admin Privileges...</p>
+      </div>
+    );
   }
 
-  // Generate stats based on user role
-  const stats = [];
-  if (user) {
-    if (user.role === 'admin') {
-      stats.push(
-        { label: 'Years of Service', value: '14', icon: Calendar },
-        { label: 'Papers Published', value: '52', icon: BookOpen },
-        { label: 'Students Mentored', value: '500+', icon: User },
-        { label: 'Awards Received', value: '8', icon: Award },
-      );
-    } else if (user.role === 'faculty') {
-      stats.push(
-        { label: 'Years of Service', value: profile.joinDate ? (new Date().getFullYear() - new Date(profile.joinDate).getFullYear()).toString() : '5', icon: Calendar },
-        { label: 'Classes Handled', value: '4', icon: BookOpen },
-        { label: 'Students Taught', value: '120+', icon: User },
-        { label: 'Research Papers', value: '12', icon: Award },
-      );
-    } else if (user.role === 'tutor') {
-      stats.push(
-        { label: 'Students Mentored', value: '60', icon: User },
-        { label: 'Classes Supervised', value: '4', icon: BookOpen },
-        { label: 'Batch Year', value: profile.specialization?.includes('20') ? profile.specialization.split(' ')[1] : '2024', icon: Calendar },
-        { label: 'Section', value: profile.specialization?.includes('Section') ? profile.specialization.split(' ')[3] : 'A', icon: Award },
-      );
-    } else if (user.role === 'student') {
-      stats.push(
-        { label: 'Semester', value: profile.specialization?.includes('Semester') ? profile.specialization.split(' ')[1] : '5', icon: Calendar },
-        { label: 'CGPA', value: profile.bio.includes('CGPA') ? profile.bio.split('CGPA: ')[1].split(' ')[0] : '8.5', icon: BookOpen },
-        { label: 'Attendance', value: profile.bio.includes('Attendance') ? profile.bio.split('Attendance: ')[1].split('%')[0] : '92%', icon: User },
-        { label: 'Backlogs', value: '0', icon: Award },
-      );
-    }
-  }
+  if (!profile) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Header Card */}
-      <Card className="glass-card border-white/10 overflow-hidden">
-        <div className="h-32 bg-gradient-to-r from-primary via-accent to-primary opacity-80" />
-        <CardContent className="relative pt-0 pb-6">
-          <div className="flex flex-col md:flex-row items-start md:items-end gap-6 -mt-16">
-            <div className="relative">
-              <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-3xl text-white">
-                  AK
+    <div className="space-y-8 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Page Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center space-y-2 mb-12"
+      >
+        <h1 className="text-4xl sm:text-5xl font-black italic bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+          Personal Profile
+        </h1>
+        <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-xs italic">
+          Administrative Identity Management
+        </p>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        {/* Left: Avatar & Quick Status */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="lg:col-span-5 flex flex-col items-center"
+        >
+          <div className="relative group/avatar">
+            <div className="absolute -inset-1 bg-gradient-to-br from-primary via-accent to-secondary rounded-[3rem] blur opacity-25 group-hover/avatar:opacity-50 transition duration-1000 group-hover/avatar:duration-200" />
+            <div className="relative p-2 bg-background rounded-[3rem] border border-white/10 shadow-2xl">
+              <Avatar className="w-56 h-56 rounded-[2.5rem] border-4 border-transparent shadow-inner">
+                <AvatarImage src={profile.avatar} className="object-cover" />
+                <AvatarFallback className="text-6xl font-black bg-gradient-to-br from-primary to-accent text-white">
+                  {profile.name?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <Button 
-                size="icon" 
-                className="absolute bottom-0 right-0 rounded-full w-10 h-10 bg-primary hover:bg-primary/90"
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="absolute -bottom-2 -right-2 p-5 bg-primary text-white rounded-[1.5rem] shadow-2xl shadow-primary/40 hover:scale-110 active:scale-95 transition-all hover:rotate-6 border-4 border-background disabled:opacity-50"
               >
-                <Camera className="w-4 h-4" />
-              </Button>
+                {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+              </button>
             </div>
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold">{profile.name}</h1>
-                  <p className="text-muted-foreground">{profile.designation}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge className="bg-primary/20 text-primary">Administrator</Badge>
-                    <Badge className="bg-emerald-500/20 text-emerald-400">Active</Badge>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {isEditing ? (
-                    <>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                      <Button onClick={handleSave} className="gap-2">
-                        <Save className="w-4 h-4" />
-                        Save Changes
-                      </Button>
-                    </>
-                  ) : (
-                    <Button onClick={() => setIsEditing(true)} className="gap-2">
-                      <Edit2 className="w-4 h-4" />
-                      Edit Profile
-                    </Button>
-                  )}
-                </div>
+          </div>
+          
+          <div className="mt-8 text-center space-y-3">
+             <Badge className="bg-primary/10 text-primary border-primary/20 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full">
+                {profile.role?.toUpperCase() || 'ADMINISTRATOR'}
+             </Badge>
+             <h2 className="text-2xl font-black italic">{profile.name}</h2>
+          </div>
+        </motion.div>
+
+        {/* Right: Consolidated Details Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="lg:col-span-7"
+        >
+          <Card className="glass-card border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-primary via-accent to-secondary" />
+            <CardContent className="p-8 sm:p-10 space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black italic flex items-center gap-3">
+                   <User className="w-6 h-6 text-primary" />
+                   Identification Records
+                </h3>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-xl hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="glass-card border-white/10">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-                  <stat.icon className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <Tabs defaultValue="details" className="w-full">
-        <TabsList>
-          <TabsTrigger value="details">Profile Details</TabsTrigger>
-          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="details" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-primary" />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    {isEditing ? (
-                      <Input 
-                        value={profile.name}
-                        onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      />
-                    ) : (
-                      <p className="p-2 rounded-lg bg-white/5">{profile.name}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Employee ID</Label>
-                    <p className="p-2 rounded-lg bg-white/5">{profile.employeeId}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    {profile.email}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-white/5">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      {profile.phone}
+              <div className="space-y-6">
+                <div className="p-6 rounded-3xl bg-muted/30 border border-white/5 group hover:bg-muted/50 transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
+                      <User className="w-6 h-6" />
                     </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      value={profile.address}
-                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-                    />
-                  ) : (
-                    <div className="flex items-start gap-2 p-2 rounded-lg bg-white/5">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      {profile.address}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 italic">Identity Name</p>
+                      <p className="text-lg font-bold text-foreground italic">{profile.name}</p>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Professional Information */}
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  Professional Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Designation</Label>
-                  <p className="p-2 rounded-lg bg-white/5">{profile.designation}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <p className="p-2 rounded-lg bg-white/5">{profile.department}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Qualification</Label>
-                    {isEditing ? (
-                      <Input 
-                        value={profile.qualification}
-                        onChange={(e) => setProfile({ ...profile, qualification: e.target.value })}
-                      />
-                    ) : (
-                      <p className="p-2 rounded-lg bg-white/5">{profile.qualification}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Join Date</Label>
-                    <p className="p-2 rounded-lg bg-white/5">{profile.joinDate}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Specialization</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={profile.specialization}
-                      onChange={(e) => setProfile({ ...profile, specialization: e.target.value })}
-                    />
-                  ) : (
-                    <p className="p-2 rounded-lg bg-white/5">{profile.specialization}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Bio</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      rows={4}
-                      value={profile.bio}
-                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                    />
-                  ) : (
-                    <p className="p-3 rounded-lg bg-white/5 text-sm text-muted-foreground">
-                      {profile.bio}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
-        <TabsContent value="activity" className="mt-6">
-          <Card className="glass-card border-white/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-white/5"
-                  >
-                    <div className="p-2 rounded-lg bg-primary/20">
-                      <Activity className="w-4 h-4 text-primary" />
+                <div className="p-6 rounded-3xl bg-muted/30 border border-white/5 group hover:bg-muted/50 transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform shadow-inner">
+                      <Mail className="w-6 h-6" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{activity.action}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {activity.time}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 italic">Authentication Source</p>
+                      <p className="text-lg font-bold text-foreground italic truncate">{profile.email}</p>
                     </div>
-                  </motion.div>
-                ))}
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-muted/30 border border-white/5 group hover:bg-muted/50 transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform shadow-inner">
+                      <Phone className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 italic">Contact Sequence</p>
+                      <p className="text-lg font-bold text-foreground italic">{profile.phone || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </motion.div>
+      </div>
 
-        <TabsContent value="security" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-primary" />
-                  Security Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-                  <DialogTrigger asChild>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className="p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:border-primary/30 transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Key className="w-5 h-5 text-primary" />
-                          <div>
-                            <p className="font-medium">Change Password</p>
-                            <p className="text-sm text-muted-foreground">Last changed 30 days ago</p>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm">Change</Button>
-                      </div>
-                    </motion.div>
-                  </DialogTrigger>
-                  <DialogContent className="glass-card border-white/10">
-                    <DialogHeader>
-                      <DialogTitle>Change Password</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Current Password</Label>
-                        <Input type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>New Password</Label>
-                        <Input type="password" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Confirm New Password</Label>
-                        <Input type="password" />
-                      </div>
-                      <Button className="w-full" onClick={() => {
-                        toast.success('Password changed successfully!');
-                        setIsChangePasswordOpen(false);
-                      }}>
-                        Update Password
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+      {/* Edit Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-xl w-[calc(100%-2rem)] glass-card border-none rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
+          <div className="h-2 bg-gradient-to-r from-primary via-accent to-secondary" />
+          <DialogHeader className="p-8 pb-0">
+            <DialogTitle className="text-2xl font-black italic tracking-tight">Modify Identity Variables</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground mt-2">
+              Update your core identification credentials.
+            </DialogDescription>
+          </DialogHeader>
 
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  className="p-4 rounded-xl bg-white/5 border border-white/10"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-emerald-400" />
-                      <div>
-                        <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-emerald-500/20 text-emerald-400">Enabled</Badge>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <LogOut className="w-5 h-5 text-red-400" />
-                      <div>
-                        <p className="font-medium text-red-400">Sign Out All Devices</p>
-                        <p className="text-sm text-muted-foreground">Log out from all active sessions</p>
-                      </div>
-                    </div>
-                    <Button variant="destructive" size="sm">Sign Out</Button>
-                  </div>
-                </motion.div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-primary" />
-                  Login History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { device: 'Chrome on Windows', location: 'Chennai, IN', time: 'Current session', current: true },
-                    { device: 'Safari on iPhone', location: 'Chennai, IN', time: '2 hours ago', current: false },
-                    { device: 'Firefox on MacOS', location: 'Bangalore, IN', time: '1 day ago', current: false },
-                    { device: 'Chrome on Android', location: 'Chennai, IN', time: '3 days ago', current: false },
-                  ].map((session, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                      <div>
-                        <p className="font-medium text-sm">{session.device}</p>
-                        <p className="text-xs text-muted-foreground">{session.location} • {session.time}</p>
-                      </div>
-                      {session.current && (
-                        <Badge className="bg-emerald-500/20 text-emerald-400">Current</Badge>
-                      )}
-                    </div>
-                  ))}
+          <div className="p-8 space-y-6">
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-primary italic ml-1">Name</Label>
+                <div className="relative group/input">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-primary transition-colors" />
+                  <Input 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Enter full name"
+                    className="pl-12 h-12 rounded-2xl bg-muted/50 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all font-bold italic"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-accent italic ml-1">Email</Label>
+                <div className="relative group/input">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-accent transition-colors" />
+                  <Input 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="admin@college.edu"
+                    className="pl-12 h-12 rounded-2xl bg-muted/50 border-white/10 focus:border-accent/50 focus:ring-accent/20 transition-all font-bold italic"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-secondary italic ml-1">Phone</Label>
+                <div className="relative group/input">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within/input:text-secondary transition-colors" />
+                  <Input 
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+91 XXXXX XXXXX"
+                    className="pl-12 h-12 rounded-2xl bg-muted/50 border-white/10 focus:border-secondary/50 focus:ring-secondary/20 transition-all font-bold italic"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          <DialogFooter className="p-8 pt-0 flex flex-col sm:flex-row gap-4">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setIsEditing(false)}
+              className="w-full sm:w-auto rounded-xl font-bold italic order-2 sm:order-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateProfile}
+              disabled={isSaving}
+              className="w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/90 font-black uppercase text-xs tracking-widest px-8 h-11 shadow-glow-sm order-1 sm:order-2"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Commit Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

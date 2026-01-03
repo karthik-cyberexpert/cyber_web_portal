@@ -179,7 +179,11 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
   const formatDate = (date: any) => {
     if (!date) return 'N/A';
     const d = new Date(date);
-    return isNaN(d.getTime()) ? date : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
   };
 
   return (

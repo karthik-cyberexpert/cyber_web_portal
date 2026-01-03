@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 import { getFileUrl } from './upload.config.js';
+import { createNotification, createBulkNotifications } from './notifications.utils.js';
 
 // Get Circulars (Filtered by Role/Context)
 export const getCirculars = async (req: Request | any, res: Response) => {
@@ -162,6 +163,38 @@ export const createCircular = async (req: Request | any, res: Response) => {
         ]);
 
         res.status(201).json({ message: 'Circular created successfully' });
+
+        // Notifications
+        if (audience === 'All') {
+            await createNotification(null, `New Circular: ${title}`, description || 'A new circular has been published.');
+        } else if (audience === 'Students') {
+            const finalBatchId = role === 'tutor' ? tutorBatchId : target_batch_id;
+            const finalSectionId = role === 'tutor' ? tutorSectionId : (target_section_id && target_section_id !== 'all' ? target_section_id : null);
+
+            let studentQuery = 'SELECT user_id FROM student_profiles WHERE 1=1';
+            const studentParams = [];
+            if (finalBatchId) {
+                studentQuery += ' AND batch_id = ?';
+                studentParams.push(finalBatchId);
+            }
+            if (finalSectionId) {
+                studentQuery += ' AND section_id = ?';
+                studentParams.push(finalSectionId);
+            }
+            const [students]: any = await pool.query(studentQuery, studentParams);
+            const studentIds = students.map((s: any) => s.user_id);
+            await createBulkNotifications(studentIds, `New Circular: ${title}`, description || 'A new circular has been published for your batch/section.');
+        } else if (audience === 'Faculty') {
+            // Get all faculty users
+            const [faculty]: any = await pool.query("SELECT id FROM users WHERE role = 'faculty'");
+            const facultyIds = faculty.map((f: any) => f.id);
+            await createBulkNotifications(facultyIds, `New Circular: ${title}`, description || 'A new circular has been published for faculty.');
+        } else if (audience === 'Tutors') {
+            // Get all tutors (who are faculty with tutor assignments)
+            const [tutors]: any = await pool.query("SELECT id FROM users WHERE role = 'tutor'");
+            const tutorIds = tutors.map((t: any) => t.id);
+            await createBulkNotifications(tutorIds, `New Circular: ${title}`, description || 'A new circular has been published for tutors.');
+        }
 
     } catch (error) {
         console.error('Create Circular Error:', error);

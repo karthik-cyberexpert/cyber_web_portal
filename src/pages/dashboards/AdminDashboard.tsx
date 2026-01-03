@@ -283,8 +283,8 @@ export default function AdminDashboard() {
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <div>
-              <h3 className="text-lg font-semibold">Attendance Trend</h3>
-              <p className="text-sm text-muted-foreground">Leave & OD Days (Active Semesters)</p>
+              <h3 className="text-lg font-semibold">Attendance Trend (Batch-wise)</h3>
+              <p className="text-sm text-muted-foreground">Leave & OD Days by Batch (Active Semesters)</p>
             </div>
             <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
               // In a real application, this would export the report
@@ -296,8 +296,7 @@ export default function AdminDashboard() {
               <BarChart data={departmentStats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
@@ -305,10 +304,47 @@ export default function AdminDashboard() {
                     borderRadius: '8px',
                   }}
                 />
-                <Bar yAxisId="left" dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Leave Days" />
-                <Bar yAxisId="right" dataKey="faculty" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="OD Days" />
+                {batchDistribution.map((batch, index) => (
+                  <Bar 
+                    key={batch.name} 
+                    dataKey={batch.name.replace(/[^a-zA-Z0-9]/g, '_')} 
+                    fill={batch.fill} 
+                    radius={[4, 4, 0, 0]} 
+                    name={batch.name}
+                  />
+                ))}
+                {batchDistribution.length === 0 && (
+                  <>
+                    <Bar dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Leave Days" />
+                    <Bar dataKey="faculty" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="OD Days" />
+                  </>
+                )}
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          
+          {/* Batch Legend */}
+          <div className="flex flex-wrap gap-4 justify-center mt-4 pt-4 border-t border-border">
+            {batchDistribution.length > 0 ? batchDistribution.map((batch, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: batch.fill }}
+                />
+                <span className="text-xs sm:text-sm text-muted-foreground">{batch.name}</span>
+              </div>
+            )) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: 'hsl(var(--primary))' }} />
+                  <span className="text-xs sm:text-sm text-muted-foreground">Leave Days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: 'hsl(var(--accent))' }} />
+                  <span className="text-xs sm:text-sm text-muted-foreground">OD Days</span>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
 
@@ -358,145 +394,6 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-
-      {/* Second Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Marks Approval Queue */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Marks Approval Queue</h3>
-            <Button variant="outline" size="sm" onClick={() => navigate('/admin/marks')}>View All</Button>
-          </div>
-          <div className="space-y-3">
-            {marksApprovalQueue.length > 0 ? marksApprovalQueue.map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
-                className="flex items-center justify-between p-4 rounded-xl bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{item.subject} - {item.exam}</p>
-                    <p className="text-xs text-muted-foreground">
-                       Section {item.section} • {item.count} students
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="success" size="sm" onClick={() => navigate(`/admin/marks?subject=${item.subject}&exam=${item.exam}`)}>
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Approve
-                  </Button>
-                </div>
-              </motion.div>
-            )) : (
-                <div className="text-center py-4 text-muted-foreground">No pending marks for approval</div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Recent Activities */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Recent Activities</h3>
-            <Button variant="outline" size="sm" onClick={() => navigate('/admin/settings')}>View All</Button>
-          </div>
-          <div className="space-y-4">
-            {recentActivities.length > 0 ? recentActivities.map((activity, index) => {
-              const icons: Record<string, React.ElementType> = {
-                timetable: Calendar,
-                circular: Bell,
-                faculty: Users,
-                marks: ClipboardCheck,
-                student: GraduationCap,
-                leave: ExternalLink
-              };
-              const Icon = icons[activity.type] || Bell;
-              
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + index * 0.1 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-xs text-muted-foreground">{activity.target}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                </motion.div>
-              );
-            }) : (
-                <div className="text-center py-4 text-muted-foreground">No recent activities</div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Semester Progress (Active Batch) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="glass-card rounded-2xl p-4 sm:p-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <h3 className="text-lg font-semibold">Semester Progress (Active Batch)</h3>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/admin/settings')}>Configure Dates</Button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-          {semesterProgress.map((sem, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 + index * 0.05 }}
-              className={`p-3 sm:p-4 rounded-xl text-center flex flex-col justify-center ${
-                sem.status === 'completed' ? 'bg-success/10' :
-                sem.status === 'active' ? 'bg-primary/10 ring-2 ring-primary' :
-                'bg-muted/50'
-              }`}
-            >
-              <p className="text-xs sm:text-sm font-medium mb-2">{sem.semester}</p>
-              <div className="h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    sem.status === 'completed' ? 'bg-success' :
-                    sem.status === 'active' ? 'bg-primary' :
-                    'bg-muted-foreground/30'
-                  }`}
-                  style={{ width: `${sem.progress}%` }}
-                />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                {sem.status === 'completed' ? 'Done' :
-                 sem.status === 'active' ? `${sem.progress}%` :
-                 'Upcoming'}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
 
       {/* Quick Actions */}
       <motion.div

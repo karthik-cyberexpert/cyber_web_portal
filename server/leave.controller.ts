@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { createNotification } from './notifications.utils.js';
 import {
     calculateWorkingDaysWithHolidays,
     validateNotPastDate,
@@ -186,6 +187,13 @@ export async function approveLeaveRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'Leave request approved' });
+
+        // Notification
+        await createNotification(
+            request.user_id,
+            'Leave Approved',
+            `Your leave request for ${new Date(request.start_date).toLocaleDateString()} to ${new Date(request.end_date).toLocaleDateString()} has been approved by ${request.status === 'cancel_requested' ? 'Tutor (Cancellation)' : 'Tutor'}.`
+        );
     } catch (error: any) {
         console.error('Error approving leave request:', error);
         res.status(500).json({ error: 'Failed to approve leave request' });
@@ -206,6 +214,16 @@ export async function forwardLeaveRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'Leave request forwarded to admin' });
+
+        // Notification for student
+        const [leaveInfo]: any = await pool.query('SELECT user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
+        if (leaveInfo.length > 0) {
+            await createNotification(
+                leaveInfo[0].user_id,
+                'Leave Forwarded',
+                `Your leave request for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`
+            );
+        }
     } catch (error: any) {
         console.error('Error forwarding leave request:', error);
         res.status(500).json({ error: 'Failed to forward leave request' });
@@ -238,6 +256,16 @@ export async function rejectLeaveRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'Leave request processed' });
+
+        // Notification
+        const [leaveInfo]: any = await pool.query('SELECT user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
+        if (leaveInfo.length > 0) {
+            await createNotification(
+                leaveInfo[0].user_id,
+                `Leave ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+                `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'leave request'} for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`
+            );
+        }
     } catch (error: any) {
         console.error('Error rejecting leave request:', error);
         res.status(500).json({ error: 'Failed to process leave request' });
@@ -258,6 +286,16 @@ export async function adminApproveLeaveRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'Leave request approved by admin' });
+
+        // Notification
+        const [leaveInfo]: any = await pool.query('SELECT user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
+        if (leaveInfo.length > 0) {
+            await createNotification(
+                leaveInfo[0].user_id,
+                'Leave Approved',
+                `Your leave request for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been approved by Admin.`
+            );
+        }
     } catch (error: any) {
         console.error('Error approving leave request:', error);
         res.status(500).json({ error: 'Failed to approve leave request' });

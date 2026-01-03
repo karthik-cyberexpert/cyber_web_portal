@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -43,6 +44,7 @@ import { getStudents, Student } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { DatePicker } from '@/components/ui/date-picker';
 import { API_BASE_URL } from '@/lib/api-config';
 import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
 
@@ -327,15 +329,13 @@ export default function PersonalDetails() {
                 {/* Demographics */}
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-accent italic">Demographic Data</h4>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase font-black tracking-widest">Date of Birth</Label>
-                    <Input 
-                      type="date"
-                      value={formData.dob}
-                      onChange={(e) => setFormData({...formData, dob: e.target.value})}
-                      className="bg-muted/50 border-white/5 rounded-xl h-11 font-bold italic"
-                    />
-                  </div>
+                      <div className="space-y-4">
+                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Date of Birth</Label>
+                        <DatePicker 
+                          date={formData.dob ? new Date(formData.dob) : undefined}
+                          onChange={date => setFormData({ ...formData, dob: date ? format(date, "yyyy-MM-dd") : '' })}
+                        />
+                      </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] uppercase font-black tracking-widest">Gender</Label>

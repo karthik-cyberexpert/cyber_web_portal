@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { createNotification } from './notifications.utils.js';
 import { 
     calculateWorkingDaysWithHolidays, 
     validateNotPastDate, 
@@ -163,6 +164,16 @@ export async function forwardODRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'OD request forwarded to admin' });
+
+        // Notification
+        const [odInfo]: any = await pool.query('SELECT user_id, start_date FROM od_requests WHERE id = ?', [id]);
+        if (odInfo.length > 0) {
+            await createNotification(
+                odInfo[0].user_id,
+                'OD Forwarded',
+                `Your OD request for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`
+            );
+        }
     } catch (error: any) {
         console.error('Error forwarding OD request:', error);
         res.status(500).json({ error: 'Failed to forward OD request' });
@@ -194,6 +205,16 @@ export async function rejectODRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'OD request processed' });
+
+        // Notification
+        const [odInfo]: any = await pool.query('SELECT user_id, start_date FROM od_requests WHERE id = ?', [id]);
+        if (odInfo.length > 0) {
+            await createNotification(
+                odInfo[0].user_id,
+                `OD ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+                `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'OD request'} for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`
+            );
+        }
     } catch (error: any) {
         console.error('Error rejecting OD request:', error);
         res.status(500).json({ error: 'Failed to process OD request' });
@@ -214,6 +235,16 @@ export async function adminApproveODRequest(req: Request, res: Response) {
         );
 
         res.json({ message: 'OD request approved by admin' });
+
+        // Notification
+        const [odInfo]: any = await pool.query('SELECT user_id, start_date FROM od_requests WHERE id = ?', [id]);
+        if (odInfo.length > 0) {
+            await createNotification(
+                odInfo[0].user_id,
+                'OD Approved',
+                `Your OD request for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been approved by Admin.`
+            );
+        }
     } catch (error: any) {
         console.error('Error approving OD request:', error);
         res.status(500).json({ error: 'Failed to approve OD request' });

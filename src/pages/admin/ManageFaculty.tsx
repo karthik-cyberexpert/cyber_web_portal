@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -44,6 +45,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { DatePicker } from '@/components/ui/date-picker';
 import { API_BASE_URL } from '@/lib/api-config';
 import { StatCard } from '@/components/dashboard/StatCards';
 
@@ -440,7 +442,7 @@ export default function ManageFaculty() {
           title="Resigned"
           value={stats.resigned}
           icon={GraduationCap}
-          variant="destructive"
+          variant="warning"
           delay={0.4}
         />
       </div>
@@ -727,11 +729,9 @@ export default function ManageFaculty() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="dateOfJoining">Date of Joining</Label>
-              <Input
-                id="dateOfJoining"
-                type="date"
-                value={formData.dateOfJoining || ''}
-                onChange={(e) => setFormData({ ...formData, dateOfJoining: e.target.value })}
+              <DatePicker 
+                date={formData.dateOfJoining ? new Date(formData.dateOfJoining) : undefined}
+                onChange={date => setFormData({ ...formData, dateOfJoining: date ? format(date, "yyyy-MM-dd") : '' })}
               />
             </div>
             <div className="space-y-2 md:col-span-2">

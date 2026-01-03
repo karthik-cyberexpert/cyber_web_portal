@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, 
@@ -25,6 +26,7 @@ import { getStudents, Student, getLeaveRequests, addLeaveRequest, LeaveRequest }
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { DatePicker } from '@/components/ui/date-picker';
 import { API_BASE_URL } from '@/lib/api-config';
 import {
   Table,
@@ -312,20 +314,16 @@ export default function LeavePortal() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">From Date</Label>
-                    <Input 
-                        type="date" 
-                        value={formData.startDate}
-                        onChange={e => setFormData({...formData, startDate: e.target.value})}
-                        className="h-11 bg-muted/50 border-transparent rounded-xl" 
+                    <DatePicker 
+                        date={formData.startDate ? new Date(formData.startDate) : undefined}
+                        onChange={date => setFormData({...formData, startDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">To Date</Label>
-                    <Input 
-                        type="date" 
-                        value={formData.endDate}
-                        onChange={e => setFormData({...formData, endDate: e.target.value})}
-                        className="h-11 bg-muted/50 border-transparent rounded-xl" 
+                    <DatePicker 
+                        date={formData.endDate ? new Date(formData.endDate) : undefined}
+                        onChange={date => setFormData({...formData, endDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
                   </div>
                 </div>
@@ -448,7 +446,7 @@ export default function LeavePortal() {
                       const d = new Date(date);
                       return isNaN(d.getTime()) ? date : d.toLocaleDateString('en-GB', {
                         day: '2-digit',
-                        month: 'short',
+                        month: '2-digit',
                         year: 'numeric'
                       });
                     };

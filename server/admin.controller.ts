@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { getFileUrl } from './upload.config.js';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -201,5 +202,56 @@ export const deleteFaculty = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Delete Faculty Error:', error);
         res.status(500).json({ message: 'Error deleting faculty' });
+    }
+};
+
+// Admin Profile Operations
+export const getAdminProfile = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    try {
+        const [rows]: any = await pool.query(
+            'SELECT id, name, email, phone, avatar_url as avatar, address, role FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (rows.length === 0) return res.status(404).json({ message: 'Admin not found' });
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Get Admin Profile Error:', error);
+        res.status(500).json({ message: 'Error fetching profile' });
+    }
+};
+
+export const updateAdminProfile = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    const { name, email, phone } = req.body;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    try {
+        await pool.query(
+            'UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?',
+            [name, email, phone, userId]
+        );
+        res.json({ message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Update Admin Profile Error:', error);
+        res.status(500).json({ message: 'Error updating profile' });
+    }
+};
+
+export const updateAdminAvatar = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    try {
+        const avatarUrl = getFileUrl(req.file.path);
+        await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, userId]);
+        res.json({ message: 'Avatar updated successfully', avatarUrl });
+    } catch (error) {
+        console.error('Update Admin Avatar Error:', error);
+        res.status(500).json({ message: 'Error updating avatar' });
     }
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Users, Plus, Edit2, Trash2, 
@@ -26,6 +27,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import { toast } from 'sonner';
+import { DatePicker } from '@/components/ui/date-picker';
 import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
 import SemesterDatePopup from '@/components/admin/SemesterDatePopup';
 
@@ -577,11 +579,17 @@ export default function BatchesClasses() {
                  <div className="grid grid-cols-2 gap-4">
                      <div className="space-y-1">
                          <Label className="text-xs">Start</Label>
-                         <Input type="date" value={editBatchStartDate} onChange={e => setEditBatchStartDate(e.target.value)} />
+                         <DatePicker 
+                            date={editBatchStartDate ? new Date(editBatchStartDate) : undefined}
+                            onChange={date => setEditBatchStartDate(date ? format(date, "yyyy-MM-dd") : '')}
+                          />
                      </div>
                      <div className="space-y-1">
                          <Label className="text-xs">End</Label>
-                         <Input type="date" value={editBatchEndDate} onChange={e => setEditBatchEndDate(e.target.value)} />
+                         <DatePicker 
+                            date={editBatchEndDate ? new Date(editBatchEndDate) : undefined}
+                            onChange={date => setEditBatchEndDate(date ? format(date, "yyyy-MM-dd") : '')}
+                          />
                      </div>
                  </div>
                  {/* Note: Semester iteration is not fully implemented in UI due to backend logic limitation found in strict 'Even'/'Odd' map.

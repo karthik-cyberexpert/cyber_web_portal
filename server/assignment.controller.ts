@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { createBulkNotifications } from './notifications.utils.js';
 import { getFileUrl, formatFileSize } from './upload.config.js';
 import path from 'path';
 import fs from 'fs';
@@ -141,6 +142,27 @@ export const createAssignmentWithFile = async (req: Request | any, res: Response
 
         console.log('[createAssignmentWithFile] Success!');
         res.status(201).json(newAssignment[0]);
+
+        // Notify students in the target section
+        try {
+            const [allocationInfo]: any = await pool.query('SELECT section_id, subject_id FROM subject_allocations WHERE id = ?', [subject_allocation_id]);
+            if (allocationInfo.length > 0) {
+                const sectionId = allocationInfo[0].section_id;
+                const [students]: any = await pool.query('SELECT user_id FROM student_profiles WHERE section_id = ?', [sectionId]);
+                const studentIds = students.map((s: any) => s.user_id);
+                
+                const [subjectInfo]: any = await pool.query('SELECT name FROM subjects WHERE id = ?', [allocationInfo[0].subject_id]);
+                const subjectName = subjectInfo[0]?.name || 'a subject';
+
+                await createBulkNotifications(
+                    studentIds,
+                    'New Assignment',
+                    `A new assignment "${title}" has been posted for ${subjectName}. Due date: ${new Date(due_date).toLocaleDateString()}`
+                );
+            }
+        } catch (notifError) {
+            console.error('Error sending assignment notification:', notifError);
+        }
     } catch (error: any) {
         console.error('[createAssignmentWithFile] Error:', error);
         console.error('[createAssignmentWithFile] Error details:', {

@@ -109,6 +109,9 @@ app.use('/api/calendar', calendarRouter);
 import attendanceTrendRoutes from './attendance-trend.routes.js';
 app.use('/api/attendance-trend', attendanceTrendRoutes);
 
+import notificationRoutes from './notifications.routes.js';
+app.use('/api/notifications', notificationRoutes);
+
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {

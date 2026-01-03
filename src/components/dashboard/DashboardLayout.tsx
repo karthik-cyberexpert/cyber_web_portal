@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import NotificationDropdown from '@/components/dashboard/NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Search, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -28,6 +29,16 @@ export default function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const isDesktop = useIsDesktop();
+
+  // Get profile path based on user role
+  const getProfilePath = () => {
+    switch (user?.role) {
+      case 'admin': return '/admin/profile';
+      case 'tutor': return '/tutor/personal';
+      case 'faculty': return '/faculty/personal';
+      default: return '/student/personal';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,11 +102,8 @@ export default function DashboardLayout() {
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
-              <div className="hidden xs:flex items-center gap-3 pl-3 border-l border-border">
+              <NotificationDropdown />
+              <Link to={getProfilePath()} className="hidden xs:flex items-center gap-3 pl-3 border-l border-border hover:opacity-80 transition-opacity cursor-pointer">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium">{user?.name}</p>
                   <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
@@ -105,7 +113,7 @@ export default function DashboardLayout() {
                   alt={user?.name}
                   className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-primary/20"
                 />
-              </div>
+              </Link>
             </div>
           </div>
         </header>
@@ -129,15 +137,14 @@ export default function DashboardLayout() {
               <Menu className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
-              <img
-                src={user?.avatar}
-                alt={user?.name}
-                className="w-8 h-8 xs:w-9 xs:h-9 rounded-xl object-cover"
-              />
+              <NotificationDropdown />
+              <Link to={getProfilePath()} className="hover:opacity-80 transition-opacity">
+                <img
+                  src={user?.avatar}
+                  alt={user?.name}
+                  className="w-8 h-8 xs:w-9 xs:h-9 rounded-xl object-cover"
+                />
+              </Link>
             </div>
           </div>
         </header>

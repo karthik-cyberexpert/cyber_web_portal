@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -50,6 +51,7 @@ import {
   Student, 
   // Removing local store functions
 } from '@/lib/data-store';
+import { DatePicker } from '@/components/ui/date-picker';
 import { API_BASE_URL } from '@/lib/api-config';
 // ... existing imports ...
 import { StatCard } from '@/components/dashboard/StatCards';
@@ -922,11 +924,9 @@ export default function ManageStudents() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="dob">Date of Birth</Label>
-              <Input
-                id="dob"
-                type="date"
-                value={formData.dateOfBirth || ''}
-                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              <DatePicker 
+                date={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
+                onChange={date => setFormData({ ...formData, dateOfBirth: date ? format(date, "yyyy-MM-dd") : '' })}
               />
             </div>
             <div className="space-y-2 md:col-span-2">

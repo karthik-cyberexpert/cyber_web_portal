@@ -427,11 +427,15 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
           {!collapsed && <span className="ml-3 text-sm">Toggle Theme</span>}
         </Button>
 
-        {/* User Profile */}
-        <div className={cn(
-          'flex items-center gap-3 p-2 rounded-xl bg-sidebar-accent',
-          collapsed && 'justify-center'
-        )}>
+        {/* User Profile - Clickable to Personal Details */}
+        <NavLink 
+          to={user.role === 'admin' ? '/admin/profile' : user.role === 'tutor' ? '/tutor/personal' : user.role === 'faculty' ? '/faculty/personal' : '/student/personal'}
+          onClick={onNavigate}
+          className={cn(
+            'flex items-center gap-3 p-2 rounded-xl bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors cursor-pointer',
+            collapsed && 'justify-center'
+          )}
+        >
           <img
             src={user.avatar}
             alt={user.name}
@@ -450,7 +454,7 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </NavLink>
 
         {/* Logout */}
         <Button

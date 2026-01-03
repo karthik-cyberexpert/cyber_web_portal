@@ -120,7 +120,11 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
   const formatDate = (date: any) => {
     if (!date) return 'N/A';
     const d = new Date(date);
-    return isNaN(d.getTime()) ? date : d.toLocaleDateString();
+    return isNaN(d.getTime()) ? date : d.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   if (loading) return <div className="p-8 text-center uppercase tracking-widest text-xs font-bold animate-pulse">Loading requests...</div>;
