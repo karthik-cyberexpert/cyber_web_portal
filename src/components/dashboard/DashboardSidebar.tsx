@@ -119,6 +119,16 @@ const tutorLinks: SidebarLink[] = [
       { label: 'Lost & Found', icon: ExternalLink, path: '/tutor/lost-found' },
     ]
   },
+  { 
+    label: 'Reports', 
+    icon: BarChart3, 
+    path: '/tutor/reports',
+    children: [
+      { label: 'Leave Report', icon: FileText, path: '/tutor/reports/leave' },
+      { label: 'OD Report', icon: ExternalLink, path: '/tutor/reports/od' },
+      { label: 'Marks Report', icon: ClipboardList, path: '/tutor/reports/marks' },
+    ]
+  },
   // Faculty Responsibilities
   { label: 'Personal Details', icon: User, path: '/tutor/personal' },
   { 
@@ -180,6 +190,16 @@ const adminLinks: SidebarLink[] = [
       { label: 'Feedback Portal', icon: ExternalLink, path: '/admin/feedback' },
       { label: 'Grievance Portal', icon: ExternalLink, path: '/admin/grievance' },
       { label: 'Lost & Found', icon: ExternalLink, path: '/admin/lost-found' },
+    ]
+  },
+  { 
+    label: 'Reports', 
+    icon: BarChart3, 
+    path: '/admin/reports',
+    children: [
+      { label: 'Leave Report', icon: FileText, path: '/admin/reports/leave' },
+      { label: 'OD Report', icon: ExternalLink, path: '/admin/reports/od' },
+      { label: 'Marks Report', icon: ClipboardList, path: '/admin/reports/marks' },
     ]
   },
   { label: 'Circulars', icon: Bell, path: '/admin/circulars' },

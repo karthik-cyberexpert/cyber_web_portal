@@ -88,6 +88,9 @@ import ExamSchedule from './pages/admin/schedules/ExamSchedule';
 import HolidaysSchedule from './pages/admin/schedules/HolidaysSchedule';
 import Settings from "@/pages/admin/Settings";
 import Profile from "@/pages/admin/Profile";
+import LeaveReport from "@/pages/admin/reports/LeaveReport";
+import ODReport from "@/pages/admin/reports/ODReport";
+import MarksReport from "@/pages/admin/reports/MarksReport";
 
 const queryClient = new QueryClient();
 
@@ -183,6 +186,10 @@ const App = () => {
                   <Route path="lms" element={<LMSAnalytics />} />
                   <Route path="eca" element={<ECAApprovals />} />
                   <Route path="circulars" element={<CircularsTutor />} />
+                  <Route path="reports" element={<Navigate to="/tutor/reports/leave" replace />} />
+                  <Route path="reports/leave" element={<LeaveReport />} />
+                  <Route path="reports/od" element={<ODReport />} />
+                  <Route path="reports/marks" element={<MarksReport />} />
                 </Route>
               
               {/* Admin Routes */}
@@ -223,6 +230,10 @@ const App = () => {
                 <Route path="lms" element={<LMSManagement />} />
                   <Route path="eca" element={<ECAAnalytics />} />
                   <Route path="leave" element={<LeaveApprovalsAdmin />} />
+                  <Route path="reports" element={<Navigate to="/admin/reports/leave" replace />} />
+                  <Route path="reports/leave" element={<LeaveReport />} />
+                  <Route path="reports/od" element={<ODReport />} />
+                  <Route path="reports/marks" element={<MarksReport />} />
                   <Route path="settings" element={<Settings />} />
                 <Route path="profile" element={<Profile />} />
               </Route>

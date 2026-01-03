@@ -197,3 +197,53 @@ export const saveMarks = async (req: Request, res: Response) => {
         connection.release();
     }
 };
+
+// Get All Marks for a Batch (Admin Report)
+export const getMarksByBatch = async (req: Request, res: Response) => {
+    const { batchId, sectionId, semester } = req.query;
+
+    if (!batchId) {
+        return res.status(400).json({ message: 'Missing required parameter: batchId' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        let query = `
+            SELECT 
+                m.student_id as studentId,
+                m.subject_id as subjectId,
+                s.code as subjectCode,
+                s.name as subjectName,
+                m.exam_id as examId,
+                e.name as examType,
+                m.marks_obtained as marks,
+                m.max_marks as maxMarks
+            FROM marks m
+            JOIN exams e ON m.exam_id = e.id
+            JOIN subjects s ON m.subject_id = s.id
+            JOIN sections sec ON m.section_id = sec.id
+            WHERE sec.batch_id = ?
+        `;
+        const params: any[] = [batchId];
+
+        if (sectionId) {
+            query += ' AND m.section_id = ?';
+            params.push(sectionId);
+        }
+
+        if (semester) {
+            query += ' AND e.semester = ?';
+            params.push(semester);
+        }
+
+        const [rows]: any = await connection.query(query, params);
+        res.json(rows);
+
+    } catch (e: any) {
+        console.error("Get Batch Marks Error:", e);
+        res.status(500).json({ message: 'Error fetching batch marks' });
+    } finally {
+        connection.release();
+    }
+};
+
