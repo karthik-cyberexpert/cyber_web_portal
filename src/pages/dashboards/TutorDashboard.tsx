@@ -17,6 +17,13 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import {
   AreaChart,
@@ -69,6 +76,23 @@ export default function TutorDashboard() {
   const [verifications, setVerifications] = useState<any[]>([]);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Graph Filtering State
+  const [rawPerformanceData, setRawPerformanceData] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('All');
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  
+  // Filter Effect
+  useEffect(() => {
+    if (rawPerformanceData.length === 0) return;
+    
+    if (selectedMonth === 'All') {
+       setPerformanceData(rawPerformanceData);
+    } else {
+       const filtered = rawPerformanceData.filter(d => d.month === selectedMonth);
+       setPerformanceData(filtered);
+    }
+  }, [selectedMonth, rawPerformanceData]);
 
   const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
   const [assignmentStat, setAssignmentStat] = useState({ total: 0, pending: 0 });
@@ -119,6 +143,14 @@ export default function TutorDashboard() {
           attendance: d.absences || 0,  // Using absences as primary metric
           marks: d.ods || 0  // Using ODs as secondary metric
         }));
+        
+        setRawPerformanceData(trend);
+        
+        // Extract months
+        const months: string[] = trend.map((d: any) => d.month);
+        setAvailableMonths(months);
+        
+        // Initial set (will trigger effect)
         setPerformanceData(trend);
 
         setLoading(false);
@@ -251,31 +283,35 @@ export default function TutorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="lg:col-span-2 4xl:col-span-3 glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl relative overflow-hidden bg-white/[0.02]"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="lg:col-span-2 4xl:col-span-3 glass-card rounded-3xl p-4 sm:p-8 border-none shadow-2xl relative overflow-hidden bg-white/[0.02]"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight italic">Attendance Trend</h3>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">Class Average Trends</p>
             </div>
-            <Button onClick={() => navigate('/tutor/analytics')} variant="outline" size="sm" className="w-full sm:w-auto rounded-xl font-black uppercase text-[9px] tracking-widest border-white/10 italic px-4">Insights</Button>
+            <div className="w-full sm:w-[180px]">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="border-white/10 italic">
+                   <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Months</SelectItem>
+                  {availableMonths.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="h-64 sm:h-80 3xl:h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={performanceData}>
-                <defs>
-                  <linearGradient id="attendanceGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="marksGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={performanceData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
@@ -287,32 +323,28 @@ export default function TutorDashboard() {
                     backdropFilter: 'blur(10px)'
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="attendance"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={4}
-                  fill="url(#attendanceGrad)"
+                <Bar 
+                  dataKey="attendance" 
+                  fill="#22c55e"  // Green-500 (Abscences)
+                  radius={[4, 4, 0, 0]} 
                   name="Absences"
                 />
-                <Area
-                  type="monotone"
-                  dataKey="marks"
-                  stroke="hsl(var(--accent))"
-                  strokeWidth={4}
-                  fill="url(#marksGrad)"
+                <Bar 
+                  dataKey="marks" 
+                  fill="#3b82f6"  // Blue-500 (ODs)
+                  radius={[4, 4, 0, 0]} 
                   name="OD Days"
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-center gap-8 mt-6">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-primary shadow-glow shadow-primary/50" />
+              <div className="w-2 h-2 rounded-full bg-success shadow-glow shadow-success/50" />
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Absences</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent shadow-glow shadow-accent/50" />
+              <div className="w-2 h-2 rounded-full bg-blue-500 shadow-glow shadow-blue-500/50" />
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">OD Days</span>
             </div>
           </div>

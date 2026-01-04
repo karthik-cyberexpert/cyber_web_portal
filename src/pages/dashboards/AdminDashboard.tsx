@@ -13,9 +13,17 @@ import {
   Settings,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 // Remvoing getStudents etc as we move to API
@@ -61,6 +69,12 @@ export default function AdminDashboard() {
   const [marksApprovalQueue, setMarksApprovalQueue] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   
+  // Graph Data State
+  const [rawTrendData, setRawTrendData] = useState<any[]>([]);
+  const [rawBatches, setRawBatches] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('All');
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+
   // Semester Popup State
   const [pendingBatches, setPendingBatches] = useState<PendingBatch[]>([]);
   const [currentPendingBatch, setCurrentPendingBatch] = useState<PendingBatch | null>(null);
@@ -98,6 +112,41 @@ export default function AdminDashboard() {
     }
   };
 
+  // Re-calculate stats when month or raw data changes
+  useEffect(() => {
+    if (rawBatches.length === 0) return;
+
+    const aggregatedData = rawBatches.map((batch: any) => {
+        const safeName = batch.name.replace(/[^a-zA-Z0-9]/g, '_');
+        
+        let totalLeaves = 0;
+        let totalODs = 0;
+
+        if (selectedMonth === 'All') {
+             // Sum up leaves and ODs across all months
+             totalLeaves = rawTrendData.reduce((sum: number, month: any) => sum + (month[`${safeName}_leave`] || 0), 0);
+             totalODs = rawTrendData.reduce((sum: number, month: any) => sum + (month[`${safeName}_od`] || 0), 0);
+        } else {
+             // Find specific month
+             const monthData = rawTrendData.find((m: any) => m.month === selectedMonth);
+             if (monthData) {
+                 totalLeaves = monthData[`${safeName}_leave`] || 0;
+                 totalODs = monthData[`${safeName}_od`] || 0;
+             }
+        }
+
+        return {
+            name: batch.name,
+            leave: totalLeaves,
+            od: totalODs
+        };
+    });
+    
+    setDepartmentStats(aggregatedData);
+
+  }, [selectedMonth, rawTrendData, rawBatches]);
+  
+  // Initial Data Fetch
   useEffect(() => {
     // Check for pending semester updates first
     fetchPendingSemesterUpdates();
@@ -122,25 +171,15 @@ export default function AdminDashboard() {
               const trendData = await trendResponse.json();
               const chartData = trendData.trend || [];
               const batches = trendData.batches || [];
-
-              // Aggregate data by Batch for the new view (X-Axis = Batch)
-              const aggregatedData = batches.map((batch: any) => {
-                  const safeName = batch.name.replace(/[^a-zA-Z0-9]/g, '_');
-                  
-                  // Sum up leaves and ODs across all months for this batch
-                  const totalLeaves = chartData.reduce((sum: number, month: any) => sum + (month[`${safeName}_leave`] || 0), 0);
-                  const totalODs = chartData.reduce((sum: number, month: any) => sum + (month[`${safeName}_od`] || 0), 0);
-
-                  return {
-                      name: batch.name, // Display Name
-                      leave: totalLeaves,
-                      od: totalODs
-                  };
-              });
               
-              setDepartmentStats(aggregatedData);
+              setRawTrendData(chartData);
+              setRawBatches(batches);
               
-              // Set batch distribution for Pie Chart (keep existing logic)
+              // Extract unique months for dropdown
+              const months: string[] = Array.from(new Set(chartData.map((d: any) => d.month)));
+              setAvailableMonths(months);
+              
+              // Batch distribution
               const colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--info))', 'hsl(var(--destructive))'];
               const batchData = batches.map((b: any, i: number) => ({
                 name: b.name,
@@ -294,10 +333,21 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold">Attendance Overview (Batch-wise)</h3>
               <p className="text-sm text-muted-foreground">Combined Leave & OD Days by Batch</p>
             </div>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
-              // In a real application, this would export the report
-              alert('Report export functionality would be implemented here');
-            }}>Export Report</Button>
+            <div className="w-full sm:w-[180px]">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Months</SelectItem>
+                  {availableMonths.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="h-64 sm:h-80 3xl:h-96">
             <ResponsiveContainer width="100%" height="100%">
@@ -403,7 +453,7 @@ export default function AdminDashboard() {
             { icon: ExternalLink, label: 'Leaves', color: 'success', path: '/admin/leave' },
             { icon: ClipboardCheck, label: 'Marks', color: 'warning', path: '/admin/marks' },
             { icon: Bell, label: 'Circular', color: 'info', path: '/admin/circulars' },
-            { icon: BarChart3, label: 'Analytics', color: 'primary', path: '/admin/settings' },
+            { icon: FileText, label: 'Reports', color: 'primary', path: '/admin/reports' },
           ].map((action, index) => {
             const Icon = action.icon;
             const colorMap: Record<string, string> = {
