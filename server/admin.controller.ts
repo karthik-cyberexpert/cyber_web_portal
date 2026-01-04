@@ -255,3 +255,42 @@ export const updateAdminAvatar = async (req: Request | any, res: Response) => {
         res.status(500).json({ message: 'Error updating avatar' });
     }
 };
+
+// Admin Reset User Password - Resets to default 'password123' and triggers onboarding
+export const resetUserPassword = async (req: Request | any, res: Response) => {
+    const adminId = req.user?.id;
+    const adminRole = req.user?.role;
+    const { userId } = req.params;
+
+    // Only admins can reset passwords
+    if (!adminId || adminRole !== 'admin') {
+        return res.status(403).json({ message: 'Only administrators can reset passwords' });
+    }
+
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    try {
+        // Hash the default password
+        const defaultPassword = 'password123';
+        const hashedPassword = await bcrypt.hash(defaultPassword, SALT_ROUNDS);
+
+        // Update password and set password_changed to FALSE to trigger onboarding
+        const [result]: any = await pool.query(
+            'UPDATE users SET password_hash = ?, password_changed = FALSE WHERE id = ?',
+            [hashedPassword, userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log(`[ADMIN] Password reset for user ID: ${userId} by admin ID: ${adminId}`);
+        res.json({ message: 'Password reset successfully. User will be prompted to set a new password on next login.' });
+
+    } catch (error) {
+        console.error('Reset User Password Error:', error);
+        res.status(500).json({ message: 'Error resetting password' });
+    }
+};

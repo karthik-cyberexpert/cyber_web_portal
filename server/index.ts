@@ -41,6 +41,9 @@ app.use('/api/faculty', facultyRoutes);
 import notesRoutes from './notes.routes.js';
 app.use('/api/notes', notesRoutes);
 
+import avatarRoutes from './avatar.routes.js';
+app.use('/api/avatar', avatarRoutes);
+
 import assignmentRoutes from './assignment.routes.js';
 app.use('/api/assignments', assignmentRoutes);
 

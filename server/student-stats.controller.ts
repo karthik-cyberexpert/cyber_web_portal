@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { getStudentAttendancePercentage } from './attendance.utils.js';
 
 // Get student dashboard statistics
 export const getStudentStats = async (req: Request | any, res: Response) => {
@@ -27,21 +28,9 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
 
         const student = students[0];
 
-        // Calculate overall attendance percentage
-        // Count total classes and attended classes across all subjects
-        const [attendanceData]: any = await pool.query(
-            `SELECT 
-                COUNT(*) as total_classes,
-                SUM(CASE WHEN status = 'present' OR status = 'late' THEN 1 ELSE 0 END) as attended_classes
-             FROM attendance
-             WHERE student_id = ?`,
-            [studentId]
-        );
-
-        let attendance = 0;
-        if (attendanceData[0] && attendanceData[0].total_classes > 0) {
-            attendance = Math.round((attendanceData[0].attended_classes / attendanceData[0].total_classes) * 100);
-        }
+        // Calculate attendance using new leave-based calculation
+        const attendanceData = await getStudentAttendancePercentage(studentId);
+        const attendance = Math.round(attendanceData.attendancePercentage);
 
         // Calculate internal average (marks)
         // This will fetch from marks table once it's populated
@@ -101,8 +90,8 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
         console.log('Student Name:', student.name);
         console.log('Section ID:', student.section_id);
         console.log('Attendance:', attendance, '%');
-        console.log('Total Classes:', attendanceData[0]?.total_classes);
-        console.log('Attended:', attendanceData[0]?.attended_classes);
+        console.log('Total Days:', attendanceData.totalDays);
+        console.log('Leave Days:', attendanceData.leaveDays);
         console.log('Pending Tasks:', pendingTasks);
         console.log('Stats:', stats);
 

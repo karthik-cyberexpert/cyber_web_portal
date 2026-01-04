@@ -17,7 +17,8 @@ import {
   UserCheck,
   GraduationCap,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -280,6 +281,29 @@ export default function ManageFaculty() {
         }
     } catch (error) {
          toast.error('Network error');
+    }
+  };
+
+  const handleResetPassword = async (member: Faculty) => {
+    if (!confirm(`Reset password for ${member.name}? This will set their password to the default and require them to create a new one on login.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/reset-password/${member.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        toast.success(`Password reset for ${member.name}. They will need to set a new password on next login.`);
+      } else {
+        const data = await response.json();
+        toast.error(data.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Reset Password Error:', error);
+      toast.error('Network error');
     }
   };
 
@@ -550,6 +574,10 @@ export default function ManageFaculty() {
                           <DropdownMenuItem onClick={() => handleEdit(member)}>
                             <Edit2 className="w-4 h-4 mr-2" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleResetPassword(member)}>
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Reset Password
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(member)}

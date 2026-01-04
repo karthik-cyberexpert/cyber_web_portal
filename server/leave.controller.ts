@@ -9,6 +9,7 @@ import {
     checkExamDatesInRange
 } from './leave-od.utils.js';
 import { getFileUrl } from './upload.config.js';
+import { canApplyCasualLeave } from './attendance.utils.js';
 
 // Create a new leave request (Student)
 export async function createLeaveRequest(req: Request, res: Response) {
@@ -28,6 +29,19 @@ export async function createLeaveRequest(req: Request, res: Response) {
         if (!validateNotPastDate(start_date)) {
             console.log('Validation failed: Past date');
             return res.status(400).json({ error: 'Cannot apply for past dates' });
+        }
+
+        // Check attendance for Casual Leave - must be >= 80%
+        if (category === 'Casual Leave' || category === 'casual' || category.toLowerCase().includes('casual')) {
+            const attendanceCheck = await canApplyCasualLeave(userId);
+            if (!attendanceCheck.allowed) {
+                console.log('Validation failed: Attendance too low for casual leave', attendanceCheck.attendancePercentage);
+                return res.status(400).json({ 
+                    error: attendanceCheck.message,
+                    currentAttendance: attendanceCheck.attendancePercentage,
+                    minimumRequired: 80
+                });
+            }
         }
 
         // Check for overlapping requests

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { 
@@ -18,8 +18,11 @@ import {
   Droplets,
   Link,
   AlertCircle,
-  Loader2
+  Loader2,
+  KeyRound
 } from 'lucide-react';
+import UpdatePasswordModal from '@/components/UpdatePasswordModal';
+import ImageCropModal from '@/components/ImageCropModal';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +58,8 @@ export default function PersonalDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   
   const academicState = student?.batch ? calculateCurrentAcademicState(student.batch) : { year: 1, semester: 1 };
 
@@ -191,14 +196,24 @@ export default function PersonalDetails() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight italic">Identity Matrix 🧬</h1>
           <p className="text-sm sm:text-base text-muted-foreground font-medium">Manage your personal information and verified credentials</p>
         </div>
-        <Button 
-          variant="gradient" 
-          onClick={() => setIsEditing(true)}
-          className="w-full sm:w-auto shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Edit Registry
-        </Button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="w-full sm:w-auto h-11 px-5 rounded-xl font-black uppercase text-[10px] tracking-widest"
+          >
+            <KeyRound className="w-4 h-4 mr-2" />
+            Update Password
+          </Button>
+          <Button 
+            variant="gradient" 
+            onClick={() => setIsEditing(true)}
+            className="w-full sm:w-auto shadow-lg shadow-primary/20 hover:scale-105 transition-all h-11 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Edit Registry
+          </Button>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -222,7 +237,10 @@ export default function PersonalDetails() {
                 className="w-full h-full rounded-[2.2rem] object-cover" 
               />
             </div>
-            <button className="absolute -bottom-2 -right-2 p-3 bg-primary text-white rounded-2xl shadow-xl shadow-primary/30 hover:scale-110 transition-transform active:scale-95 group-hover:rotate-6 border-2 border-background">
+            <button 
+              onClick={() => setIsCropModalOpen(true)}
+              className="absolute -bottom-2 -right-2 p-3 bg-primary text-white rounded-2xl shadow-xl shadow-primary/30 hover:scale-110 transition-transform active:scale-95 group-hover:rotate-6 border-2 border-background"
+            >
               <Camera className="w-5 h-5" />
             </button>
           </div>
@@ -446,6 +464,17 @@ export default function PersonalDetails() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <UpdatePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        onSuccess={() => fetchProfile()}
+      />
     </div>
   );
 }

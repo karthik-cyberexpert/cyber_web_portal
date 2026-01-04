@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 import bcrypt from 'bcrypt';
+import { getStudentAttendancePercentage } from './attendance.utils.js';
 
 // Get All Students
 export const getStudents = async (req: Request, res: Response) => {
@@ -21,7 +22,19 @@ export const getStudents = async (req: Request, res: Response) => {
       WHERE u.role = 'student'
       ORDER BY u.name ASC
     `);
-    res.json(rows);
+
+    // Calculate attendance for each student
+    const studentsWithAttendance = await Promise.all(
+      rows.map(async (student: any) => {
+        const attendance = await getStudentAttendancePercentage(student.id);
+        return {
+          ...student,
+          attendance_percentage: attendance.attendancePercentage
+        };
+      })
+    );
+
+    res.json(studentsWithAttendance);
   } catch (error: any) {
     console.error('Get Students Error:', error);
     res.status(500).json({ message: 'Error fetching students' });
@@ -349,5 +362,82 @@ export const updateStudentProfile = async (req: Request | any, res: Response) =>
         res.status(500).json({ message: 'Error updating profile' });
     } finally {
         connection.release();
+    }
+};
+
+// Get Student's Current Semester Subjects
+export const getStudentSubjects = async (req: Request | any, res: Response) => {
+    const studentId = req.user?.id;
+
+    if (!studentId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    try {
+        // Get student's section and batch info
+        const [students]: any = await pool.query(
+            `SELECT sp.section_id, s.batch_id, b.current_semester 
+             FROM student_profiles sp
+             JOIN sections s ON sp.section_id = s.id
+             JOIN batches b ON s.batch_id = b.id
+             WHERE sp.user_id = ?`,
+            [studentId]
+        );
+
+        if (students.length === 0) {
+            return res.status(404).json({ message: 'Student profile not found' });
+        }
+
+        const { section_id, batch_id, current_semester } = students[0];
+
+        // Fetch subjects for current semester that are allocated to student's section
+        const [subjects]: any = await pool.query(
+            `SELECT DISTINCT 
+                sub.id,
+                sub.name,
+                sub.code,
+                sub.semester,
+                sub.credits
+             FROM subjects sub
+             JOIN subject_allocations sa ON sub.id = sa.subject_id
+             WHERE sa.section_id = ?
+               AND sa.is_active = TRUE
+               AND sub.semester = ?
+             ORDER BY sub.name ASC`,
+            [section_id, current_semester]
+        );
+
+        res.json(subjects);
+
+    } catch (error: any) {
+        console.error('Get Student Subjects Error:', error);
+        res.status(500).json({ message: 'Error fetching subjects' });
+    }
+};
+
+// Get student attendance percentage
+
+export const getStudentAttendance = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.id;
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const attendance = await getStudentAttendancePercentage(userId);
+        
+        res.json({
+            totalDays: attendance.totalDays,
+            presentDays: attendance.totalDays - attendance.leaveDays,
+            leaveDays: attendance.leaveDays,
+            odDays: attendance.odDays,
+            attendancePercentage: attendance.attendancePercentage,
+            semesterStartDate: attendance.semesterStartDate,
+            canApplyCasualLeave: attendance.attendancePercentage >= 80,
+            minimumAttendanceForCasualLeave: 80
+        });
+    } catch (error: any) {
+        console.error('Get Student Attendance Error:', error);
+        res.status(500).json({ message: 'Error fetching attendance' });
     }
 };

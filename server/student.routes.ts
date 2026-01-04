@@ -5,9 +5,11 @@ import { authenticateToken } from './auth.middleware.js';
 const router = express.Router();
 
 // Student Self Routes
-import { getStudentProfile, getStudentMarks, updateStudentProfile } from './student.controller.js';
+import { getStudentProfile, getStudentMarks, updateStudentProfile, getStudentSubjects, getStudentAttendance } from './student.controller.js';
 router.get('/profile', authenticateToken, getStudentProfile);
 router.get('/marks', authenticateToken, getStudentMarks);
+router.get('/subjects', authenticateToken, getStudentSubjects);
+router.get('/attendance', authenticateToken, getStudentAttendance);
 router.put('/profile', authenticateToken, updateStudentProfile);
 
 // Public/Admin Routes

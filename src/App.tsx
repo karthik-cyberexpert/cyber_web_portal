@@ -15,6 +15,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Public Pages
 import LoginPage from "@/pages/LoginPage";
+import SetPassword from "@/pages/SetPassword";
 import NotFound from "@/pages/NotFound";
 
 // Student Pages
@@ -50,7 +51,6 @@ import StudentsFaculty from "@/pages/faculty/Students";
 
 // Tutor Pages
 import TutorDashboard from "@/pages/dashboards/TutorDashboard";
-import ClassAnalytics from "@/pages/tutor/ClassAnalytics";
 import PersonalDetails from "@/pages/tutor/PersonalDetails";
 import ClassManagement from "@/pages/tutor/ClassManagement";
 import TimetableTutor from "@/pages/tutor/Timetable";
@@ -112,6 +112,7 @@ const App = () => {
               {/* Public Routes */}
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/set-password" element={<SetPassword />} />
               
                 {/* Student Routes */}
                 <Route
@@ -172,7 +173,6 @@ const App = () => {
                   }
                 >
                   <Route index element={<TutorDashboard />} />
-                  <Route path="analytics" element={<ClassAnalytics />} />
                     <Route path="personal" element={<PersonalDetails />} />
                     <Route path="class" element={<ClassManagement />} />
                     <Route path="timetable" element={<TimetableTutor />} />

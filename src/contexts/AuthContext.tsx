@@ -7,9 +7,12 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  token: string | null;
+  requiresPasswordChange: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
+  setRequiresPasswordChange: (value: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,12 +20,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({ user: null, isAuthenticated: false });
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check for stored auth on mount
     const stored = getStoredAuth();
+    const storedToken = localStorage.getItem('token');
     setAuthState(stored);
+    setToken(storedToken);
     setIsLoading(false);
   }, []);
 
@@ -41,10 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         setStoredAuth({ user: data.user, isAuthenticated: true });
         setAuthState({ user: data.user, isAuthenticated: true });
-        localStorage.setItem('token', data.token); // Store JWT
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
         
-        const dashboardPath = getRoleDashboardPath(data.user.role);
-        navigate(dashboardPath);
+        // Check if password change is required
+        if (data.requiresPasswordChange) {
+          setRequiresPasswordChange(true);
+          navigate('/set-password');
+        } else {
+          const dashboardPath = getRoleDashboardPath(data.user.role);
+          navigate(dashboardPath);
+        }
+        
         setIsLoading(false);
         return { success: true };
       } else {
@@ -62,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearStoredAuth();
     localStorage.removeItem('token');
     setAuthState({ user: null, isAuthenticated: false });
+    setToken(null);
+    setRequiresPasswordChange(false);
     navigate('/login');
   };
 
@@ -80,9 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: authState.user,
         isAuthenticated: authState.isAuthenticated,
         isLoading,
+        token,
+        requiresPasswordChange,
         login,
         logout,
         updateUser,
+        setRequiresPasswordChange,
       }}
     >
       {children}
@@ -97,3 +117,4 @@ export function useAuth() {
   }
   return context;
 }
+

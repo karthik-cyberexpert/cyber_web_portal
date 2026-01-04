@@ -14,17 +14,72 @@ import {
   History,
   Zap,
   Target,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { getQuizzes, Quiz, getQuizResults, QuizResult } from '@/lib/data-store';
+import { toast } from 'sonner';
+import { API_BASE_URL } from '@/lib/api-config';
+
+interface Subject {
+  id: number;
+  name: string;
+  code: string;
+  semester: number;
+  credits: number;
+}
 
 export default function LMSQuiz() {
   const [activeTab, setActiveTab] = useState('available');
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
+  const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('');
+  const [questionCount, setQuestionCount] = useState('10');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  // Fetch subjects from API when modal opens
+  const fetchSubjects = async () => {
+    try {
+      setLoadingSubjects(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/students/subjects`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSubjects(data);
+      } else {
+        toast.error('Failed to load subjects');
+      }
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+      toast.error('Error loading subjects');
+    } finally {
+      setLoadingSubjects(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isTakeQuizOpen && subjects.length === 0) {
+      fetchSubjects();
+    }
+  }, [isTakeQuizOpen]);
 
   useEffect(() => {
     setQuizzes(getQuizzes());
@@ -68,6 +123,18 @@ export default function LMSQuiz() {
 
   const filteredQuizzes = quizzes.filter(q => activeTab === 'available' ? q.status !== 'expired' : q.status === 'expired');
 
+  const handleTakeQuiz = () => {
+    if (!selectedSubject || !selectedDifficulty || !questionCount) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    toast.info('Taking Quiz will be implemented soon...');
+    setIsTakeQuizOpen(false);
+    setSelectedSubject('');
+    setSelectedDifficulty('');
+    setQuestionCount('10');
+  };
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -89,6 +156,14 @@ export default function LMSQuiz() {
               <p className="text-sm font-black mt-1 uppercase">{overallAverage}</p>
             </div>
           </div>
+          <Button 
+            variant="gradient" 
+            className="rounded-xl font-black uppercase text-[10px] tracking-widest px-6 h-10 shadow-lg shadow-primary/20"
+            onClick={() => setIsTakeQuizOpen(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Take Quiz
+          </Button>
         </div>
       </motion.div>
 
@@ -260,6 +335,121 @@ export default function LMSQuiz() {
           </motion.div>
         </div>
       </div>
+
+      {/* Take Quiz Modal */}
+      <AnimatePresence>
+        {isTakeQuizOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTakeQuizOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden w-full max-w-md mx-auto">
+                {/* Header */}
+                <div className="bg-gradient-primary p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Take Quiz</h2>
+                        <p className="text-white/80 text-sm">Configure your quiz session</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsTakeQuizOpen(false)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form */}
+                <div className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <Label>Subject</Label>
+                    <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                      <SelectTrigger className="h-12 rounded-xl">
+                        <SelectValue placeholder={loadingSubjects ? "Loading subjects..." : "Select a subject"} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {subjects.length > 0 ? subjects.map((sub) => (
+                          <SelectItem key={sub.id} value={String(sub.id)}>
+                            {sub.code} - {sub.name}
+                          </SelectItem>
+                        )) : (
+                          <div className="p-2 text-center text-muted-foreground text-sm">
+                            {loadingSubjects ? 'Loading...' : 'No subjects available'}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Difficulty</Label>
+                    <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+                      <SelectTrigger className="h-12 rounded-xl">
+                        <SelectValue placeholder="Select difficulty level" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="very-easy">Very Easy</SelectItem>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                        <SelectItem value="very-hard">Very Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Number of Questions</Label>
+                    <Input
+                      type="number"
+                      value={questionCount}
+                      onChange={(e) => setQuestionCount(e.target.value)}
+                      placeholder="Enter number of questions"
+                      min="5"
+                      max="50"
+                      className="h-12 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      onClick={() => setIsTakeQuizOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="gradient"
+                      className="flex-1 rounded-xl"
+                      onClick={handleTakeQuiz}
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Start Quiz
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -12,8 +12,13 @@ import {
   Edit2,
   ShieldCheck,
   Building2,
-  GraduationCap
+  GraduationCap,
+  KeyRound,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import UpdatePasswordModal from '@/components/UpdatePasswordModal';
+import ImageCropModal from '@/components/ImageCropModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -21,11 +26,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import { getTutors, getFaculty, Tutor, Faculty } from '@/lib/data-store';
+import { toast } from 'sonner';
 
 export default function PersonalDetails() {
   const { user } = useAuth();
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [faculty, setFaculty] = useState<Faculty | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -85,10 +93,16 @@ export default function PersonalDetails() {
           <h1 className="text-3xl font-bold tracking-tight italic uppercase">Personal Profile 👤</h1>
           <p className="text-muted-foreground font-medium">Manage your department profile and professional details</p>
         </div>
-        <Button variant="gradient" className="shadow-lg shadow-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest italic px-6">
-          <Edit2 className="w-4 h-4 mr-2" />
-          Edit Profile
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" className="rounded-xl font-black uppercase text-[10px] tracking-widest italic px-6" onClick={() => setIsPasswordModalOpen(true)}>
+            <KeyRound className="w-4 h-4 mr-2" />
+            Update Password
+          </Button>
+          <Button variant="gradient" className="shadow-lg shadow-primary/20 rounded-xl font-black uppercase text-[10px] tracking-widest italic px-6">
+            <Edit2 className="w-4 h-4 mr-2" />
+            Edit Profile
+          </Button>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -100,11 +114,17 @@ export default function PersonalDetails() {
           <Card className="glass-card overflow-hidden border-none shadow-2xl rounded-3xl">
             <div className="h-32 bg-gradient-to-br from-primary via-accent to-secondary relative">
               <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                <div className="p-1.5 bg-background rounded-full shadow-2xl">
+                <div className="p-1.5 bg-background rounded-full shadow-2xl relative">
                   <Avatar className="w-24 h-24 border-4 border-background">
                     <AvatarImage src={tutor.avatar} />
                     <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
                   </Avatar>
+                  <button
+                    onClick={() => setIsCropModalOpen(true)}
+                    className="absolute -bottom-1 -right-1 p-2 bg-primary text-white rounded-full shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -220,6 +240,17 @@ export default function PersonalDetails() {
           </Card>
         </motion.div>
       </div>
+
+      <UpdatePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        onSuccess={() => window.location.reload()}
+      />
     </div>
   );
 }

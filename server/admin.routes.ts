@@ -7,7 +7,8 @@ import {
   deleteFaculty,
   getAdminProfile,
   updateAdminProfile,
-  updateAdminAvatar
+  updateAdminAvatar,
+  resetUserPassword
 } from './admin.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 import { uploadAvatar } from './upload.config.js';
@@ -25,5 +26,8 @@ router.delete('/faculty/:id', authenticateToken, deleteFaculty);
 router.get('/profile', authenticateToken, getAdminProfile);
 router.put('/profile', authenticateToken, updateAdminProfile);
 router.post('/profile/avatar', authenticateToken, uploadAvatar.single('avatar'), updateAdminAvatar);
+
+// Password Reset (Admin only)
+router.post('/reset-password/:userId', authenticateToken, resetUserPassword);
 
 export default router;

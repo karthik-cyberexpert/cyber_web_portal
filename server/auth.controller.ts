@@ -44,6 +44,10 @@ export const login = async (req: Request, res: Response) => {
         }
     }
 
+    // Check if password needs to be changed (first-time login)
+    const requiresPasswordChange = user.password_changed === 0 || user.password_changed === false;
+    console.log(`[AUTH] Password changed status: ${user.password_changed}, requires change: ${requiresPasswordChange}`);
+
     // Generate Token
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: effectiveRole, name: user.name },
@@ -60,7 +64,8 @@ export const login = async (req: Request, res: Response) => {
         name: user.name,
         role: effectiveRole,
         avatar: user.avatar_url
-      }
+      },
+      requiresPasswordChange
     });
 
   } catch (error: any) {
@@ -68,3 +73,86 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+// Set Password (First-time login or password reset)
+export const setPassword = async (req: Request | any, res: Response) => {
+  const userId = req.user?.id;
+  const { newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  }
+
+  try {
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and mark as changed
+    await pool.query(
+      'UPDATE users SET password_hash = ?, password_changed = TRUE WHERE id = ?',
+      [hashedPassword, userId]
+    );
+
+    console.log(`[AUTH] Password updated for user ID: ${userId}`);
+    res.json({ message: 'Password updated successfully' });
+
+  } catch (error: any) {
+    console.error('Set Password error:', error);
+    res.status(500).json({ message: 'Error updating password' });
+  }
+};
+
+// Update Password (with old password verification)
+export const updatePassword = async (req: Request | any, res: Response) => {
+  const userId = req.user?.id;
+  const { oldPassword, newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ message: 'Old password and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'New password must be at least 6 characters' });
+  }
+
+  try {
+    // Get current user
+    const [users]: any = await pool.query('SELECT password_hash FROM users WHERE id = ?', [userId]);
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify old password
+    const validOldPassword = await bcrypt.compare(oldPassword, users[0].password_hash);
+    if (!validOldPassword) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password_hash = ?, password_changed = TRUE WHERE id = ?',
+      [hashedPassword, userId]
+    );
+
+    console.log(`[AUTH] Password updated for user ID: ${userId}`);
+    res.json({ message: 'Password updated successfully' });
+
+  } catch (error: any) {
+    console.error('Update Password error:', error);
+    res.status(500).json({ message: 'Error updating password' });
+  }
+};
+
+

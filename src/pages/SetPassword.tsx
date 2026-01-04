@@ -1,42 +1,71 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  GraduationCap, 
-  Eye, 
-  EyeOff, 
-  Loader2,
-  Sun,
-  Moon,
-  ChevronRight,
-  Mail,
-  Lock
-} from 'lucide-react';
+import { Lock, Eye, EyeOff, Shield, GraduationCap, Loader2, ChevronRight, Sun, Moon } from 'lucide-react';
+import { toast } from 'sonner';
 
-export default function LoginPage() {
-  const { login, isLoading } = useAuth();
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3007/api';
+
+export default function SetPassword() {
+  const navigate = useNavigate();
+  const { user, token, setRequiresPasswordChange } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (!email || !password) {
-      setError('Please enter email and password');
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
-    
-    const result = await login(email, password);
-    if (!result.success) {
-      setError(result.error || 'Login failed');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newPassword })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to set password');
+      }
+
+      toast.success('Password set successfully!');
+      setRequiresPasswordChange(false);
+      
+      // Redirect based on role
+      const rolePath = user?.role === 'admin' ? '/admin' :
+                       user?.role === 'tutor' ? '/tutor' :
+                       user?.role === 'faculty' ? '/faculty' :
+                       user?.role === 'student' ? '/student' : '/';
+      
+      setTimeout(() => navigate(rolePath), 500);
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,11 +105,9 @@ export default function LoginPage() {
               transition={{ delay: 0.4 }}
               className="text-5xl font-bold mb-6 leading-tight"
             >
-              Academic
+              Secure Your
               <br />
-              Management
-              <br />
-              System
+              Account
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 30 }}
@@ -88,8 +115,7 @@ export default function LoginPage() {
               transition={{ delay: 0.5 }}
               className="text-xl text-white/90 max-w-md"
             >
-              Manage your academic institution efficiently 
-              with our comprehensive management system.
+              Set a strong password to protect your academic portal access.
             </motion.p>
           </div>
 
@@ -99,17 +125,11 @@ export default function LoginPage() {
             transition={{ delay: 0.6 }}
             className="flex items-center gap-4"
           >
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div 
-                  key={i}
-                  className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 backdrop-blur-sm"
-                  style={{ backgroundImage: `url(https://api.dicebear.com/7.x/avataaars/svg?seed=user${i})`, backgroundSize: 'cover' }}
-                />
-              ))}
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <Shield className="w-6 h-6" />
             </div>
             <p className="text-white/80">
-              <span className="font-semibold text-white">Active Users</span>
+              <span className="font-semibold text-white">One-time setup</span> for enhanced security
             </p>
           </motion.div>
         </div>
@@ -125,14 +145,9 @@ export default function LoginPage() {
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           className="absolute bottom-40 right-40 w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm"
         />
-        <motion.div 
-          animate={{ y: [0, -15, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/2 right-10 w-16 h-16 bg-white/10 rounded-xl backdrop-blur-sm"
-        />
       </motion.div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Form */}
       <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-12">
         {/* Theme Toggle */}
         <motion.div 
@@ -168,43 +183,32 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-            <p className="text-muted-foreground">Sign in to your account</p>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-2xl mb-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2">Welcome, {user?.name}!</h1>
+            <p className="text-muted-foreground">Please set your password to continue</p>
           </div>
 
-          {/* Login Form */}
+          {/* Form */}
           <motion.form 
             onSubmit={handleSubmit}
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  className="h-12 pl-12"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="newPassword">New Password</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="password"
+                  id="newPassword"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={loading}
                   className="h-12 pl-12 pr-12"
+                  required
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -216,18 +220,22 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Forgot Password Link */}
-            <div className="text-right">
-              <button
-                type="button"
-                className="text-sm text-primary hover:underline"
-                onClick={() => {
-                  // TODO: Implement forgot password flow
-                  alert('Forgot password feature coming soon!');
-                }}
-              >
-                Forgot Password?
-              </button>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  className="h-12 pl-12"
+                  required
+                  minLength={6}
+                />
+              </div>
             </div>
 
             {error && (
@@ -245,16 +253,16 @@ export default function LoginPage() {
               variant="gradient"
               size="xl"
               className="w-full"
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Signing in...
+                  Setting Password...
                 </>
               ) : (
                 <>
-                  Sign In
+                  Set Password & Continue
                   <ChevronRight className="w-5 h-5" />
                 </>
               )}
@@ -269,9 +277,9 @@ export default function LoginPage() {
             className="mt-6 p-4 rounded-xl bg-info/10 border border-info/20"
           >
             <p className="text-sm text-center">
-              <span className="font-medium text-info">New User?</span>{' '}
+              <span className="font-medium text-info">Security Note:</span>{' '}
               <span className="text-muted-foreground">
-                Contact your administrator for account access
+                Choose a strong password that you'll remember
               </span>
             </p>
           </motion.div>
@@ -280,4 +288,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

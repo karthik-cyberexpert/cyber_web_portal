@@ -96,7 +96,6 @@ const tutorLinks: SidebarLink[] = [
     icon: BarChart3, 
     path: '/tutor/analytics-menu',
     children: [
-      { label: 'Anaytics', icon: BarChart3, path: '/tutor/analytics' },
       { label: 'My Class', icon: Users, path: '/tutor/class' },
       { label: 'Class Time Table', icon: Calendar, path: '/tutor/timetable' },
       { label: 'Verify Marks', icon: ClipboardList, path: '/tutor/marks' },
@@ -265,7 +264,7 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
                 className="overflow-hidden"
               >
                 <p className="font-bold text-sidebar-foreground text-sm">Cyber Security Department</p>
-                <p className="text-xs text-sidebar-foreground/60">Your Institution</p>
+                <p className="text-xs text-sidebar-foreground/60">ACE-HOSUR</p>
               </motion.div>
             )}
           </AnimatePresence>

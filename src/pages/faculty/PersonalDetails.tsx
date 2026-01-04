@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -11,8 +11,13 @@ import {
   Edit2,
   BookOpen,
   Briefcase,
-  Save
+  Save,
+  KeyRound,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import UpdatePasswordModal from '@/components/UpdatePasswordModal';
+import ImageCropModal from '@/components/ImageCropModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -30,6 +35,8 @@ export default function PersonalDetails() {
   const { user } = useAuth();
   const [faculty, setFaculty] = React.useState<Faculty | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = React.useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = React.useState(false);
   const [formData, setFormData] = React.useState({
     phone: '',
     address: '',
@@ -123,14 +130,24 @@ export default function PersonalDetails() {
           <h1 className="text-2xl sm:text-3xl font-bold italic bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Faculty Profile</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">Professional information & academic credentials</p>
         </div>
-        <Button 
-          variant="outline" 
-          className="w-full sm:w-auto rounded-xl border-primary/20 hover:bg-primary/5 transition-all"
-          onClick={() => setIsEditDialogOpen(true)}
-        >
-          <Edit2 className="w-4 h-4 mr-2" />
-          Update Details
-        </Button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto rounded-xl border-primary/20 hover:bg-primary/5 transition-all"
+            onClick={() => setIsPasswordModalOpen(true)}
+          >
+            <KeyRound className="w-4 h-4 mr-2" />
+            Update Password
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto rounded-xl border-primary/20 hover:bg-primary/5 transition-all"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Edit2 className="w-4 h-4 mr-2" />
+            Update Details
+          </Button>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -143,13 +160,19 @@ export default function PersonalDetails() {
             <div className="h-32 sm:h-40 bg-gradient-to-br from-primary/80 via-accent/80 to-secondary/80 relative">
               <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
               <div className="absolute -bottom-12 sm:-bottom-16 left-1/2 -translate-x-1/2">
-                <div className="p-1 sm:p-2 bg-background/80 backdrop-blur-xl rounded-full shadow-2xl border border-white/20">
+                <div className="p-1 sm:p-2 bg-background/80 backdrop-blur-xl rounded-full shadow-2xl border border-white/20 relative">
                   <Avatar className="w-20 h-20 sm:w-24 h-24 border-4 border-transparent shadow-glow shadow-primary/30">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback className="text-xl sm:text-2xl font-black bg-primary text-white">
                       {user?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
+                  <button
+                    onClick={() => setIsCropModalOpen(true)}
+                    className="absolute -bottom-1 -right-1 p-2 bg-primary text-white rounded-full shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -391,6 +414,17 @@ export default function PersonalDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UpdatePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        onSuccess={() => window.location.reload()}
+      />
     </div>
   );
 }

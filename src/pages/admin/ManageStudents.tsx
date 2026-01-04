@@ -20,7 +20,8 @@ import {
   X,
   Lock,
   Upload, 
-  FileSpreadsheet
+  FileSpreadsheet,
+  KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,7 +129,7 @@ export default function ManageStudents() {
                   section: s.section_name || 'N/A',
                   sectionId: s.section_id, // Map section ID
                   status: 'Active', 
-                  attendance: 0,
+                  attendance: s.attendance_percentage || 0,
                   cgpa: 0,
                   avatar: s.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`,
                   
@@ -409,6 +410,30 @@ export default function ManageStudents() {
       }
     } catch (error) {
        console.error('Delete Error:', error);
+    }
+  };
+
+  const handleResetPassword = async (student: LocalStudent) => {
+    if (!confirm(`Reset password for ${student.name}? This will set their password to the default and require them to create a new one on login.`)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/admin/reset-password/${student.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        toast.success(`Password reset for ${student.name}. They will need to set a new password on next login.`);
+      } else {
+        const data = await response.json();
+        toast.error(data.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Reset Password Error:', error);
+      toast.error('Network error');
     }
   };
 
@@ -732,6 +757,10 @@ export default function ManageStudents() {
                           <DropdownMenuItem onClick={() => handleEdit(student)}>
                             <Edit2 className="w-4 h-4 mr-2" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleResetPassword(student)}>
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Reset Password
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(student)}

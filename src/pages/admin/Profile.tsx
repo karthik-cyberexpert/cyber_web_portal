@@ -4,8 +4,11 @@ import {
   User, Mail, Phone, MapPin, 
   Camera, Save, Shield, 
   Activity, Clock, Loader2,
-  CheckCircle2, AlertCircle, Edit2, X
+  CheckCircle2, AlertCircle, Edit2, X,
+  KeyRound
 } from 'lucide-react';
+import UpdatePasswordModal from '@/components/UpdatePasswordModal';
+import ImageCropModal from '@/components/ImageCropModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,8 +33,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -99,43 +102,6 @@ export default function Profile() {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("File size must be less than 2MB");
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const token = localStorage.getItem('token');
-      const formDataUpload = new FormData();
-      formDataUpload.append('avatar', file);
-
-      const res = await fetch(`${API_BASE_URL}/admin/profile/avatar`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formDataUpload
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success("Avatar updated successfully!");
-        updateUser({ avatar: data.avatarUrl });
-        fetchProfile();
-      } else {
-        throw new Error("Upload failed");
-      }
-    } catch (err) {
-       console.error("Error uploading avatar", err);
-       toast.error("Failed to upload avatar");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 animate-pulse">
@@ -179,19 +145,11 @@ export default function Profile() {
                   {profile.name?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleFileChange}
-              />
               <button 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="absolute -bottom-2 -right-2 p-5 bg-primary text-white rounded-[1.5rem] shadow-2xl shadow-primary/40 hover:scale-110 active:scale-95 transition-all hover:rotate-6 border-4 border-background disabled:opacity-50"
+                onClick={() => setIsCropModalOpen(true)}
+                className="absolute -bottom-2 -right-2 p-5 bg-primary text-white rounded-[1.5rem] shadow-2xl shadow-primary/40 hover:scale-110 active:scale-95 transition-all hover:rotate-6 border-4 border-background"
               >
-                {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+                <Camera className="w-6 h-6" />
               </button>
             </div>
           </div>
@@ -219,14 +177,24 @@ export default function Profile() {
                    <User className="w-6 h-6 text-primary" />
                    Identification Records
                 </h3>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setIsEditing(true)}
-                  className="rounded-xl hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setIsPasswordModalOpen(true)}
+                    className="rounded-xl hover:bg-accent/10 hover:text-accent transition-all shadow-sm"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setIsEditing(true)}
+                    className="rounded-xl hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -345,6 +313,17 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UpdatePasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)} 
+      />
+
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        onClose={() => setIsCropModalOpen(false)}
+        onSuccess={() => fetchProfile()}
+      />
     </div>
   );
 }
