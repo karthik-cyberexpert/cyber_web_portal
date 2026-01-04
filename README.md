@@ -1,73 +1,127 @@
-# Welcome to your Lovable project
+# 🌐 ACE-HOSUR Cyber Security Department Web Portal
 
-## Project info
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Status](https://img.shields.io/badge/status-production-success.svg)
+![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB.svg)
+![Node](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933.svg)
+![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1.svg)
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+A robust, enterprise-grade educational management system specifically tailored for the **Department of Cyber Security** at **Adhiyamaan College of Engineering (ACE-HOSUR)**. This portal bridges the gap between students, faculty, and administration through a unified, high-performance web interface.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Key Modules & Features
 
-**Use Lovable**
+### 👤 Role-Based Dashboards
+- 🛡️ **Admin**: High-level departmental overview, user management, and centralized approvals.
+- 👨‍🏫 **Faculty**: Personal classroom management, marks entry, resource sharing, and attendance tracking.
+- 🎓 **Student**: Comprehensive profile, attendance analytics, assignment submission, and performance tracking.
+- 🤝 **Tutor (Class In-charge)**: Detailed oversight of their specific batch/section, mentoring students, and leave forwarding.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 📅 Academic Operations
+- **Timetable & Scheduling**: Dynamic timetable generation and visualization for students and faculty.
+- **Attendance 2.0**: Intelligent attendance calculation excluding holidays and Sundays. Classifies OD (On-Duty) as present and Approved Leaves as absent (for calculation purposes).
+- **Exam Center**: Management of Internal Assessment (IA) marks, Model Exam scores, and consolidated mark sheets.
 
-Changes made via Lovable will be committed automatically to this repo.
+### 📋 Leave & OD Portal
+- **Smart Approval Workflow**: Multi-tier approval system (Tutor -> Admin).
+- **Casual Leave Logic**: Automated check for ≥ 80% attendance requirement before applying.
+- **On-Duty (OD) Tracking**: Place and reason tracking for academic, sports, or symposium events.
 
-**Use your preferred IDE**
+### 📚 Learning Management (LMS)
+- **Unit-wise Notes**: Upload and download resources organized by syllabus units.
+- **Digital Assignments**: Deadline-tracked submissions with grading capabilities and feedback loops.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 📢 Communication & Welfare
+- **Targeted Circulars**: Official notices filtered by role (All/Faculty/Students).
+- **Grievance Cell**: Secure channel for students to report issues directly to Tutors or Admin.
+- **Lost & Found**: Community-driven item recovery system.
+- **Feedback System**: End-of-semester faculty performance evaluations.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🛠️ Technology Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Shadcn/UI |
+| **State Management** | React Context API |
+| **Backend** | Node.js, Express.js |
+| **Database** | MySQL (with optimized connection pooling) |
+| **Authentication** | JWT (JSON Web Tokens) with secure password hashing |
+| **File Handling** | Multer (local disk storage) |
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🔄 Core Workflow
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```mermaid
+graph TD
+    S[Student] -->|Apply Leave/OD| T[Tutor]
+    T -->|Forward request| A[Admin]
+    A -->|Final Approval| S
+    
+    F[Faculty] -->|Mark Attendance/Marks| DB[(Database)]
+    DB -->|Visual Analytics| S
+    DB -->|Department Stats| A
+    
+    A -->|Publish Circular| S
+    A -->|Publish Circular| F
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## ⚙️ Development Setup
 
-**Use GitHub Codespaces**
+### Prerequisites
+- Node.js (v18+)
+- MySQL Server (v8.0+)
+- Bun or NPM (Bun is recommended for performance)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Installation Steps
 
-## What technologies are used for this project?
+1. **Clone & Install**
+   ```sh
+   git clone https://github.com/karthik-cyberexpert/cyber_web_portal.git
+   cd cyber_web_portal
+   npm install
+   ```
 
-This project is built with:
+2. **Backend Configuration**
+   Navigate to the `server/` directory and create a `.env` file:
+   ```env
+   DB_HOST=localhost
+   DB_USER=your_db_user
+   DB_PASSWORD=your_db_password
+   DB_NAME=Cyber_Dept_Portal
+   JWT_SECRET=your_jwt_secret
+   PORT=5000
+   ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. **Database Setup**
+   Execute the consolidated schema file in your MySQL environment:
+   ```sh
+   mysql -u root -p < schema/final_schema.sql
+   ```
 
-## How can I deploy this project?
+4. **Run Application**
+   ```sh
+   # Frontend (from root)
+   npm run dev
+   
+   # Backend (from server directory)
+   npm run dev
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## 📄 Database Schema
+The entire database structure is defined in [final_schema.sql](file:///C:/Users/Admin/Desktop/orchids-edu-bloom-2/schema/final_schema.sql). It contains 30+ tables with optimized constraints, supporting everything from basic user profiles to complex academic trends and feedback responses.
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🛡️ Maintainer
+**Cyber Security Department**  
+*Adhiyamaan College of Engineering (ACE-HOSUR)*
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Designed for excellence in departmental management. 🚀
