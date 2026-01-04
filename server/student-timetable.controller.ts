@@ -23,6 +23,7 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
         const sectionId = students[0].section_id;
 
         // Fetch timetable slots for the student's section
+        // FIX: Strict Filter - Active allocations & Current Semester
         const [timetable]: any = await pool.query(
             `SELECT 
                 ts.id,
@@ -39,7 +40,11 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              LEFT JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
              LEFT JOIN subjects s ON sa.subject_id = s.id
              LEFT JOIN users u ON sa.faculty_id = u.id
+             JOIN sections sec ON ts.section_id = sec.id
+             JOIN batches b ON sec.batch_id = b.id
              WHERE ts.section_id = ?
+               AND sa.is_active = TRUE
+               AND s.semester = b.current_semester
              ORDER BY 
                 FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
                 ts.period_number`,
@@ -57,19 +62,22 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
         };
 
         timetable.forEach((slot: any) => {
-            formattedTimetable[slot.day_of_week].push({
-                period: slot.period_number,
-                subject: slot.subject_name || 'Free Period',
-                code: slot.subject_code || '',
-                type: slot.subject_type || '',
-                faculty: slot.faculty_name || '',
-                room: slot.room_number || '',
-                startTime: slot.start_time,
-                endTime: slot.end_time
-            });
+            if (formattedTimetable[slot.day_of_week]) { // Safety check
+                formattedTimetable[slot.day_of_week].push({
+                    period: slot.period_number,
+                    subject: slot.subject_name || 'Free Period',
+                    code: slot.subject_code || '',
+                    type: slot.subject_type || '',
+                    faculty: slot.faculty_name || '',
+                    room: slot.room_number || '',
+                    startTime: slot.start_time,
+                    endTime: slot.end_time
+                });
+            }
         });
 
         // Get syllabus - all subjects allocated to student's section with faculty
+        // FIX: Strict Filter - Active allocations & Current Semester
         const [syllabusData]: any = await pool.query(
             `SELECT DISTINCT
                 s.id,
@@ -81,7 +89,11 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              FROM subject_allocations sa
              JOIN subjects s ON sa.subject_id = s.id
              JOIN users u ON sa.faculty_id = u.id
+             JOIN sections sec ON sa.section_id = sec.id
+             JOIN batches b ON sec.batch_id = b.id
              WHERE sa.section_id = ?
+               AND sa.is_active = TRUE
+               AND s.semester = b.current_semester
              ORDER BY s.name`,
             [sectionId]
         );

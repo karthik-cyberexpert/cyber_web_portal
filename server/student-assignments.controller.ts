@@ -23,6 +23,7 @@ export const getStudentAssignments = async (req: Request | any, res: Response) =
         const sectionId = students[0].section_id;
 
         // Fetch assignments for the student's section with submission status
+        // FIX: Strict Semester Filter
         const [assignments]: any = await pool.query(
             `SELECT 
                 a.id,
@@ -44,9 +45,13 @@ export const getStudentAssignments = async (req: Request | any, res: Response) =
              FROM assignments a
              JOIN subject_allocations sa ON a.subject_allocation_id = sa.id
              JOIN subjects s ON sa.subject_id = s.id
+             JOIN sections sec ON sa.section_id = sec.id
+             JOIN batches b ON sec.batch_id = b.id
              LEFT JOIN users u ON sa.faculty_id = u.id
              LEFT JOIN assignment_submissions asub ON a.id = asub.assignment_id AND asub.student_id = ?
              WHERE sa.section_id = ?
+               AND sa.is_active = TRUE
+               AND s.semester = b.current_semester
              ORDER BY a.due_date ASC`,
             [studentId, sectionId]
         );

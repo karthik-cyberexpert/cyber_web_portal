@@ -11,6 +11,8 @@ export const getFacultyAssignments = async (req: Request | any, res: Response) =
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     try {
+        // FIX: Handle sa.section_id IS NULL (Global Allocation) -> Join all sections in matching semester
+        // We use sec.id for student_count to get accurate counts for the specific section row
         const [rows]: any = await pool.query(`
             SELECT 
                 a.id, a.title, a.description, a.due_date, a.max_score, a.attachment_url, a.created_at,
@@ -19,8 +21,8 @@ export const getFacultyAssignments = async (req: Request | any, res: Response) =
                 b.name as batch_name,
                 sa.id as subject_allocation_id,
                 
-                -- Student Count (based on section)
-                (SELECT COUNT(*) FROM student_profiles sp WHERE sp.section_id = sa.section_id) as student_count,
+                -- Student Count (based on section row)
+                (SELECT COUNT(*) FROM student_profiles sp WHERE sp.section_id = sec.id) as student_count,
                 
                 -- Submission Stats
                 (SELECT COUNT(*) FROM assignment_submissions asub WHERE asub.assignment_id = a.id) as submission_count,
@@ -29,9 +31,10 @@ export const getFacultyAssignments = async (req: Request | any, res: Response) =
             FROM assignments a
             JOIN subject_allocations sa ON a.subject_allocation_id = sa.id
             JOIN subjects s ON sa.subject_id = s.id
-            JOIN sections sec ON sa.section_id = sec.id
+            JOIN sections sec ON (sa.section_id = sec.id OR sa.section_id IS NULL)
             JOIN batches b ON sec.batch_id = b.id
             WHERE sa.faculty_id = ? AND sa.is_active = TRUE
+              AND s.semester = b.current_semester
             ORDER BY a.created_at DESC
         `, [userId]);
 
@@ -48,6 +51,7 @@ export const getFacultySubjectAllocations = async (req: Request | any, res: Resp
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     try {
+        // FIX: Handle sa.section_id IS NULL -> Join all sections in matching semester
         const [rows]: any = await pool.query(`
             SELECT 
                 sa.id as allocation_id,
@@ -56,7 +60,7 @@ export const getFacultySubjectAllocations = async (req: Request | any, res: Resp
                 b.id as batch_id, b.name as batch_name
             FROM subject_allocations sa
             JOIN subjects s ON sa.subject_id = s.id
-            JOIN sections sec ON sa.section_id = sec.id
+            JOIN sections sec ON (sa.section_id = sec.id OR sa.section_id IS NULL)
             JOIN batches b ON sec.batch_id = b.id
             WHERE sa.faculty_id = ? 
               AND sa.is_active = TRUE

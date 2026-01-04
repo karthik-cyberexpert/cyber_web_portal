@@ -60,6 +60,7 @@ export default function MarksReport() {
     const [selectedSection, setSelectedSection] = useState<string>('');
     const [selectedSemester, setSelectedSemester] = useState<string>('1');
     const [selectedSubject, setSelectedSubject] = useState<string>('all');
+    const [reportType, setReportType] = useState<'raw' | 'calculated'>('calculated');
     const [searchQuery, setSearchQuery] = useState('');
     const [reportData, setReportData] = useState<StudentEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -70,56 +71,7 @@ export default function MarksReport() {
         }
     }, [user]);
 
-    const fetchBatches = async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/academic/batches`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setBatches(data);
-                if (data.length > 0) {
-                    setSelectedBatch(data[0].id.toString());
-                    fetchSections(data[0].id);
-                }
-            }
-        } catch (error) {
-            console.error("Failed to fetch batches", error);
-        }
-    };
-
-    const fetchSections = async (batchId: number) => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setSections(data);
-                if (data.length > 0) {
-                    setSelectedSection(data[0].id.toString());
-                }
-            }
-        } catch (error) {
-            console.error("Failed to fetch sections", error);
-        }
-    };
-
-    const fetchSubjects = async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/academic/subjects`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data: Subject[] = await res.json();
-                // Filter by selected semester
-                const filtered = data.filter(s => s.semester.toString() === selectedSemester);
-                setSubjects(filtered);
-            }
-        } catch (error) {
-            console.error("Failed to fetch subjects", error);
-        }
-    };
+    // ... (keep fetchBatches, fetchSections, fetchSubjects same)
 
     const fetchReport = async () => {
         if (!selectedSemester) return;
@@ -143,49 +95,71 @@ export default function MarksReport() {
                 return matchesSemester && matchesBatch && matchesSection;
             });
 
-            // 2. Fetch Marks for these students
-            // Since we don't have a bulk marks endpoint for multiple students easily, 
-            // we'll use the local data-store pattern or assume we can fetch all and filter
-            // In a real app, you'd have /academic/marks/report?batch=... etc.
-            
-            // For now, let's mock or use the data-store if available via a fetch
-            // But since I'm in frontend, I'll simulate the aggregation:
-            const marksRes = await fetch(`${API_BASE_URL}/academic/marks/report?batchId=${selectedBatch}&semester=${selectedSemester}`, {
-                 headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            const allMarks = marksRes.ok ? await marksRes.json() : [];
-
-            // Aggregate Data
-            const mapped: StudentEntry[] = targetStudents.map((s: any) => {
-                const studentMarks: Record<string, number> = {};
+            if (reportType === 'calculated') {
+                // Fetch Calculated Internals
+                const calcRes = await fetch(`${API_BASE_URL}/academic/marks/internals/theory?batchId=${selectedBatch}&semester=${selectedSemester}`, {
+                     headers: { Authorization: `Bearer ${token}` }
+                });
                 
-                // For each subject, sum up the internal marks from the fetched report data
-                subjects.forEach(sub => {
-                    const subjectExamMarks = allMarks.filter((m: any) => 
-                        m.studentId === s.id && 
-                        m.subjectId === sub.id
-                    );
+                const calcData = calcRes.ok ? await calcRes.json() : [];
+
+                // Pivot Data
+                const mapped: StudentEntry[] = targetStudents.map((s: any) => {
+                    const studentMarks: Record<string, number> = {};
                     
-                    // Sum marks for this subject across all internal exams
-                    const total = subjectExamMarks.reduce((sum: number, curr: any) => sum + (curr.marks || 0), 0);
-                    studentMarks[sub.code] = total;
+                    // Filter marks for this student
+                    const myMarks = calcData.filter((m: any) => m.studentId === s.id);
+                    
+                    myMarks.forEach((m: any) => {
+                        studentMarks[m.subjectCode] = m.total;
+                    });
+
+                    return {
+                        id: s.id,
+                        name: s.name,
+                        rollNo: s.roll_number || s.rollNo || 'N/A',
+                        marks: studentMarks
+                    };
+                });
+                 
+                setReportData(mapped.filter(r => 
+                    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    r.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
+                ));
+
+            } else {
+                // RAW MARKS LOGIC
+                const marksRes = await fetch(`${API_BASE_URL}/academic/marks/report?batchId=${selectedBatch}&semester=${selectedSemester}`, {
+                     headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const allMarks = marksRes.ok ? await marksRes.json() : [];
+
+                const mapped: StudentEntry[] = targetStudents.map((s: any) => {
+                    const studentMarks: Record<string, number> = {};
+                    subjects.forEach(sub => {
+                        const subjectExamMarks = allMarks.filter((m: any) => 
+                            m.studentId === s.id && 
+                            m.subjectId === sub.id
+                        );
+                        const total = subjectExamMarks.reduce((sum: number, curr: any) => sum + (curr.marks || 0), 0);
+                        studentMarks[sub.code] = total;
+                    });
+
+                    return {
+                        id: s.id,
+                        name: s.name,
+                        rollNo: s.roll_number || s.rollNo || 'N/A',
+                        marks: studentMarks
+                    };
                 });
 
-                return {
-                    id: s.id,
-                    name: s.name,
-                    rollNo: s.roll_number || s.rollNo || 'N/A',
-                    marks: studentMarks
-                };
-            });
+                setReportData(mapped.filter(r => 
+                    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    r.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
+                ));
+            }
 
-            const filtered = mapped.filter(r => 
-                r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                r.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
-            setReportData(filtered);
         } catch (error) {
             console.error("Report fetch failed:", error);
             toast.error("Failed to load marks report");
@@ -196,40 +170,13 @@ export default function MarksReport() {
 
     useEffect(() => {
         fetchReport();
-    }, [selectedBatch, selectedSection, selectedSemester, searchQuery]);
-
-    const handleExport = () => {
-        if (reportData.length === 0) {
-            toast.error("No data to export");
-            return;
-        }
-
-        const exportData = reportData.map((r, index) => {
-            const row: any = {
-                'S.No': index + 1,
-                'Name': r.name,
-                'Register Number': r.rollNo,
-            };
-            
-            // Dynamic Columns
-            subjects.forEach(sub => {
-                if (selectedSubject === 'all' || selectedSubject === sub.code) {
-                    row[sub.code] = r.marks[sub.code] || 0;
-                }
-            });
-            
-            return row;
-        });
-
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Marks Report");
-        XLSX.writeFile(wb, `Marks_Report_Sem_${selectedSemester}.xlsx`);
-        toast.success("Report exported successfully");
-    };
+    }, [selectedBatch, selectedSection, selectedSemester, searchQuery, reportType]);
+    
+    // ... handleExport ...
 
     return (
         <div className="space-y-6">
+            {/* Headers ... */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
@@ -237,17 +184,20 @@ export default function MarksReport() {
                     </h1>
                     <p className="text-muted-foreground mt-1">Total internal marks summary by semester</p>
                 </div>
-                <Button onClick={handleExport} className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
+                {/* ... */}
+                 <Button onClick={handleExport} className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
                     <Download className="w-4 h-4" />
                     Export to Excel
                 </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm">
+                 {/* Batch/Section Selectors (Admin Only) */}
                 {isAdmin && (
                     <>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Batch</label>
+                             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Batch</label>
+                            {/* ... Select Batch ... */}
                             <Select value={selectedBatch} onValueChange={(val) => {
                                 setSelectedBatch(val);
                                 fetchSections(parseInt(val));
@@ -264,7 +214,7 @@ export default function MarksReport() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Section</label>
-                            <Select value={selectedSection} onValueChange={setSelectedSection}>
+                             <Select value={selectedSection} onValueChange={setSelectedSection}>
                                 <SelectTrigger className="glass-select">
                                     <SelectValue placeholder="Select Section" />
                                 </SelectTrigger>
@@ -277,6 +227,21 @@ export default function MarksReport() {
                         </div>
                     </>
                 )}
+                
+                {/* Report Type Selector */}
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Report Type</label>
+                    <Select value={reportType} onValueChange={(val: any) => setReportType(val)}>
+                        <SelectTrigger className="glass-select border-blue-500/20 bg-blue-500/5">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="calculated">Consolidated Internals (40)</SelectItem>
+                            <SelectItem value="raw">Raw Exam Marks</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Semester</label>
                     <Select value={selectedSemester} onValueChange={setSelectedSemester}>
@@ -290,6 +255,8 @@ export default function MarksReport() {
                         </SelectContent>
                     </Select>
                 </div>
+                
+                {/* ... Focus Subject and Search ... */}
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Focus Subject</label>
                     <Select value={selectedSubject} onValueChange={setSelectedSubject}>

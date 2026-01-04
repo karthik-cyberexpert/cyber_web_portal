@@ -11,6 +11,7 @@ export const getFacultyClasses = async (req: Request | any, res: Response) => {
     try {
         // Fetch allocations: Subject Name, Code, Section Name, Batch Name
         // Only show subjects where subject.semester matches batch.current_semester
+        // FIX: Allow section_id to be NULL (Global Allocation) -> Join all sections in matching semester
         const [rows]: any = await connection.query(`
             SELECT 
                 s.name as subjectName, 
@@ -22,7 +23,7 @@ export const getFacultyClasses = async (req: Request | any, res: Response) => {
                 b.current_semester as batchCurrentSemester
             FROM subject_allocations sa
             JOIN subjects s ON sa.subject_id = s.id
-            JOIN sections sec ON sa.section_id = sec.id
+            JOIN sections sec ON (sa.section_id = sec.id OR sa.section_id IS NULL)
             JOIN batches b ON sec.batch_id = b.id
             WHERE sa.faculty_id = ? 
               AND sa.is_active = TRUE
@@ -103,6 +104,17 @@ export const getMarks = async (req: Request, res: Response) => {
 
         // 4. Fetch Students and Left Join Marks
         console.log('[getMarks] Fetching students with marks for:', { examId, subjectId, sectionId });
+        
+        // FIX: Strict Semester Filter
+        // Only fetch students if their batch is currently in the semester of the exam/subject
+        // Actually, we should check if the Exam's semester matches the Batch's current semester
+        // But for "Reviewing old marks", maybe we want to allow it?
+        // User Requirement: "reset... UI should be blank and new for the next semester."
+        // So, if we are in Sem 4, we should NOT see Sem 3 marks in the active entry view?
+        // Or rather, the "My Classes" dropdown already filters subjects.
+        // If I access a "Maths (Sem 3)" subject, and my batch is in Sem 4, I shouldn't see any students there to enter marks for.
+        // The student list query below drives the rows.
+        
         const [rows]: any = await connection.query(`
             SELECT 
                 u.id, u.name, u.email, sp.roll_number as rollNumber,
@@ -111,10 +123,15 @@ export const getMarks = async (req: Request, res: Response) => {
                 m.status as markStatus
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
+            JOIN sections sec ON sp.section_id = sec.id
+            JOIN batches b ON sec.batch_id = b.id
             LEFT JOIN marks m ON m.student_id = u.id AND m.exam_id = ? AND m.subject_id = ?
-            WHERE sp.section_id = ? AND u.role = 'student'
+            JOIN exams e ON e.id = ?
+            WHERE sp.section_id = ? 
+              AND u.role = 'student'
+              AND e.semester = b.current_semester -- Key: Only show students if exam sem matches batch current sem
             ORDER BY sp.roll_number ASC
-        `, [examId, subjectId, sectionId]);
+        `, [examId, subjectId, examId, sectionId]);
 
         console.log('[getMarks] Students fetched:', rows.length);
         res.json(rows);
@@ -242,6 +259,127 @@ export const getMarksByBatch = async (req: Request, res: Response) => {
     } catch (e: any) {
         console.error("Get Batch Marks Error:", e);
         res.status(500).json({ message: 'Error fetching batch marks' });
+    } finally {
+        connection.release();
+    }
+};
+
+// Get Internal Marks Calculation (Theory)
+export const getTheoryInternalMarks = async (req: Request, res: Response) => {
+    const { batchId, semester } = req.query;
+
+    if (!batchId) {
+        return res.status(400).json({ message: 'Missing required parameter: batchId' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        // 1. Fetch Students
+        const [students]: any = await connection.query(`
+            SELECT u.id, u.name, sp.roll_number 
+            FROM users u
+            JOIN student_profiles sp ON u.id = sp.user_id
+            JOIN sections sec ON sp.section_id = sec.id
+            WHERE sec.batch_id = ? AND u.role = 'student'
+            ORDER BY sp.roll_number
+        `, [batchId]);
+
+        // 2. Fetch Theory Subjects for the context (semester)
+        let subjectQuery = "SELECT id, name, code FROM subjects WHERE type = 'theory'";
+        const subjectParams: any[] = [];
+        if (semester) {
+            subjectQuery += " AND semester = ?";
+            subjectParams.push(semester);
+        }
+        const [subjects]: any = await connection.query(subjectQuery, subjectParams);
+
+        // 3. Fetch Marks (CIA 1, CIA 2, CIA 3, Model)
+        // Optimization: Fetch all marks for this batch and filter in JS
+        const [allMarks]: any = await connection.query(`
+            SELECT m.student_id, m.subject_id, m.marks_obtained, m.max_marks, e.name as exam_name
+            FROM marks m
+            JOIN exams e ON m.exam_id = e.id
+            JOIN sections sec ON m.section_id = sec.id
+            WHERE sec.batch_id = ? AND e.name IN ('CIA 1', 'CIA 2', 'CIA 3', 'Model')
+        `, [batchId]);
+
+        // 4. Fetch Assignment Stats
+        // We need: For each student+subject, count of assigned vs submitted
+        // Assignments are linked to subject_allocations -> subject
+        const [assignmentStats]: any = await connection.query(`
+            SELECT 
+                u.id as student_id,
+                s.id as subject_id,
+                COUNT(DISTINCT a.id) as total_assignments,
+                COUNT(DISTINCT asub.id) as submitted_assignments
+            FROM users u
+            JOIN student_profiles sp ON u.id = sp.user_id
+            JOIN sections sec ON sp.section_id = sec.id
+            -- Link students to assignments via their section's allocations
+            JOIN subject_allocations sa ON sa.section_id = sec.id
+            JOIN subjects s ON sa.subject_id = s.id
+            JOIN assignments a ON a.subject_allocation_id = sa.id
+            LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.student_id = u.id
+            WHERE sec.batch_id = ? AND s.type = 'theory'
+            GROUP BY u.id, s.id
+        `, [batchId]);
+
+        // 5. Aggregate Data
+        const report: any[] = [];
+
+        for (const student of students) {
+            for (const subject of subjects) {
+                const studentMarks = allMarks.filter((m: any) => m.student_id === student.id && m.subject_id === subject.id);
+                const assignStat = assignmentStats.find((a: any) => a.student_id === student.id && a.subject_id === subject.id);
+
+                // Helper to get normalized score
+                const getScore = (examName: string, maxTarget: number) => {
+                    const entry = studentMarks.find((m: any) => m.exam_name.toUpperCase() === examName.toUpperCase());
+                    if (!entry || !entry.max_marks) return 0;
+                    return (entry.marks_obtained / entry.max_marks) * maxTarget;
+                };
+
+                const cia1 = getScore('CIA 1', 10);
+                const cia2 = getScore('CIA 2', 10);
+                const cia3 = getScore('CIA 3', 10);
+                const model = getScore('Model', 5);
+
+                // Assignment Logic: (Submitted / Total) * 5
+                let assignmentScore = 0;
+                if (assignStat && assignStat.total_assignments > 0) {
+                    assignmentScore = (assignStat.submitted_assignments / assignStat.total_assignments) * 5;
+                } else if (assignStat && assignStat.total_assignments === 0) {
+                     // If no assignments given...
+                     assignmentScore = 0;
+                }
+
+                // If user meant "Assignment total is 5 and we add it", we do exactly that.
+                // If they meant something else, we can adjust.
+                
+                const total = cia1 + cia2 + cia3 + model + assignmentScore;
+
+                report.push({
+                    studentId: student.id,
+                    studentName: student.name,
+                    rollNumber: student.roll_number,
+                    subjectId: subject.id,
+                    subjectName: subject.name,
+                    subjectCode: subject.code,
+                    cia1: parseFloat(cia1.toFixed(2)),
+                    cia2: parseFloat(cia2.toFixed(2)),
+                    cia3: parseFloat(cia3.toFixed(2)),
+                    model: parseFloat(model.toFixed(2)),
+                    assignment: parseFloat(assignmentScore.toFixed(2)),
+                    total: parseFloat(total.toFixed(2)) // Should be out of 40
+                });
+            }
+        }
+
+        res.json(report);
+
+    } catch (e: any) {
+        console.error("Get Theory Internal Marks Error:", e);
+        res.status(500).json({ message: 'Error calculating internal marks' });
     } finally {
         connection.release();
     }

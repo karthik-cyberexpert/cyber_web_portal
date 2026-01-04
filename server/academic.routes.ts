@@ -38,9 +38,10 @@ router.post('/subjects/:id/faculties', authenticateToken, updateSubjectFaculties
 
 // Timetable Routes
 import { getTimetable, saveTimetableSlot } from './academic.controller.js';
-import { getMarksByBatch } from './marks.controller.js';
+import { getMarksByBatch, getTheoryInternalMarks } from './marks.controller.js';
 
 router.get('/marks/report', authenticateToken, getMarksByBatch);
+router.get('/marks/internals/theory', authenticateToken, getTheoryInternalMarks);
 
 console.log('Registering Timetable Routes');
 router.get('/timetable', authenticateToken, (req, res, next) => {

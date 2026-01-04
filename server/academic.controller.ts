@@ -222,11 +222,21 @@ export const deleteSection = async (req: Request, res: Response) => {
 
 // Get All Subjects with Faculties (Simple "Master" List)
 export const getSubjects = async (req: Request, res: Response) => {
+  const { semester } = req.query; // Add semester filter
+
   try {
+    let query = `SELECT * FROM subjects`;
+    const params: any[] = [];
+
+    if (semester) {
+        query += ` WHERE semester = ?`;
+        params.push(semester);
+    }
+    
+    query += ` ORDER BY semester ASC, code ASC`;
+
     // Fetch subjects
-    const [subjects]: any = await pool.query(`
-      SELECT * FROM subjects ORDER BY semester ASC, code ASC
-    `);
+    const [subjects]: any = await pool.query(query, params);
 
     // Fetch allocations (faculties assigned to subjects)
     // We assume allocations with NULL section_id are "General" assignments for this view
@@ -238,6 +248,7 @@ export const getSubjects = async (req: Request, res: Response) => {
     `);
 
     // Merge allocations into subjects
+    // Optimization: If semester is filtered, we could filter allocations too, but this is okay for now
     const subjectsWithFaculties = subjects.map((sub: any) => {
       const subAllocations = allocations.filter((a: any) => a.subject_id === sub.id);
       return {
@@ -367,7 +378,9 @@ export const getTimetable = async (req: Request, res: Response) => {
       LEFT JOIN users u ON sa.faculty_id = u.id
       LEFT JOIN sections sec ON ts.section_id = sec.id
       LEFT JOIN batches b ON sec.batch_id = b.id
-      WHERE 1=1
+      WHERE 1=1 
+      AND s.semester = b.current_semester
+      AND sa.is_active = TRUE
     `;
     const params: any[] = [];
 
@@ -375,11 +388,21 @@ export const getTimetable = async (req: Request, res: Response) => {
       query += ' AND sec.batch_id = ? AND ts.section_id = ?';
       params.push(batchId, sectionId);
     } else if (facultyId) {
+      // For faculty, we want to see their active slots for current semesters
       query += ' AND sa.faculty_id = ?';
       params.push(facultyId);
     }
 
+    console.log('=== GET TIMETABLE DEBUG ===');
+    console.log('Query Params:', { batchId, sectionId, facultyId });
+    console.log('SQL Params:', params);
+
     const [rows]: any = await pool.query(query, params);
+    
+    console.log('Rows Returned:', rows.length);
+    if (rows.length > 0) {
+      console.log('Sample Row:', JSON.stringify(rows[0], null, 2));
+    }
 
     // Transform to frontend format if needed (TimetableSlot interface)
     const formatted = rows.map((r: any) => ({

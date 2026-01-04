@@ -40,14 +40,23 @@ export const getCirculars = async (req: Request | any, res: Response) => {
             // See circulars for Students OR All
             // Filter by batch AND section
             
-            // First get the student's batch_id and section_id
-            const [studentProfile]: any = await pool.query(
-                'SELECT batch_id, section_id FROM student_profiles WHERE user_id = ?',
-                [userId]
-            );
+            // First get the student's batch_id, section_id, AND semester start date
+            const [studentProfile]: any = await pool.query(`
+                SELECT sp.batch_id, sp.section_id, b.semester_start_date 
+                FROM student_profiles sp
+                LEFT JOIN batches b ON sp.batch_id = b.id
+                WHERE sp.user_id = ?
+            `, [userId]);
 
             const batchId = studentProfile[0]?.batch_id;
             const sectionId = studentProfile[0]?.section_id;
+            const semesterStartDate = studentProfile[0]?.semester_start_date;
+
+            // Only show circulars created AFTER the current semester started
+            if (semesterStartDate) {
+                query += ` AND c.created_at >= ?`;
+                params.push(semesterStartDate);
+            }
 
             if (batchId && sectionId) {
                 // Show circulars that are:

@@ -22,7 +22,8 @@ export const getStudentNotes = async (req: Request | any, res: Response) => {
 
         const sectionId = students[0].section_id;
 
-        // Fetch notes - either for specific section or all published notes accessible to students
+        // Fetch notes - filter by current semester
+        // FIX: Strict Semester Filter
         const [notes]: any = await pool.query(
             `SELECT 
                 n.id,
@@ -39,7 +40,11 @@ export const getStudentNotes = async (req: Request | any, res: Response) => {
              FROM notes n
              JOIN subjects s ON n.subject_id = s.id
              LEFT JOIN users u ON n.uploaded_by = u.id
-             WHERE (n.section_id = ? OR n.section_id IS NULL) AND n.is_published = 1
+             LEFT JOIN sections sec ON n.section_id = sec.id
+             LEFT JOIN batches b ON sec.batch_id = b.id
+             WHERE (n.section_id = ? OR n.section_id IS NULL) 
+               AND n.is_published = 1
+               AND (b.id IS NULL OR s.semester = b.current_semester)
              ORDER BY n.created_at DESC`,
             [sectionId]
         );

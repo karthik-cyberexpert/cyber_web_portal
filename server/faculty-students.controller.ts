@@ -25,6 +25,8 @@ export const getStudentsByAllocation = async (req: Request | any, res: Response)
         const subjectId = allocation[0].subject_id;
 
         // Get all students in this section with their attendance
+        // FIX: Strict Semester Filter. Only show students if their Batch's current_semester
+        // matches the Subject's semester.
         const query = `
             SELECT 
                 u.id,
@@ -34,11 +36,15 @@ export const getStudentsByAllocation = async (req: Request | any, res: Response)
                 0 as attendance_percentage
             FROM student_profiles sp
             JOIN users u ON sp.user_id = u.id
+            JOIN sections sec ON sp.section_id = sec.id
+            JOIN batches b ON sec.batch_id = b.id
+            JOIN subjects s ON s.id = ?
             WHERE sp.section_id = ?
+              AND s.semester = b.current_semester -- Key: Only show if semester matches
             ORDER BY sp.roll_number
         `;
 
-        const [students]: any = await pool.query(query, [sectionId]);
+        const [students]: any = await pool.query(query, [subjectId, sectionId]);
 
         console.log('=== FACULTY STUDENTS DEBUG ===');
         console.log('Allocation ID:', allocationId);

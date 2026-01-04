@@ -233,7 +233,11 @@ export const getTutorTimetable = async (req: Request | any, res: Response) => {
             JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
             JOIN subjects s ON sa.subject_id = s.id
             JOIN users u ON sa.faculty_id = u.id
+            JOIN sections sec ON ts.section_id = sec.id
+            JOIN batches b ON sec.batch_id = b.id
             WHERE ts.section_id = ?
+              AND sa.is_active = TRUE 
+              AND s.semester = b.current_semester -- Key: Sync with Batch Semester
             ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), ts.period_number
         `, [section_id]);
 

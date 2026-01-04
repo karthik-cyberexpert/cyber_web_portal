@@ -48,6 +48,7 @@ interface Subject {
   name: string;
   credits: number;
   semester: number;
+  type: 'theory' | 'lab' | 'integrated';
   faculties: { id: number; name: string; avatar?: string }[];
 }
 
@@ -82,7 +83,8 @@ export default function ManageSubjects() {
     code: '',
     name: '',
     credits: '3',
-    semester: '1'
+    semester: '1',
+    type: 'theory'
   });
 
   // Fetch Data
@@ -120,7 +122,7 @@ export default function ManageSubjects() {
   }, [token]);
 
   const handleAddClick = () => {
-    setFormData({ code: '', name: '', credits: '3', semester: '1' });
+    setFormData({ code: '', name: '', credits: '3', semester: '1', type: 'theory' });
     setIsAddOpen(true);
   };
 
@@ -130,7 +132,8 @@ export default function ManageSubjects() {
       code: subject.code,
       name: subject.name,
       credits: subject.credits.toString(),
-      semester: subject.semester.toString()
+      semester: subject.semester.toString(),
+      type: subject.type || 'theory'
     });
     setIsEditOpen(true);
   };
@@ -176,7 +179,7 @@ export default function ManageSubjects() {
                 name: formData.name,
                 credits: parseInt(formData.credits),
                 semester: parseInt(formData.semester),
-                type: 'theory' // Default for now
+                type: formData.type
             })
         });
 
@@ -199,7 +202,7 @@ export default function ManageSubjects() {
      if (!selectedSubject) return;
      setIsSaving(true);
      try {
-         const res = await fetch(`http://localhost:3007/api/academic/subjects/${selectedSubject.id}`, {
+         const res = await fetch(`${API_BASE_URL}/academic/subjects/${selectedSubject.id}`, {
              method: 'DELETE',
              headers: { Authorization: `Bearer ${token}` }
          });
@@ -382,6 +385,7 @@ export default function ManageSubjects() {
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="w-[80px]">S.No</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Subject Code</TableHead>
               <TableHead>Subject Name</TableHead>
               <TableHead>Credits</TableHead>
@@ -392,7 +396,7 @@ export default function ManageSubjects() {
           <TableBody>
             {isLoading ? (
                <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Loading subjects...
                 </TableCell>
               </TableRow>
@@ -400,6 +404,14 @@ export default function ManageSubjects() {
               filteredSubjects.map((subject, index) => (
                 <TableRow key={subject.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      subject.type === 'lab' ? 'secondary' : 
+                      subject.type === 'integrated' ? 'default' : 'outline'
+                    } className="text-[10px] uppercase tracking-wider">
+                      {subject.type || 'theory'}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono">
                       {subject.code}
@@ -459,7 +471,7 @@ export default function ManageSubjects() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                    <div className="flex flex-col items-center justify-center gap-2">
                      <BookOpen className="w-8 h-8 opacity-20" />
                      <p>No subjects found. Add a new subject to get started.</p>
@@ -492,6 +504,21 @@ export default function ManageSubjects() {
                 className="col-span-3"
                 placeholder="e.g. CS101"
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="theory">Theory</SelectItem>
+                  <SelectItem value="lab">Lab</SelectItem>
+                  <SelectItem value="integrated">Integrated</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">

@@ -10,6 +10,7 @@ export const getFacultyNotes = async (req: Request | any, res: Response) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     try {
+        // FIX: Strict Semester Filter - Only show notes for current semester subjects
         const [rows]: any = await pool.query(`
             SELECT 
                 n.id, n.title, n.description, n.type, n.file_type, n.file_url, n.file_size,
@@ -22,6 +23,7 @@ export const getFacultyNotes = async (req: Request | any, res: Response) => {
             LEFT JOIN sections sec ON n.section_id = sec.id
             LEFT JOIN batches b ON sec.batch_id = b.id
             WHERE n.uploaded_by = ?
+              AND (b.id IS NULL OR s.semester = b.current_semester)
             ORDER BY n.created_at DESC
         `, [userId]);
 
