@@ -120,25 +120,33 @@ export default function AdminDashboard() {
             });
             if (trendResponse.ok) {
               const trendData = await trendResponse.json();
-              // Transform trend data for the chart
-              const chartData = trendData.trend?.map((t: any) => ({
-                month: t.month,
-                students: t.leaves || 0, // Using leaves as primary
-                faculty: t.ods || 0 // Using ODs as secondary
-              })) || [];
-              setDepartmentStats(chartData.length > 0 ? chartData : [
-                { month: 'Jan', students: 0, faculty: 0 },
-                { month: 'Feb', students: 0, faculty: 0 },
-                { month: 'Mar', students: 0, faculty: 0 }
-              ]);
+              const chartData = trendData.trend || [];
+              const batches = trendData.batches || [];
+
+              // Aggregate data by Batch for the new view (X-Axis = Batch)
+              const aggregatedData = batches.map((batch: any) => {
+                  const safeName = batch.name.replace(/[^a-zA-Z0-9]/g, '_');
+                  
+                  // Sum up leaves and ODs across all months for this batch
+                  const totalLeaves = chartData.reduce((sum: number, month: any) => sum + (month[`${safeName}_leave`] || 0), 0);
+                  const totalODs = chartData.reduce((sum: number, month: any) => sum + (month[`${safeName}_od`] || 0), 0);
+
+                  return {
+                      name: batch.name, // Display Name
+                      leave: totalLeaves,
+                      od: totalODs
+                  };
+              });
               
-              // Set batch distribution from ALL batches with real student counts
+              setDepartmentStats(aggregatedData);
+              
+              // Set batch distribution for Pie Chart (keep existing logic)
               const colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--info))', 'hsl(var(--destructive))'];
-              const batchData = trendData.batches?.map((b: any, i: number) => ({
+              const batchData = batches.map((b: any, i: number) => ({
                 name: b.name,
-                value: b.studentCount || 0,  // Use actual student count
+                value: b.studentCount || 0,
                 fill: colors[i % colors.length]
-              })) || [];
+              }));
               setBatchDistribution(batchData);
             }
           } catch (trendError) {
@@ -283,8 +291,8 @@ export default function AdminDashboard() {
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <div>
-              <h3 className="text-lg font-semibold">Attendance Trend (Batch-wise)</h3>
-              <p className="text-sm text-muted-foreground">Leave & OD Days by Batch (Active Semesters)</p>
+              <h3 className="text-lg font-semibold">Attendance Overview (Batch-wise)</h3>
+              <p className="text-sm text-muted-foreground">Combined Leave & OD Days by Batch</p>
             </div>
             <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
               // In a real application, this would export the report
@@ -295,7 +303,7 @@ export default function AdminDashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={departmentStats}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip
                   contentStyle={{
@@ -304,47 +312,32 @@ export default function AdminDashboard() {
                     borderRadius: '8px',
                   }}
                 />
-                {batchDistribution.map((batch, index) => (
-                  <Bar 
-                    key={batch.name} 
-                    dataKey={batch.name.replace(/[^a-zA-Z0-9]/g, '_')} 
-                    fill={batch.fill} 
-                    radius={[4, 4, 0, 0]} 
-                    name={batch.name}
-                  />
-                ))}
-                {batchDistribution.length === 0 && (
-                  <>
-                    <Bar dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Leave Days" />
-                    <Bar dataKey="faculty" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="OD Days" />
-                  </>
-                )}
+                <Bar 
+                  dataKey="leave" 
+                  fill="#22c55e"  // Green-500
+                  radius={[4, 4, 0, 0]} 
+                  name="Leave Days"
+                />
+                <Bar 
+                  dataKey="od" 
+                  fill="#3b82f6"  // Blue-500
+                  radius={[4, 4, 0, 0]} 
+                  name="OD Days"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
           
-          {/* Batch Legend */}
+          {/* Legend */}
           <div className="flex flex-wrap gap-4 justify-center mt-4 pt-4 border-t border-border">
-            {batchDistribution.length > 0 ? batchDistribution.map((batch, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: batch.fill }}
-                />
-                <span className="text-xs sm:text-sm text-muted-foreground">{batch.name}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: '#22c55e' }} />
+                <span className="text-xs sm:text-sm text-muted-foreground">Leave Days</span>
               </div>
-            )) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: 'hsl(var(--primary))' }} />
-                  <span className="text-xs sm:text-sm text-muted-foreground">Leave Days</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: 'hsl(var(--accent))' }} />
-                  <span className="text-xs sm:text-sm text-muted-foreground">OD Days</span>
-                </div>
-              </>
-            )}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: '#3b82f6' }} />
+                <span className="text-xs sm:text-sm text-muted-foreground">OD Days</span>
+              </div>
           </div>
         </motion.div>
 

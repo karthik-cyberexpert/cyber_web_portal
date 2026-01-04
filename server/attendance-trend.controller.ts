@@ -239,21 +239,24 @@ export const getAdminTrend = async (req: Request | any, res: Response) => {
             return res.json({ batches: activeBatches, trend: [] });
         }
 
-        // Aggregate leave and OD data across all active batches
+        // Aggregate leave and OD data across all active batches Grouped by Batch
         const batchIds = activeBatches.map((b: any) => b.id);
         
+        // Fix: Use separate queries or strictly compatible GROUP BY
         const [leaveData]: any = await pool.query(`
             SELECT 
                 DATE_FORMAT(lr.start_date, '%b') as month,
                 MONTH(lr.start_date) as month_num,
+                b.name as batch_name,
                 COUNT(*) as count
             FROM leave_requests lr
             JOIN student_profiles sp ON lr.user_id = sp.user_id
+            JOIN batches b ON sp.batch_id = b.id
             WHERE sp.batch_id IN (?)
               AND lr.status IN ('approved', 'forwarded')
               AND lr.start_date >= ?
               AND lr.start_date <= CURDATE()
-            GROUP BY month, month_num
+            GROUP BY month, month_num, b.name
             ORDER BY month_num
         `, [batchIds, earliestStart]);
 
@@ -261,14 +264,16 @@ export const getAdminTrend = async (req: Request | any, res: Response) => {
             SELECT 
                 DATE_FORMAT(od.start_date, '%b') as month,
                 MONTH(od.start_date) as month_num,
+                b.name as batch_name,
                 COUNT(*) as count
             FROM od_requests od
             JOIN student_profiles sp ON od.user_id = sp.user_id
+            JOIN batches b ON sp.batch_id = b.id
             WHERE sp.batch_id IN (?)
               AND od.status IN ('approved', 'forwarded')
               AND od.start_date >= ?
               AND od.start_date <= CURDATE()
-            GROUP BY month, month_num
+            GROUP BY month, month_num, b.name
             ORDER BY month_num
         `, [batchIds, earliestStart]);
 
@@ -280,14 +285,30 @@ export const getAdminTrend = async (req: Request | any, res: Response) => {
             const monthName = current.toLocaleDateString('en-US', { month: 'short' });
             const monthNum = current.getMonth() + 1;
             
-            const leaveEntry = leaveData.find((l: any) => l.month_num === monthNum);
-            const odEntry = odData.find((o: any) => o.month_num === monthNum);
-            
-            months.push({
+            // Base object
+            const monthObj: any = {
                 month: monthName,
-                leaves: leaveEntry?.count || 0,
-                ods: odEntry?.count || 0
+                month_num: monthNum
+            };
+
+            // For each active batch, calculate separate totals for leaves and ods
+            activeBatches.forEach((batch: any) => {
+                const batchKey = batch.name.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize for frontend
+                
+                const lCount = leaveData
+                    .filter((l: any) => l.month_num === monthNum && l.batch_name === batch.name)
+                    .reduce((sum: number, item: any) => sum + item.count, 0);
+                    
+                const oCount = odData
+                    .filter((o: any) => o.month_num === monthNum && o.batch_name === batch.name)
+                    .reduce((sum: number, item: any) => sum + item.count, 0);
+
+                // Separate keys
+                monthObj[`${batchKey}_leave`] = lCount;
+                monthObj[`${batchKey}_od`] = oCount;
             });
+            
+            months.push(monthObj);
             
             current.setMonth(current.getMonth() + 1);
         }
