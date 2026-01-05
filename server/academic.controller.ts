@@ -270,8 +270,8 @@ export const createSubject = async (req: Request, res: Response) => {
 
   try {
     const [result]: any = await pool.execute(
-      'INSERT INTO subjects (name, code, credits, semester, type) VALUES (?, ?, ?, ?, ?)',
-      [name, code, credits, semester, type || 'theory']
+      'INSERT INTO subjects (name, code, credits, semester, type, department_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, code, credits, semester, type || 'theory', 1]
     );
     res.status(201).json({ id: result.insertId, message: 'Subject created successfully' });
   } catch (error: any) {
