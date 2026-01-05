@@ -111,8 +111,8 @@ export const createFaculty = async (req: Request, res: Response) => {
         // User complaint was mostly about "admin updated not reflecting", likely department/timetable.
         
         await connection.execute(
-            'INSERT INTO faculty_profiles (user_id, employee_id, qualification, specialization, experience_years, joining_date, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [userId, validEmployeeId, qualification, specialization, validExperience, validDate, departmentId]
+            'INSERT INTO faculty_profiles (user_id, name, employee_id, qualification, specialization, experience_years, joining_date, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [userId, name, validEmployeeId, qualification, specialization, validExperience, validDate, departmentId]
         );
         
         // Update user address
@@ -167,8 +167,8 @@ export const updateFaculty = async (req: Request, res: Response) => {
         // We only update department_id for now.
         // If department is provided, we update it.
         
-        let query = 'UPDATE faculty_profiles SET employee_id = ?, qualification = ?, specialization = ?, experience_years = ?, joining_date = ?';
-        const params = [employeeId, qualification, specialization, validExperience, validDate];
+        let query = 'UPDATE faculty_profiles SET name = ?, employee_id = ?, qualification = ?, specialization = ?, experience_years = ?, joining_date = ?';
+        const params = [name, employeeId, qualification, specialization, validExperience, validDate];
 
         if (departmentId !== null) {
             query += ', department_id = ?';

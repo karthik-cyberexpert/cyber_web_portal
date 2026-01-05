@@ -67,9 +67,9 @@ export const createStudent = async (req: Request, res: Response) => {
     // 2. Create Profile
     await connection.execute(
       `INSERT INTO student_profiles (
-        user_id, roll_number, register_number, batch_id, section_id, dob, gender
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, roll_number, register_number, batch_id, section_id, dob, gender]
+        user_id, name, roll_number, register_number, batch_id, section_id, dob, gender
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, name, roll_number, register_number, batch_id, section_id, dob, gender]
     );
 
     await connection.commit();
@@ -144,10 +144,11 @@ export const updateStudent = async (req: Request, res: Response) => {
     // Use INSERT ... ON DUPLICATE KEY UPDATE to handle missing profile rows
     await connection.execute(
       `INSERT INTO student_profiles (
-         user_id, roll_number, register_number, batch_id, section_id, 
+         user_id, name, roll_number, register_number, batch_id, section_id, 
          dob, gender, guardian_name, guardian_phone
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
+         name = VALUES(name),
          roll_number = VALUES(roll_number),
          register_number = VALUES(register_number),
          batch_id = VALUES(batch_id),
@@ -157,7 +158,7 @@ export const updateStudent = async (req: Request, res: Response) => {
          guardian_name = VALUES(guardian_name),
          guardian_phone = VALUES(guardian_phone)`,
       [
-        id, roll_number, register_number, s_batch_id, s_section_id, 
+        id, name, roll_number, register_number, s_batch_id, s_section_id, 
         sanitizedDob, s_gender, s_guardian_name, s_guardian_phone
       ]
     );
