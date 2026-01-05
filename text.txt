@@ -1,17 +1,1 @@
-ManageSubjects.tsx:171  POST http://192.168.46.90:3007/api/academic/subjects 500 (Internal Server Error)
-handleSaveSubject @ ManageSubjects.tsx:171
-callCallback2 @ chunk-T2SWDQEL.js?v=27648452:3674
-invokeGuardedCallbackDev @ chunk-T2SWDQEL.js?v=27648452:3699
-invokeGuardedCallback @ chunk-T2SWDQEL.js?v=27648452:3733
-invokeGuardedCallbackAndCatchFirstError @ chunk-T2SWDQEL.js?v=27648452:3736
-executeDispatch @ chunk-T2SWDQEL.js?v=27648452:7014
-processDispatchQueueItemsInOrder @ chunk-T2SWDQEL.js?v=27648452:7034
-processDispatchQueue @ chunk-T2SWDQEL.js?v=27648452:7043
-dispatchEventsForPlugins @ chunk-T2SWDQEL.js?v=27648452:7051
-(anonymous) @ chunk-T2SWDQEL.js?v=27648452:7174
-batchedUpdates$1 @ chunk-T2SWDQEL.js?v=27648452:18913
-batchedUpdates @ chunk-T2SWDQEL.js?v=27648452:3579
-dispatchEventForPluginEventSystem @ chunk-T2SWDQEL.js?v=27648452:7173
-dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-T2SWDQEL.js?v=27648452:5478
-dispatchEvent @ chunk-T2SWDQEL.js?v=27648452:5472
-dispatchDiscreteEvent @ chunk-T2SWDQEL.js?v=27648452:5449
+:3007/api/academic/subjects/1/faculties:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
