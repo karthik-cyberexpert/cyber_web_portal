@@ -57,10 +57,10 @@ export const createStudent = async (req: Request, res: Response) => {
     await connection.beginTransaction();
 
     // 1. Create User
-    const hashedPassword = await bcrypt.hash(password || 'student123', 10);
+    const hashedPassword = await bcrypt.hash(password || 'password123', 10);
     const [userResult]: any = await connection.execute(
-      'INSERT INTO users (email, name, password_hash, role, phone) VALUES (?, ?, ?, ?, ?)',
-      [email, name, hashedPassword, 'student', phone]
+      'INSERT INTO users (email, name, password_hash, role, phone, password_changed) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, name, hashedPassword, 'student', phone, false]
     );
     const userId = userResult.insertId;
 

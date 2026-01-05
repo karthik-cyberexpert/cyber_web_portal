@@ -80,8 +80,8 @@ export const createFaculty = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
         
         const [userResult]: any = await connection.execute(
-            'INSERT INTO users (name, email, password_hash, role, phone, avatar_url) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, 'faculty', phone, `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`]
+            'INSERT INTO users (name, email, password_hash, role, phone, avatar_url, password_changed) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, 'faculty', phone, `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`, false]
         );
         const userId = userResult.insertId;
 
