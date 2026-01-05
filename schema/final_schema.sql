@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS `feedback_forms` (
 CREATE TABLE IF NOT EXISTS `feedback_questions` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `feedback_form_id` INT NOT NULL,
-    `question_text TEXT NOT NULL,
+    `question_text` TEXT NOT NULL,
     `question_type` ENUM('mcq', 'text') NOT NULL DEFAULT 'text',
     `options` JSON DEFAULT NULL,
     `order_index` INT DEFAULT 0,
