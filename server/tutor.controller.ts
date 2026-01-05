@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 import { RowDataPacket } from 'mysql2';
+import { getStudentAttendancePercentage } from './attendance.utils.js';
 
 // Get All Tutors (Assignments)
 export const getAllTutors = async (req: Request, res: Response) => {
@@ -166,7 +167,7 @@ export const getTutorClass = async (req: Request | any, res: Response) => {
         const assignment = assignments[0];
 
         // 2. Fetch Students in that Batch & Section
-        const [students]: any = await pool.query(`
+        const [rows]: any = await pool.query(`
              SELECT 
                 u.id, 
                 u.name, 
@@ -175,13 +176,30 @@ export const getTutorClass = async (req: Request | any, res: Response) => {
                 u.avatar_url as avatar,
                 sp.roll_number as rollNumber,
                 sp.register_number as registerNumber,
-                92 as attendance, -- Placeholder until attendance table
-                8.0 as cgpa       -- Placeholder
+                sp.cgpa
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
             WHERE sp.batch_id = ? AND sp.section_id = ? AND u.role = 'student'
             ORDER BY sp.roll_number ASC
         `, [assignment.batch_id, assignment.section_id]);
+
+        // Calculate attendance and certifications for each student
+        const studentsWithData = await Promise.all(
+            rows.map(async (student: any) => {
+                const attendanceData = await getStudentAttendancePercentage(student.id);
+                // Count approved certifications
+                const [certRows]: any = await pool.query(
+                    'SELECT COUNT(*) as certCount FROM eca_achievements WHERE student_id = ? AND status = "Approved"',
+                    [student.id]
+                );
+                return {
+                    ...student,
+                    attendance: attendanceData.attendancePercentage,
+                    cgpa: Number(student.cgpa || 0),
+                    certifications: certRows[0].certCount || 0
+                };
+            })
+        );
 
         res.json({
             hasAssignment: true,
@@ -189,7 +207,7 @@ export const getTutorClass = async (req: Request | any, res: Response) => {
             section: assignment.section_name,
             batchId: assignment.batch_id,
             sectionId: assignment.section_id,
-            students: students
+            students: studentsWithData
         });
 
     } catch (error) {

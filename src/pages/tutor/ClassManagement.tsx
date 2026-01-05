@@ -70,10 +70,11 @@ export default function ClassManagement() {
                     if (myStudents.length > 0) {
                         const totalAttendance = myStudents.reduce((sum: number, s: any) => sum + (s.attendance || 0), 0);
                         const totalCGPA = myStudents.reduce((sum: number, s: any) => sum + (s.cgpa || 0), 0);
+                        const totalCerts = myStudents.reduce((sum: number, s: any) => sum + (s.certifications || 0), 0);
                         setStats({
                             avgAttendance: Math.round(totalAttendance / myStudents.length),
                             avgCGPA: Number((totalCGPA / myStudents.length).toFixed(2)),
-                            certifications: Math.floor(myStudents.length * 1.5) 
+                            certifications: totalCerts
                         });
                     }
                 } else {
