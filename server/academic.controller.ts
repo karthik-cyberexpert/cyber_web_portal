@@ -335,13 +335,13 @@ export const updateSubjectFaculties = async (req: Request, res: Response) => {
 
     // 2. Insert new allocations
     if (facultyIds.length > 0) {
-      const values = facultyIds.map((fid: number) => [id, fid, null]); // null for section_id
+      const values = facultyIds.map((fid: number) => [id, fid, null, 1]); // subject_id, faculty_id, section_id, academic_year_id
       // Construct bulk insert query
-      const placeholders = facultyIds.map(() => '(?, ?, ?)').join(', ');
+      const placeholders = facultyIds.map(() => '(?, ?, ?, ?)').join(', ');
       const flatValues = values.flat();
       
       await connection.execute(
-        `INSERT INTO subject_allocations (subject_id, faculty_id, section_id) VALUES ${placeholders}`,
+        `INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES ${placeholders}`,
         flatValues
       );
     }

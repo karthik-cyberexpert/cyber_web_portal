@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS `subject_allocations` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `subject_id` INT NOT NULL,
     `faculty_id` INT NOT NULL,
-    `section_id` INT NOT NULL,
+    `section_id` INT,
     `academic_year_id` INT NOT NULL,
     `is_active` BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE,
