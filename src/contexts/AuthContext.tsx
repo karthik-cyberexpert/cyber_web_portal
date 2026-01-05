@@ -100,6 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setRequiresPasswordChangePersistent = (value: boolean) => {
+    setRequiresPasswordChange(value);
+    if (authState.isAuthenticated) {
+      const updatedState = { ...authState, requiresPasswordChange: value };
+      setStoredAuth(updatedState);
+      setAuthState(updatedState);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -111,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         updateUser,
-        setRequiresPasswordChange,
+        setRequiresPasswordChange: setRequiresPasswordChangePersistent,
       }}
     >
       {children}

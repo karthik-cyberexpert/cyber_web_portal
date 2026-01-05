@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Lock, Eye, EyeOff, Shield, GraduationCap, Loader2, ChevronRight, Sun, Moon } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3007/api';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export default function SetPassword() {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ export default function SetPassword() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/set-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/set-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
