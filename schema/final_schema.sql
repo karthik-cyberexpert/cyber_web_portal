@@ -72,6 +72,19 @@ CREATE TABLE IF NOT EXISTS `sections` (
     FOREIGN KEY (`class_incharge_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS `tutor_assignments` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `faculty_id` INT NOT NULL,
+    `section_id` INT NOT NULL,
+    `batch_id` INT NOT NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `assigned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `revoked_at` TIMESTAMP NULL,
+    FOREIGN KEY (`faculty_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`section_id`) REFERENCES `sections`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`batch_id`) REFERENCES `batches`(`id`) ON DELETE CASCADE
+);
+
 -- -----------------------------------------------------------------------------
 -- 3. Profiles
 -- -----------------------------------------------------------------------------
