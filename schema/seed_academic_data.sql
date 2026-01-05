@@ -4,7 +4,6 @@
 USE Cyber_Dept_Portal;
 
 -- 1. Insert Default Department (Required for Batches and Faculty)
--- The frontend (BatchesClasses.tsx) hardcodes department_id = 1
 INSERT INTO `departments` (`id`, `name`, `code`) 
 VALUES (1, 'Cyber Security', 'CSS')
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `code` = VALUES(`code`);

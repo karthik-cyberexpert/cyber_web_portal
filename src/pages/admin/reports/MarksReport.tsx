@@ -71,7 +71,54 @@ export default function MarksReport() {
         }
     }, [user]);
 
-    // ... (keep fetchBatches, fetchSections, fetchSubjects same)
+    const fetchBatches = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/academic/batches`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setBatches(data);
+                if (data.length > 0 && !selectedBatch) {
+                    setSelectedBatch(data[0].id.toString());
+                    fetchSections(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch batches", error);
+        }
+    };
+
+    const fetchSections = async (batchId: number) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSections(data);
+                if (data.length > 0 && !selectedSection) {
+                    setSelectedSection(data[0].id.toString());
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch sections", error);
+        }
+    };
+
+    const fetchSubjects = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/academic/subjects?semester=${selectedSemester}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSubjects(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch subjects", error);
+        }
+    };
 
     const fetchReport = async () => {
         if (!selectedSemester) return;
@@ -172,7 +219,32 @@ export default function MarksReport() {
         fetchReport();
     }, [selectedBatch, selectedSection, selectedSemester, searchQuery, reportType]);
     
-    // ... handleExport ...
+    const handleExport = () => {
+        if (reportData.length === 0) {
+            toast.error("No data to export");
+            return;
+        }
+
+        const exportData = reportData.map((student, index) => {
+            const row: any = {
+                'S.No': index + 1,
+                'Name': student.name,
+                'Register No': student.rollNo,
+            };
+
+            subjects.filter(s => selectedSubject === 'all' || selectedSubject === s.code).forEach(sub => {
+                row[`${sub.code} (${sub.name})`] = student.marks[sub.code] || 0;
+            });
+
+            return row;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Marks Report");
+        XLSX.writeFile(wb, `Marks_Report_Batch_${selectedBatch}_Sem_${selectedSemester}.xlsx`);
+        toast.success("Report exported successfully");
+    };
 
     return (
         <div className="space-y-6">

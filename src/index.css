@@ -387,6 +387,35 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
   }
+
+  /* Date Picker Customization - Minimal & Modern */
+  .rdp-dropdown_month label, 
+  .rdp-dropdown_year label { 
+    display: none !important; 
+  }
+
+  .rdp-vhidden {
+    display: none !important;
+  }
+
+  .rdp-dropdown {
+    @apply hover:bg-muted/50 p-1 px-2 rounded-lg transition-all border-none font-semibold cursor-pointer;
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+    color-scheme: dark;
+  }
+
+  .rdp-dropdown option {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Refined Selection */
+  .rdp-day_selected {
+    @apply glow-accent rounded-xl !important;
+    background: var(--gradient-accent) !important;
+    color: white !important;
+  }
 }
 
 @layer utilities {

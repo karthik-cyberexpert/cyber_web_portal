@@ -65,11 +65,16 @@ export const createStudent = async (req: Request, res: Response) => {
     const userId = userResult.insertId;
 
     // 2. Create Profile
+    const validDob = dob || null;
+    const validGender = gender || null;
+    const validBatchId = batch_id || null;
+    const validSectionId = section_id || null;
+
     await connection.execute(
       `INSERT INTO student_profiles (
         user_id, name, roll_number, register_number, batch_id, section_id, dob, gender
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, name, roll_number, register_number, batch_id, section_id, dob, gender]
+      [userId, name, roll_number, register_number, validBatchId, validSectionId, validDob, validGender]
     );
 
     await connection.commit();

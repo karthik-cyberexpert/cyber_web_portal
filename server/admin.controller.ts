@@ -96,23 +96,18 @@ export const createFaculty = async (req: Request, res: Response) => {
                  if (deptParams.length > 0) departmentId = deptParams[0].id;
             }
         }
-        // Default to CSE (1) if not found? No, keep null.
+
 
         // 3. Create Profile
         const validDate = dateOfJoining ? dateOfJoining : null;
         const validExperience = experience || 0;
         const validEmployeeId = employeeId || `EMP${String(userId).padStart(3, '0')}`;
+        const validQualification = qualification || null;
+        const validSpecialization = specialization || null;
 
-        // Attempt to insert designation if column exists (try/catch implied or loose check)
-        // Since we cannot verify schema easily, we will try to include it.
-        // IF column missing, this will fail.
-        // SAFE APPROACH: For now, we will NOT insert designation to avoid 500 Error if migration failed.
-        // We will only insert department_id. 
-        // User complaint was mostly about "admin updated not reflecting", likely department/timetable.
-        
         await connection.execute(
             'INSERT INTO faculty_profiles (user_id, name, employee_id, qualification, specialization, experience_years, joining_date, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [userId, name, validEmployeeId, qualification, specialization, validExperience, validDate, departmentId]
+            [userId, name, validEmployeeId, validQualification, validSpecialization, validExperience, validDate, departmentId]
         );
         
         // Update user address
@@ -163,10 +158,6 @@ export const updateFaculty = async (req: Request, res: Response) => {
              }
         }
 
-        // Update Profile
-        // We only update department_id for now.
-        // If department is provided, we update it.
-        
         let query = 'UPDATE faculty_profiles SET name = ?, employee_id = ?, qualification = ?, specialization = ?, experience_years = ?, joining_date = ?';
         const params = [name, employeeId, qualification, specialization, validExperience, validDate];
 

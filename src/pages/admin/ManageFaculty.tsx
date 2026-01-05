@@ -141,7 +141,7 @@ export default function ManageFaculty() {
         f.employeeId.toLowerCase().includes(term) ||
         f.email.toLowerCase().includes(term) ||
         f.specialization.toLowerCase().includes(term)
-      );
+    );
     }
 
     if (statusFilter !== 'all') {
@@ -698,15 +698,6 @@ export default function ManageFaculty() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="designation">Designation</Label>
-              <Input
-                id="designation"
-                value={formData.designation || ''}
-                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                placeholder="e.g., Assistant Professor"
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
               <Select 
                   value={formData.department} 
@@ -719,6 +710,15 @@ export default function ManageFaculty() {
                       <SelectItem value="Electronics">Electronics</SelectItem>
                   </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="designation">Designation</Label>
+              <Input
+                id="designation"
+                value={formData.designation || ''}
+                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                placeholder="e.g., Assistant Professor"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="specialization">Specialization</Label>

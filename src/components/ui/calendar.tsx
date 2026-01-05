@@ -15,17 +15,17 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center px-8",
-        caption_label: "text-sm font-medium",
-        caption_dropdowns: "flex justify-center gap-1",
+        caption: "flex justify-center pt-1 relative items-center px-10",
+        caption_label: cn("text-sm font-semibold", props.captionLayout?.includes("dropdown") && "hidden"),
+        caption_dropdowns: "flex justify-center gap-3",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          buttonVariants({ variant: "ghost" }),
+          "h-8 w-8 bg-transparent p-0 opacity-60 hover:opacity-100 hover:bg-muted/50 rounded-full transition-all"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        dropdown: "rdp-dropdown bg-transparent text-sm font-medium focus:ring-0 outline-none cursor-pointer hover:text-primary transition-colors",
+        dropdown: "rdp-dropdown bg-transparent text-sm font-semibold focus:ring-0 outline-none cursor-pointer hover:text-primary transition-colors",
         dropdown_month: "rdp-dropdown_month",
         dropdown_year: "rdp-dropdown_year",
         table: "w-full border-collapse space-y-1",

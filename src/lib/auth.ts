@@ -22,6 +22,7 @@ export interface User {
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  requiresPasswordChange?: boolean;
 }
 
 // Default credentials for initial system access (should be replaced with real users)
@@ -87,7 +88,7 @@ export function getStoredAuth(): AuthState {
   } catch (error) {
     console.error('Error reading auth state:', error);
   }
-  return { user: null, isAuthenticated: false };
+  return { user: null, isAuthenticated: false, requiresPasswordChange: false };
 }
 
 export function setStoredAuth(state: AuthState): void {

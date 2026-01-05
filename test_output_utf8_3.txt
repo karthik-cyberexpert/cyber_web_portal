@@ -1,0 +1,11 @@
+﻿=== STARTING COMPREHENSIVE BACKEND TEST (RETRY) ===
+Health Check: { status: 'ok', database: 'connected' }
+Login Success!
+Batch Creation: 201 { id: 10, message: 'Batch created successfully' }
+Section Creation: 201 { id: 10, message: 'Section created successfully' }
+Faculty Creation: 500 { message: 'Error creating faculty' }
+Student Creation: 500 { message: 'Error creating student' }
+Subject Creation: 201 { id: 13, message: 'Subject created successfully' }
+Leave Request Status: 500
+Grievance Submission Status: 201
+=== TEST SUITE COMPLETED ===

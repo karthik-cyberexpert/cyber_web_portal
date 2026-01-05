@@ -11,6 +11,36 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. User Management & Authentication
 -- -----------------------------------------------------------------------------
 
+DROP TABLE IF EXISTS `feedback_answers`;
+DROP TABLE IF EXISTS `feedback_responses`;
+DROP TABLE IF EXISTS `feedback_questions`;
+DROP TABLE IF EXISTS `feedback_forms`;
+DROP TABLE IF EXISTS `lost_and_found_items`;
+DROP TABLE IF EXISTS `grievances`;
+DROP TABLE IF EXISTS `eca_achievements`;
+DROP TABLE IF EXISTS `calendar_events`;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `circulars`;
+DROP TABLE IF EXISTS `marks`;
+DROP TABLE IF EXISTS `exams`;
+DROP TABLE IF EXISTS `assignment_submissions`;
+DROP TABLE IF EXISTS `assignments`;
+DROP TABLE IF EXISTS `notes`;
+DROP TABLE IF EXISTS `od_requests`;
+DROP TABLE IF EXISTS `leave_requests`;
+DROP TABLE IF EXISTS `attendance`;
+DROP TABLE IF EXISTS `timetable_slots`;
+DROP TABLE IF EXISTS `subject_allocations`;
+DROP TABLE IF EXISTS `subjects`;
+DROP TABLE IF EXISTS `student_profiles`;
+DROP TABLE IF EXISTS `faculty_profiles`;
+DROP TABLE IF EXISTS `tutor_assignments`;
+DROP TABLE IF EXISTS `sections`;
+DROP TABLE IF EXISTS `batches`;
+DROP TABLE IF EXISTS `academic_years`;
+DROP TABLE IF EXISTS `departments`;
+DROP TABLE IF EXISTS `users`;
+
 CREATE TABLE IF NOT EXISTS `users` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(255) NOT NULL UNIQUE,
@@ -39,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`head_of_department_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS `academic_years` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -198,17 +229,19 @@ CREATE TABLE IF NOT EXISTS `attendance` (
 CREATE TABLE IF NOT EXISTS `leave_requests` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT NOT NULL,
-    `category` ENUM('Casual', 'Medical', 'Sick', 'Emergency', 'Other') DEFAULT 'Casual',
+    `category` VARCHAR(50) DEFAULT 'Casual',
     `start_date` DATE NOT NULL,
     `end_date` DATE NOT NULL,
     `is_half_day` BOOLEAN DEFAULT FALSE,
     `session` ENUM('Forenoon', 'Afternoon', 'Full Day') DEFAULT 'Full Day',
+    `duration_type` ENUM('Full-Day', 'Half-Day (First Half)', 'Half-Day (Second Half)') DEFAULT 'Full-Day',
     `reason` TEXT NOT NULL,
     `proof_url` VARCHAR(500),
     `status` ENUM('pending', 'pending_admin', 'approved', 'rejected') DEFAULT 'pending',
     `approver_id` INT,
     `forwarded_by` INT,
     `forwarded_at` TIMESTAMP NULL,
+    `approved_by` ENUM('Tutor', 'Admin') NULL,
     `rejection_reason` TEXT,
     `approved_at` TIMESTAMP NULL,
     `working_days` DECIMAL(5,1) DEFAULT 0.0,
@@ -222,11 +255,12 @@ CREATE TABLE IF NOT EXISTS `leave_requests` (
 CREATE TABLE IF NOT EXISTS `od_requests` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT NOT NULL,
-    `category` ENUM('Academic', 'Sports', 'Symposium', 'Workshop', 'Conference', 'Competition', 'Other') DEFAULT 'Academic',
+    `category` VARCHAR(50) DEFAULT 'Academic',
     `start_date` DATE NOT NULL,
     `end_date` DATE NOT NULL,
     `is_half_day` BOOLEAN DEFAULT FALSE,
     `session` ENUM('Forenoon', 'Afternoon', 'Full Day') DEFAULT 'Full Day',
+    `duration_type` ENUM('Full-Day', 'Half-Day (First Half)', 'Half-Day (Second Half)') DEFAULT 'Full-Day',
     `reason` TEXT NOT NULL,
     `place_to_visit` VARCHAR(255),
     `proof_url` VARCHAR(500),
@@ -234,6 +268,7 @@ CREATE TABLE IF NOT EXISTS `od_requests` (
     `approver_id` INT,
     `forwarded_by` INT,
     `forwarded_at` TIMESTAMP NULL,
+    `approved_by` ENUM('Tutor', 'Admin') NULL,
     `rejection_reason` TEXT,
     `approved_at` TIMESTAMP NULL,
     `working_days` DECIMAL(5,1) DEFAULT 0.0,
@@ -283,7 +318,7 @@ CREATE TABLE IF NOT EXISTS `assignment_submissions` (
     `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `score` INT,
     `feedback` TEXT,
-    `status` ENUM('submitted', 'graded', 'late') DEFAULT 'submitted',
+    `status` ENUM('Pending', 'Graded', 'Late') DEFAULT 'Pending',
     FOREIGN KEY (`assignment_id`) REFERENCES `assignments`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`student_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 );
@@ -308,6 +343,7 @@ CREATE TABLE IF NOT EXISTS `marks` (
     `exam_id` INT NOT NULL,
     `student_id` INT NOT NULL,
     `subject_id` INT NOT NULL,
+    `section_id` INT,
     `marks_obtained` DECIMAL(5, 2),
     `max_marks` DECIMAL(5, 2) DEFAULT 100.00,
     `breakdown` JSON DEFAULT NULL,
@@ -317,7 +353,8 @@ CREATE TABLE IF NOT EXISTS `marks` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`exam_id`) REFERENCES `exams`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`student_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE
+    FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`section_id`) REFERENCES `sections`(`id`) ON DELETE SET NULL
 );
 
 -- -----------------------------------------------------------------------------
@@ -332,6 +369,7 @@ CREATE TABLE IF NOT EXISTS `circulars` (
     `audience` ENUM('all', 'students', 'faculty', 'tutors') NOT NULL,
     `target_batch_id` INT,
     `target_section_id` INT,
+    `type` ENUM('Notice', 'Event', 'Holiday', 'Exam') DEFAULT 'Notice',
     `attachment_url` VARCHAR(500),
     `created_by` INT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

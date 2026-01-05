@@ -1,0 +1,82 @@
+﻿mysql : mysql: 
+[Warning] Using a 
+password on the 
+command line 
+interface can be 
+insecure.
+At line:1 char:1
++ mysql -u root 
+-proot 
+Cyber_Dept_Portal -e 
+"DESCRIBE 
+faculty_profiles; ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (mysql:    
+ [Warning...an be    
+ insecure.:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+Field	Type	Null	Key	Default	Extra
+user_id	int	NO	PRI	NULL	
+department_id	int	YES	MUL	NULL	
+designation	varchar(100)	YES		NULL	
+employee_id	varchar(50)	YES	UNI	NULL	
+qualification	varchar(255)	YES		NULL	
+specialization	varchar(255)	YES		NULL	
+experience_years	int	YES		0	
+joining_date	date	YES		NULL	
+employment_type	enum('Permanent','Probation','Contract','Visiting')	YES		Permanent	
+current_status	enum('Active','On Leave','Resigned','Retired')	YES		Active	
+workload_hours	int	YES		0	
+cabin_location	varchar(100)	YES		NULL	
+extension_number	varchar(20)	YES		NULL	
+created_at	timestamp	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
+updated_at	timestamp	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP
+Field	Type	Null	Key	Default	Extra
+user_id	int	NO	PRI	NULL	
+roll_number	varchar(50)	NO	UNI	NULL	
+register_number	varchar(50)	NO	UNI	NULL	
+batch_id	int	YES	MUL	NULL	
+section_id	int	YES	MUL	NULL	
+dob	date	YES		NULL	
+gender	enum('male','female','other')	YES		NULL	
+blood_group	varchar(5)	YES		NULL	
+guardian_name	varchar(100)	YES		NULL	
+guardian_phone	varchar(20)	YES		NULL	
+cgpa	decimal(4,2)	YES		0.00	
+attendance_percentage	decimal(5,2)	YES		0.00	
+linkedin_url	varchar(255)	YES		NULL	
+github_url	varchar(255)	YES		NULL	
+portfolio_url	varchar(255)	YES		NULL	
+education_degree	varchar(255)	YES		B.Tech in Computer Science	
+education_institution	varchar(255)	YES		Your Institution	
+Field	Type	Null	Key	Default	Extra
+id	int	NO	PRI	NULL	auto_increment
+user_id	int	NO	MUL	NULL	
+category	enum('Casual','Medical','Sick','Emergency','Other')	YES		Casual	
+start_date	date	NO	MUL	NULL	
+end_date	date	NO		NULL	
+is_half_day	tinyint(1)	YES		0	
+duration_type	enum('Full-Day','Half-Day (First Half)','Half-Day (Second Half)')	YES		Full-Day	
+session	enum('Forenoon','Afternoon','Full Day')	YES		Full Day	
+reason	text	NO		NULL	
+proof_url	varchar(500)	YES		NULL	
+status	enum('pending','pending_admin','approved','rejected','cancel_requested','cancelled')	YES	MUL	pending	
+approver_id	int	YES	MUL	NULL	
+approved_by	varchar(50)	YES		NULL	
+forwarded_by	int	YES	MUL	NULL	
+forwarded_at	timestamp	YES		NULL	
+rejection_reason	text	YES		NULL	
+approved_at	timestamp	YES		NULL	
+working_days	int	YES		0	
+created_at	timestamp	YES	MUL	CURRENT_TIMESTAMP	DEFAULT_GENERATED
+updated_at	timestamp	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP

@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedToken = localStorage.getItem('token');
     setAuthState(stored);
     setToken(storedToken);
+    setRequiresPasswordChange(!!stored.requiresPasswordChange);
     setIsLoading(false);
   }, []);
 
@@ -46,8 +47,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        setStoredAuth({ user: data.user, isAuthenticated: true });
-        setAuthState({ user: data.user, isAuthenticated: true });
+        setStoredAuth({ 
+          user: data.user, 
+          isAuthenticated: true, 
+          requiresPasswordChange: !!data.requiresPasswordChange 
+        });
+        setAuthState({ 
+          user: data.user, 
+          isAuthenticated: true,
+          requiresPasswordChange: !!data.requiresPasswordChange
+        });
         localStorage.setItem('token', data.token);
         setToken(data.token);
         
