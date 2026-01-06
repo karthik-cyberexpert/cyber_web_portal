@@ -62,8 +62,8 @@ export const getFacultyProfile = async (req: Request | any, res: Response) => {
                 b.name as batch
             FROM subject_allocations sa
             JOIN subjects s ON sa.subject_id = s.id
-            JOIN sections sec ON sa.section_id = sec.id
-            JOIN batches b ON sec.batch_id = b.id
+            LEFT JOIN sections sec ON sa.section_id = sec.id
+            LEFT JOIN batches b ON sec.batch_id = b.id
             WHERE sa.faculty_id = ? AND sa.is_active = TRUE
         `, [userId]);
         

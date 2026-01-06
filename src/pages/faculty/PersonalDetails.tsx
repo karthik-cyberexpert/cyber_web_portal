@@ -46,7 +46,7 @@ export default function PersonalDetails() {
   });
 
   React.useEffect(() => {
-    if (user && user.role === 'faculty') {
+    if (user && (user.role === 'faculty' || user.role === 'tutor')) {
         const fetchProfile = async () => {
              try {
                 const token = localStorage.getItem('token');

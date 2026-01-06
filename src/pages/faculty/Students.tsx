@@ -51,7 +51,7 @@ export default function Students() {
   const [studentDetailsLoading, setStudentDetailsLoading] = useState(false);
 
   useEffect(() => {
-    if (user && user.role === 'faculty') {
+    if (user && (user.role === 'faculty' || user.role === 'tutor')) {
       loadData();
     }
   }, [user]);

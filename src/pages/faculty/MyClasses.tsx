@@ -46,7 +46,7 @@ export default function MyClasses() {
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   useEffect(() => {
-    if (user && user.role === 'faculty') {
+    if (user && (user.role === 'faculty' || user.role === 'tutor')) {
       loadFacultyClasses();
     }
   }, [user]);
@@ -127,7 +127,7 @@ export default function MyClasses() {
     }
   };
 
-  if (!user || user.role !== 'faculty') {
+  if (!user || (user.role !== 'faculty' && user.role !== 'tutor')) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
         <AlertCircle className="w-12 h-12 mb-4" />

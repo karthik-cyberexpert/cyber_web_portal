@@ -28,8 +28,8 @@ export const getClassStatistics = async (req: Request | any, res: Response) => {
                 ) as student_count
             FROM subject_allocations sa
             JOIN subjects sub ON sa.subject_id = sub.id
-            JOIN sections s ON sa.section_id = s.id
-            JOIN batches b ON s.batch_id = b.id
+            LEFT JOIN sections s ON sa.section_id = s.id
+            LEFT JOIN batches b ON s.batch_id = b.id
             WHERE sa.faculty_id = ?
             ORDER BY b.name, s.name, sub.name
         `;

@@ -49,7 +49,7 @@ export default function Timetable() {
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || (user.role !== 'faculty' && user.role !== 'tutor')) return;
     
     const fetchTimetable = async () => {
         try {
