@@ -203,6 +203,7 @@ export default function ODPortal() {
     switch (status) {
       case 'approved': return <CheckCircle2 className="w-4 h-4 text-success" />;
       case 'rejected': return <XCircle className="w-4 h-4 text-destructive" />;
+      case 'forwarded_to_admin': return <UserCheck className="w-4 h-4 text-blue-500" />;
       default: return <Clock className="w-4 h-4 text-warning" />;
     }
   };
@@ -213,6 +214,7 @@ export default function ODPortal() {
       case 'rejected': return 'bg-destructive/10 text-destructive border-destructive/20';
       case 'cancel_requested': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
       case 'cancelled': return 'bg-muted text-muted-foreground border-muted-foreground/20';
+      case 'forwarded_to_admin': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       default: return 'bg-warning/10 text-warning border-warning/20';
     }
   };

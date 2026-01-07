@@ -853,7 +853,7 @@ export interface LeaveRequest {
   endDate: string;
   reason: string;
   contact: string;
-  status: 'pending' | 'pending_admin' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
+  status: 'pending' | 'pending_admin' | 'forwarded_to_admin' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
   processedBy?: string;
   processedDate?: string;
   durationType?: string;

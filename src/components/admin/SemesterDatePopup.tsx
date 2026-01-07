@@ -18,7 +18,6 @@ interface PendingBatch {
   id: number;
   name: string;
   current_semester: number;
-  department_name: string;
   semester_start_date: string | null;
   semester_end_date: string | null;
 }
@@ -116,7 +115,6 @@ export default function SemesterDatePopup({ batch, onSave, onClose, readOnly = f
               <span className="font-medium">Batch</span>
             </div>
             <p className="text-lg font-bold">{batch.name}</p>
-            <p className="text-xs text-muted-foreground">{batch.department_name}</p>
           </div>
 
           {/* Current Semester (Read-Only) */}

@@ -10,36 +10,24 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
     }
 
     try {
-        // Get student's section
-        const [students]: any = await pool.query(
-            `SELECT section_id, batch_id FROM student_profiles WHERE user_id = ?`,
-            [studentId]
-        );
-
-        if (students.length === 0) {
-            return res.status(404).json({ message: 'Student profile not found' });
-        }
-
-        const { section_id, batch_id } = students[0];
-
-        // Fetch marks grouped by subject
+        // Fetch marks grouped by subject from schedules table
         const [marksData]: any = await pool.query(
             `SELECT 
                 s.id as subject_id,
                 s.name as subject_name,
                 s.code as subject_code,
                 s.credits,
-                e.name as exam_name,
-                e.exam_type,
+                sch.title as exam_name,
+                sch.category as exam_type,
                 m.marks_obtained,
                 m.max_marks,
                 m.status,
                 m.remarks
              FROM marks m
-             JOIN exams e ON m.exam_id = e.id
+             JOIN schedules sch ON m.schedule_id = sch.id
              JOIN subjects s ON m.subject_id = s.id
-             WHERE m.student_id = ? AND m.status = 'published'
-             ORDER BY s.name, e.exam_type`,
+             WHERE m.student_id = ? AND m.status = 'approved'
+             ORDER BY s.name, sch.category`,
             [studentId]
         );
 
@@ -50,11 +38,11 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
             if (!subjectMarksMap[mark.subject_id]) {
                 subjectMarksMap[mark.subject_id] = {
                     subjectId: mark.subject_id,
-                    subjectName: mark.subject_name,
-                    subjectCode: mark.subject_code,
+                    subject: mark.subject_name,
+                    code: mark.subject_code,
                     credits: mark.credits,
-                    cia1: null,
-                    cia2: null,
+                    ia1: null,
+                    ia2: null,
                     cia3: null,
                     model: null,
                     assignment: null,
@@ -65,18 +53,22 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
 
             const subject = subjectMarksMap[mark.subject_id];
             
-            // Map exam types to fields
-            if (mark.exam_type === 'Internal') {
-                if (mark.exam_name.includes('1') || mark.exam_name.includes('I')) {
-                    subject.cia1 = mark.marks_obtained;
-                } else if (mark.exam_name.includes('2') || mark.exam_name.includes('II')) {
-                    subject.cia2 = mark.marks_obtained;
-                } else if (mark.exam_name.includes('3') || mark.exam_name.includes('III')) {
+            // Map schedule types to fields
+            // New schema uses schedules.type which might be 'Internal', 'Model', etc.
+            const type = mark.exam_type.toLowerCase();
+            const title = mark.exam_name.toUpperCase();
+
+            if (type.includes('internal') || type.includes('ia')) {
+                if (title.includes('1') || title.includes('I')) {
+                    subject.ia1 = mark.marks_obtained;
+                } else if (title.includes('2') || title.includes('II')) {
+                    subject.ia2 = mark.marks_obtained;
+                } else if (title.includes('3') || title.includes('III')) {
                     subject.cia3 = mark.marks_obtained;
                 }
-            } else if (mark.exam_type === 'Model') {
+            } else if (type.includes('model')) {
                 subject.model = mark.marks_obtained;
-            } else if (mark.exam_type === 'Assignment') {
+            } else if (type.includes('assignment')) {
                 subject.assignment = mark.marks_obtained;
             }
         });
@@ -84,14 +76,14 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
         // Calculate totals and grades for each subject
         const subjectMarks = Object.values(subjectMarksMap).map((subject: any) => {
             const marks = [
-                subject.cia1 || 0,
-                subject.cia2 || 0,
+                subject.ia1 || 0,
+                subject.ia2 || 0,
                 subject.cia3 || 0,
                 subject.model || 0,
                 subject.assignment || 0
             ];
             
-            subject.total = marks.reduce((sum, m) => sum + m, 0);
+            subject.total = marks.reduce((sum, m) => sum + Number(m), 0);
             
             // Calculate grade
             const percentage = subject.total;
@@ -113,12 +105,6 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
         
         // Calculate CGPA (on 10-point scale)
         const cgpa = averageMarks / 10;
-
-        console.log('=== STUDENT MARKS DEBUG ===');
-        console.log('Student ID:', studentId);
-        console.log('Total subjects:', totalSubjects);
-        console.log('Average marks:', averageMarks.toFixed(2));
-        console.log('CGPA:', cgpa.toFixed(2));
 
         res.json({
             subjectMarks,

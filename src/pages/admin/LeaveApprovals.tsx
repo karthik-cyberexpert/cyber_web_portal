@@ -107,7 +107,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
   };
 
   const filteredRequests = requests
-    .filter(r => activeTab === 'pending' ? r.status === 'pending_admin' : r.status !== 'pending_admin')
+    .filter(r => activeTab === 'pending' ? r.status === 'forwarded_to_admin' : r.status !== 'forwarded_to_admin')
     .filter(r => {
       const name = r.user_name || r.userName || '';
       const roll = r.roll_number || '';
@@ -147,7 +147,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
             onClick={() => setActiveTab('pending')}
             className="flex-1 sm:flex-none rounded-lg font-bold whitespace-nowrap"
           >
-            Pending ({requests.filter(r => r.status === 'pending_admin').length})
+            Pending ({requests.filter(r => r.status === 'forwarded_to_admin').length})
           </Button>
           <Button 
             variant={activeTab === 'history' ? 'default' : 'ghost'} 
@@ -250,7 +250,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end items-center gap-1">
-                      {request.status === 'pending_admin' && (
+                      {request.status === 'forwarded_to_admin' && (
                         <div className="flex gap-1 mr-1">
                           <Button 
                             size="icon" 
@@ -292,7 +292,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                             View Details
                           </DropdownMenuItem>
                           
-                          {request.status !== 'pending_admin' && (
+                          {request.status !== 'forwarded_to_admin' && (
                             (() => {
                               const canRevoke = new Date(request.startDate) > new Date();
                               return (
@@ -397,7 +397,7 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
                       </div>
                   )}
 
-                  {selectedRequest?.status === 'pending_admin' && (
+                  {selectedRequest?.status === 'forwarded_to_admin' && (
                       <DialogFooter className="pt-4 flex flex-col sm:flex-row items-stretch sm:justify-center gap-3">
                           <Button 
                             className="flex-1 rounded-2xl h-12 font-bold uppercase text-[10px] tracking-widest shadow-glow-primary w-full" 

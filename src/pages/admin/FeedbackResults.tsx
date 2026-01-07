@@ -79,7 +79,7 @@ export default function FeedbackResults() {
                         <span>•</span>
                         <span>{form.section_name || 'All Sections'}</span>
                         <span>•</span>
-                        <span>Closed: {new Date(form.closing_date).toLocaleDateString()}</span>
+                        <span>Closed: {new Date(form.closing_date).toLocaleDateString('en-GB')}</span>
                     </div>
                 </div>
             </div>
@@ -204,7 +204,7 @@ export default function FeedbackResults() {
                                             <TableCell className="font-medium">{r.name}</TableCell>
                                             <TableCell>{r.roll_number}</TableCell>
                                             <TableCell className="text-muted-foreground">{r.email}</TableCell>
-                                            <TableCell>{new Date(r.submitted_at).toLocaleString()}</TableCell>
+                                            <TableCell>{new Date(r.submitted_at).toLocaleString('en-GB')}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button size="sm" variant="outline">View</Button>
                                             </TableCell>
@@ -233,7 +233,7 @@ export default function FeedbackResults() {
                             {selectedStudent?.name}'s Feedback
                         </DialogTitle>
                         <CardDescription>
-                            Roll No: {selectedStudent?.roll_number} • Submitted: {selectedStudent && new Date(selectedStudent.submitted_at).toLocaleString()}
+                            Roll No: {selectedStudent?.roll_number} • Submitted: {selectedStudent && new Date(selectedStudent.submitted_at).toLocaleString('en-GB')}
                         </CardDescription>
                     </DialogHeader>
 

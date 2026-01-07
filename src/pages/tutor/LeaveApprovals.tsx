@@ -102,7 +102,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
       let endpoint = action === 'approve' ? 'approve' : (action === 'reject' ? 'reject' : (action === 'forward' ? 'forward' : 'revoke'));
       const apiEndpoint = filterType === 'od' ? 'od' : 'leave';
       
-      const response = await fetch(`http://localhost:3007/api/${apiEndpoint}/${id}/${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/${apiEndpoint}/${id}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
   // Stats Calculation
   const stats = {
       pending: requests.filter(r => (r.status as string) === 'pending' || (r.status as string) === 'cancel_requested').length,
-      forwarded: requests.filter(r => (r.status as string) === 'pending_admin').length,
+      forwarded: requests.filter(r => (r.status as string) === 'forwarded_to_admin').length,
       approved: requests.filter(r => (r.status as string) === 'approved').length,
       rejected: requests.filter(r => (r.status as string) === 'rejected').length,
       cancelled: requests.filter(r => (r.status as string) === 'cancelled').length,
@@ -328,15 +328,15 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                 <TableCell className="text-[10px] font-bold text-foreground/70">{formatDate(request.endDate)}</TableCell>
                 <TableCell className="text-center">
                   <Badge 
-                    variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'pending_admin' ? 'secondary' : (request.status === 'cancel_requested' ? 'outline' : 'outline')))} 
+                    variant={request.status === 'approved' ? 'default' : (request.status === 'rejected' ? 'destructive' : (request.status === 'forwarded_to_admin' ? 'secondary' : (request.status === 'cancel_requested' ? 'outline' : 'outline')))} 
                     className={`uppercase text-[9px] font-black ${
                       request.status === 'approved' ? 'bg-emerald-500 hover:bg-emerald-600' : 
-                      request.status === 'pending_admin' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+                      request.status === 'forwarded_to_admin' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
                       request.status === 'cancel_requested' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                       request.status === 'cancelled' ? 'bg-slate-500/10 text-slate-500 border-slate-500/20' : ''
                     }`}
                   >
-                      {request.status === 'pending_admin' ? 'Forwarded' : request.status.replace('_', ' ')}
+                      {request.status === 'forwarded_to_admin' ? 'Forwarded' : request.status.replace('_', ' ')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right pr-6">

@@ -4,7 +4,8 @@ import { pool } from './db.js';
 // Helper to get tutor's assigned section and batch
 const getTutorAssignment = async (facultyId: string | number) => {
     const [rows]: any = await pool.query(`
-        SELECT ta.section_id, ta.batch_id, s.name as section_name, b.name as batch_name
+        SELECT ta.section_id, ta.batch_id, s.name as section_name, b.name as batch_name,
+               ta.reg_number_start, ta.reg_number_end
         FROM tutor_assignments ta
         JOIN sections s ON ta.section_id = s.id
         JOIN batches b ON ta.batch_id = b.id
@@ -12,6 +13,27 @@ const getTutorAssignment = async (facultyId: string | number) => {
         LIMIT 1
     `, [facultyId]);
     return rows[0] || null;
+};
+
+// Helper to get student IDs in range
+const getTutorStudentIds = async (assignment: any) => {
+    let query = `
+        SELECT id FROM (
+            SELECT u.id, ROW_NUMBER() OVER (ORDER BY sp.roll_number ASC) as row_num
+            FROM users u
+            JOIN student_profiles sp ON u.id = sp.user_id
+            WHERE sp.batch_id = ? AND sp.section_id = ? AND u.role = 'student'
+        ) as ranked
+    `;
+    const params = [assignment.batch_id, assignment.section_id];
+    
+    if (assignment.reg_number_start && assignment.reg_number_end) {
+        query += ` WHERE row_num >= ? AND row_num <= ?`;
+        params.push(parseInt(assignment.reg_number_start), parseInt(assignment.reg_number_end));
+    }
+    
+    const [rows]: any = await pool.query(query, params);
+    return rows.map((r: any) => r.id);
 };
 
 // GET /api/tutor-analytics/overview
@@ -25,24 +47,32 @@ export const getClassOverview = async (req: Request | any, res: Response) => {
             return res.json({ hasAssignment: false, message: 'No active tutor assignment found.' });
         }
 
-        // Total Students
-        const [studentCount]: any = await pool.query(
-            'SELECT COUNT(*) as count FROM student_profiles WHERE section_id = ?',
-            [assignment.section_id]
-        );
+        const studentIds = await getTutorStudentIds(assignment);
+        if (studentIds.length === 0) {
+             return res.json({
+                hasAssignment: true,
+                sectionName: assignment.section_name,
+                batchName: assignment.batch_name,
+                totalStudents: 0,
+                avgAttendance: 0
+            });
+        }
 
-        // Attendance Avg (Placeholder logic for now, using dummy 92% if no data)
+        // Total Students
+        const totalStudents = studentIds.length;
+
+        // Attendance Avg
         const [attendance]: any = await pool.query(`
             SELECT AVG(CASE WHEN status = 'present' THEN 1 ELSE 0 END) * 100 as avg_attendance
             FROM attendance
-            WHERE section_id = ?
-        `, [assignment.section_id]);
+            WHERE student_id IN (?)
+        `, [studentIds]);
 
         res.json({
             hasAssignment: true,
             sectionName: assignment.section_name,
             batchName: assignment.batch_name,
-            totalStudents: studentCount[0].count,
+            totalStudents,
             avgAttendance: attendance[0].avg_attendance || 0
         });
     } catch (error) {
@@ -60,17 +90,20 @@ export const getAttendanceMetrics = async (req: Request | any, res: Response) =>
         const assignment = await getTutorAssignment(facultyId);
         if (!assignment) return res.json([]);
 
+        const studentIds = await getTutorStudentIds(assignment);
+        if (studentIds.length === 0) return res.json([]);
+
         // Last 7 days trend
         const [rows]: any = await pool.query(`
             SELECT 
                 DATE_FORMAT(date, '%a') as day,
                 COUNT(DISTINCT CASE WHEN status = 'present' THEN student_id END) as count
             FROM attendance
-            WHERE section_id = ? 
+            WHERE student_id IN (?) 
             AND date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             GROUP BY date
             ORDER BY date ASC
-        `, [assignment.section_id]);
+        `, [studentIds]);
 
         res.json(rows);
     } catch (error) {
@@ -88,6 +121,9 @@ export const getPerformanceMetrics = async (req: Request | any, res: Response) =
         const assignment = await getTutorAssignment(facultyId);
         if (!assignment) return res.json([]);
 
+        const studentIds = await getTutorStudentIds(assignment);
+        if (studentIds.length === 0) return res.json([]);
+
         // Grade Distribution (O, A+, A, B+, B, U)
         const [rows]: any = await pool.query(`
             SELECT 
@@ -101,10 +137,10 @@ export const getPerformanceMetrics = async (req: Request | any, res: Response) =
                 END as name,
                 COUNT(*) as value
             FROM marks m
-            JOIN exams e ON m.exam_id = e.id
-            WHERE e.batch_id = ? AND e.is_published = TRUE
+            JOIN schedules sch ON m.schedule_id = sch.id
+            WHERE m.student_id IN (?) AND m.status = 'approved'
             GROUP BY name
-        `, [assignment.batch_id]);
+        `, [studentIds]);
 
         // Map colors for frontend
         const colorMap: any = {
@@ -137,6 +173,9 @@ export const getSubjectMetrics = async (req: Request | any, res: Response) => {
         const assignment = await getTutorAssignment(facultyId);
         if (!assignment) return res.json([]);
 
+        const studentIds = await getTutorStudentIds(assignment);
+        if (studentIds.length === 0) return res.json([]);
+
         const [rows]: any = await pool.query(`
             SELECT 
                 s.name as subject,
@@ -144,12 +183,9 @@ export const getSubjectMetrics = async (req: Request | any, res: Response) => {
                 (SUM(CASE WHEN (m.marks_obtained / m.max_marks) * 100 >= 50 THEN 1 ELSE 0 END) / COUNT(*)) * 100 as pass
             FROM marks m
             JOIN subjects s ON m.subject_id = s.id
-            JOIN exams e ON m.exam_id = e.id
-            JOIN users u ON m.student_id = u.id
-            JOIN student_profiles sp ON u.id = sp.user_id
-            WHERE sp.section_id = ? AND e.is_published = TRUE
+            WHERE m.student_id IN (?) AND m.status = 'approved'
             GROUP BY s.id
-        `, [assignment.section_id]);
+        `, [studentIds]);
 
         res.json(rows);
     } catch (error) {

@@ -104,9 +104,9 @@ export async function getTutorLeaveRequests(req: Request, res: Response) {
     try {
         const tutorId = (req as any).user.id;
 
-        // Get tutor's assigned batch and section
+        // Get tutor's assigned ranges
         const [assignments]: any = await pool.query(
-            'SELECT batch_id, section_id FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
             [tutorId]
         );
 
@@ -114,27 +114,37 @@ export async function getTutorLeaveRequests(req: Request, res: Response) {
             return res.json([]);
         }
 
-        const { batch_id, section_id } = assignments[0];
+        const allRequests: any[] = [];
+        for (const assignment of assignments) {
+            const [requests]: any = await pool.query(
+                `SELECT lr.id, lr.user_id as userId, lr.category as type, lr.start_date as startDate,
+                        lr.end_date as endDate, lr.is_half_day as isHalfDay, lr.session,
+                        lr.duration_type as durationType, lr.reason, lr.proof_url as proofUrl,
+                        lr.working_days as workingDays, lr.status, lr.tutor_id as tutorId,
+                        lr.admin_id as adminId,
+                        lr.rejection_reason as rejectionReason,
+                        u.name as user_name, sp.roll_number, b.current_semester, b.name as batch_name
+                FROM leave_requests lr
+                JOIN (
+                    SELECT user_id, batch_id, section_id, roll_number, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    FROM student_profiles
+                    WHERE batch_id = ? AND section_id = ?
+                ) sp ON lr.user_id = sp.user_id
+                JOIN users u ON lr.user_id = u.id
+                LEFT JOIN batches b ON sp.batch_id = b.id
+                WHERE (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
+                ORDER BY lr.created_at DESC`,
+                [
+                    assignment.batch_id, 
+                    assignment.section_id,
+                    assignment.reg_number_start, assignment.reg_number_end,
+                    parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
+                ]
+            );
+            allRequests.push(...requests);
+        }
 
-        // Get leave requests from students in this section
-        const [requests]: any = await pool.query(
-            `SELECT lr.id, lr.user_id as userId, lr.category as type, lr.start_date as startDate,
-                    lr.end_date as endDate, lr.is_half_day as isHalfDay, lr.session,
-                    lr.duration_type as durationType, lr.reason, lr.proof_url as proofUrl,
-                    lr.working_days as workingDays, lr.status, lr.forwarded_by as forwardedBy,
-                    lr.forwarded_at as forwardedAt, lr.approver_id as approverId,
-                    lr.approved_at as approvedAt, lr.rejection_reason as rejectionReason,
-                    u.name as user_name, sp.roll_number, b.current_semester, b.name as batch_name
-            FROM leave_requests lr
-            JOIN users u ON lr.user_id = u.id
-            JOIN student_profiles sp ON lr.user_id = sp.user_id
-            LEFT JOIN batches b ON sp.batch_id = b.id
-            WHERE sp.batch_id = ? AND sp.section_id = ?
-            ORDER BY lr.created_at DESC`,
-            [batch_id, section_id]
-        );
-
-        res.json(requests);
+        res.json(allRequests);
     } catch (error: any) {
         console.error('Error getting tutor leave requests:', error);
         res.status(500).json({ error: 'Failed to fetch leave requests' });
@@ -149,16 +159,16 @@ export async function getAdminLeaveRequests(req: Request, res: Response) {
             `SELECT lr.id, lr.user_id as userId, lr.category as type, lr.start_date as startDate,
                     lr.end_date as endDate, lr.is_half_day as isHalfDay, lr.session,
                     lr.duration_type as durationType, lr.reason, lr.proof_url as proofUrl,
-                    lr.working_days as workingDays, lr.status, lr.forwarded_by as forwardedBy,
-                    lr.forwarded_at as forwardedAt, lr.approver_id as approverId,
-                    lr.approved_at as approvedAt, lr.rejection_reason as rejectionReason,
+                    lr.working_days as workingDays, lr.status, lr.tutor_id as tutorId,
+                    lr.admin_id as adminId,
+                    lr.rejection_reason as rejectionReason,
                     u.name as user_name, sp.roll_number, sp.batch_id, sp.section_id, b.current_semester,
-                    b.name as batch_name, f.name as forwarded_by_name
+                    b.name as batch_name, t.name as tutor_name
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id
             JOIN student_profiles sp ON lr.user_id = sp.user_id
             LEFT JOIN batches b ON sp.batch_id = b.id
-            LEFT JOIN users f ON lr.forwarded_by = f.id
+            LEFT JOIN users t ON lr.tutor_id = t.id
             ORDER BY lr.created_at DESC`,
             []
         );
@@ -195,9 +205,9 @@ export async function approveLeaveRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE leave_requests
-            SET status = ?, approved_by = 'Tutor', approver_id = ?, approved_at = NOW()
+            SET status = 'approved', tutor_id = ?
             WHERE id = ?`,
-            [newStatus, userId, id]
+            [userId, id]
         );
 
         res.json({ message: 'Leave request approved' });
@@ -222,7 +232,7 @@ export async function forwardLeaveRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE leave_requests
-            SET status = 'pending_admin', forwarded_by = ?, forwarded_at = NOW()
+            SET status = 'forwarded_to_admin', tutor_id = ?
             WHERE id = ?`,
             [userId, id]
         );
@@ -294,7 +304,7 @@ export async function adminApproveLeaveRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE leave_requests 
-            SET status = 'approved', approved_by = 'Admin', approver_id = ?, approved_at = NOW() 
+            SET status = 'approved', admin_id = ? 
             WHERE id = ?`,
             [userId, id]
         );
@@ -407,13 +417,13 @@ export async function getMyLeaveRequests(req: Request, res: Response) {
             `SELECT lr.id, lr.user_id as userId, lr.category as type, lr.start_date as startDate, 
                     lr.end_date as endDate, lr.is_half_day as isHalfDay, lr.session, 
                     lr.duration_type as durationType, lr.reason, lr.proof_url as proofUrl, 
-                    lr.working_days as workingDays, lr.status, lr.forwarded_by as forwardedBy, 
-                    lr.forwarded_at as forwardedAt, lr.approver_id as approverId, 
-                    lr.approved_at as approvedAt, lr.rejection_reason as rejectionReason,
-                    u.name as approver_name, f.name as forwarded_by_name
+                    lr.working_days as workingDays, lr.status, lr.tutor_id as tutorId, 
+                    lr.admin_id as adminId, 
+                    lr.rejection_reason as rejectionReason,
+                    t.name as tutor_name, a.name as admin_name
             FROM leave_requests lr
-            LEFT JOIN users u ON lr.approver_id = u.id
-            LEFT JOIN users f ON lr.forwarded_by = f.id
+            LEFT JOIN users t ON lr.tutor_id = t.id
+            LEFT JOIN users a ON lr.admin_id = a.id
             WHERE lr.user_id = ?
             ORDER BY lr.created_at DESC`,
             [userId]

@@ -24,21 +24,12 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-    getTutors, 
-    getStudents, 
-    getMarks, 
-    getFaculty, 
-    updateMarkStatus,
-    Tutor, 
-    Student, 
-    MarkEntry,
-    Faculty
-} from '@/lib/data-store';
+import { API_BASE_URL } from '@/lib/api-config';
+import { Users } from 'lucide-react';
 
 export default function VerifyMarks() {
   const { user } = useAuth();
-  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [tutor, setTutor] = useState<any | null>(null);
   const [verifications, setVerifications] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -49,66 +40,61 @@ export default function VerifyMarks() {
   const [selectedExam, setSelectedExam] = useState('ia1');
 
   useEffect(() => {
-    if (!user) return;
-    const allTutors = getTutors();
-    const currentTutor = allTutors.find(t => t.id === user.id || t.email === user.email);
-    if (!currentTutor) return;
-    setTutor(currentTutor);
-
-    const allStudents = getStudents();
-    const myStudents = allStudents.filter(s => s.batch === currentTutor.batch && s.section === currentTutor.section);
-    
-    const allMarks = getMarks();
-    const myMarks = allMarks.filter(m => myStudents.find(s => s.id === m.studentId));
-    
-    // Group by Subject + Exam
-    const groups = new Map();
-    myMarks.forEach(m => {
-        const key = `${m.subjectCode}-${m.examType}`;
-        if (!groups.has(key)) {
-            groups.set(key, {
-                id: key,
-                code: m.subjectCode,
-                name: m.subjectName || m.subjectCode,
-                faculty: m.facultyName || 'Faculty',
-                examType: m.examType,
-                status: 'verified', // assume verified until we find a submitted one
-                count: 0,
-                pendingCount: 0,
-                submissionDate: m.createdAt.split('T')[0],
-                ids: []
-            });
-        }
-        const g = groups.get(key);
-        g.count += 1;
-        g.ids.push(m.id);
-        if (m.status === 'submitted') {
-            g.status = 'pending';
-            g.pendingCount += 1;
-        }
-    });
-
-    const list = Array.from(groups.values());
-    setVerifications(list);
-
-    // Calculate Stats
-    const total = list.length;
-    const pending = list.filter(l => l.status === 'pending').length;
-    const verified = total - pending;
-    setStats({
-        total,
-        pending,
-        verified,
-        completion: total > 0 ? Math.round((verified / total) * 100) : 0
-    });
-
+    fetchVerifications();
   }, [user]);
 
-  const handleVerify = (ids: string[]) => {
-    ids.forEach(id => updateMarkStatus(id, 'approved'));
-    toast.success("Marks Verified and forwarded to HOD.");
-    // Refresh local state normally, but for now recall effect
-    window.location.reload();
+  const fetchVerifications = async () => {
+    if (!user) return;
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/verification-status`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setVerifications(data);
+            
+            // Stats
+            const total = data.length;
+            const pending = data.filter((v: any) => v.markStatus === 'pending_tutor').length;
+            const verified = total - pending;
+            setStats({
+                total,
+                pending,
+                verified,
+                completion: total > 0 ? Math.round((verified / total) * 100) : 0
+            });
+        }
+    } catch (error) {
+        console.error("Fetch Verifications Error", error);
+    }
+  };
+
+  const handleVerify = async (v: any) => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/verify`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+                scheduleId: v.scheduleId,
+                sectionId: v.sectionId,
+                subjectCode: v.subjectCode
+            })
+        });
+
+        if (res.ok) {
+            toast.success("Marks Verified and forwarded to Admin.");
+            fetchVerifications();
+        } else {
+            toast.error("Failed to verify marks");
+        }
+    } catch (error) {
+        toast.error("Network error");
+    }
   };
 
   const filteredVerifications = verifications.filter(v => v.examType === selectedExam);
@@ -122,7 +108,7 @@ export default function VerifyMarks() {
       >
         <div>
           <h1 className="text-3xl font-black italic tracking-tighter uppercase">Internal Marks Verification 📝</h1>
-          <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers • Section {tutor?.section}</p>
+          <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic">
@@ -197,19 +183,19 @@ export default function VerifyMarks() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="flex items-start gap-6">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-glow ${
-                    subject.status === 'verified' ? 'bg-success/10 text-success shadow-success/20' : 'bg-primary/10 text-primary shadow-primary/20'
+                    subject.markStatus === 'pending_tutor' ? 'bg-primary/10 text-primary shadow-primary/20' : 'bg-success/10 text-success shadow-success/20'
                   }`}>
-                    {subject.status === 'verified' ? <CheckCircle className="w-7 h-7" /> : <ClipboardCheck className="w-7 h-7" />}
+                    {subject.markStatus === 'pending_tutor' ? <ClipboardCheck className="w-7 h-7" /> : <CheckCircle className="w-7 h-7" />}
                   </div>
                   <div>
                     <h3 className="text-xl font-black italic tracking-tight uppercase flex items-center gap-3">
-                      {subject.name}
+                      {subject.subjectName}
                       <Badge variant="outline" className="text-[9px] font-black font-mono border-white/10 tracking-widest px-2 py-0.5">
-                        {subject.code}
+                        {subject.subjectCode}
                       </Badge>
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mt-2">
-                      <User className="w-3.5 h-3.5 text-primary" /> {subject.faculty} • <Users className="w-3.5 h-3.5 text-accent" /> {subject.count} Students
+                       {subject.sectionName} • {subject.facultyName} • {subject.studentCount} Students
                     </p>
                   </div>
                 </div>
@@ -217,22 +203,21 @@ export default function VerifyMarks() {
                 <div className="flex items-center gap-8">
                    <div className="text-right hidden sm:block">
                      <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black">Submitted On</p>
-                     <p className="text-sm font-bold italic mt-1">{subject.submissionDate}</p>
+                     <p className="text-sm font-bold italic mt-1">{subject.submittedAt ? subject.submittedAt.split('T')[0] : 'N/A'}</p>
                    </div>
                    
                    <div className="flex items-center gap-3">
-                     {subject.status === 'verified' ? (
+                     {subject.markStatus !== 'pending_tutor' ? (
                        <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none">
-                          <CheckCheck className="w-3.5 h-3.5" /> Verified
+                          <CheckCheck className="w-3.5 h-3.5" /> Forwarded
                         </Badge>
                      ) : (
                        <div className="flex items-center gap-3">
-                         <Button variant="outline" size="sm" className="hidden lg:flex rounded-xl border-white/10 font-black uppercase text-[10px] tracking-widest italic px-6">View Marks</Button>
                          <Button 
                           variant="gradient" 
                           size="sm"
                           className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8"
-                          onClick={() => handleVerify(subject.ids)}
+                          onClick={() => handleVerify(subject)}
                          >
                            Verify & Forward
                            <ArrowRight className="w-4 h-4 ml-2" />

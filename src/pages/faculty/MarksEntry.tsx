@@ -41,7 +41,7 @@ export default function MarksEntrySelection() {
   const fetchClasses = async () => {
       try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`${API_BASE_URL}/faculty/classes`, {
+          const res = await fetch(`${API_BASE_URL}/marks/faculty/classes`, {
               headers: { Authorization: `Bearer ${token}` }
           });
           if (res.ok) {

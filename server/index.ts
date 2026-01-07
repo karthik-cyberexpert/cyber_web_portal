@@ -106,6 +106,9 @@ app.use('/api/grievance', grievanceRoutes);
 import lostAndFoundRoutes from './lost-and-found.routes.js';
 app.use('/api/lost-and-found', lostAndFoundRoutes);
 
+import marksRoutes from './marks.routes.js';
+app.use('/api/marks', marksRoutes);
+
 import { calendarRouter } from './calendar.routes.js';
 app.use('/api/calendar', calendarRouter);
 
@@ -127,12 +130,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-import * as marksController from './marks.controller.js';
-
-// Marks Routes
-app.get('/api/faculty/classes', authenticateToken, marksController.getFacultyClasses);
-app.get('/api/faculty/marks', authenticateToken, marksController.getMarks);
-app.post('/api/faculty/marks', authenticateToken, marksController.saveMarks);
 
 app.listen(PORT,  () => {
   console.log(`Server running on port ${PORT}`);

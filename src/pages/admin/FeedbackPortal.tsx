@@ -140,22 +140,6 @@ export default function FeedbackPortalAdmin() {
     }
   };
 
-  const handleViewResults = async (id: number) => {
-      setIsViewModalOpen(true);
-      setSelectedFeedbackResults(null);
-      try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`${API_BASE_URL}/feedback/${id}/results`, {
-             headers: { Authorization: `Bearer ${token}` }
-          });
-          if (response.ok) {
-              const data = await response.json();
-              setSelectedFeedbackResults(data);
-          }
-      } catch (error) {
-          console.error("Error fetching results", error);
-      }
-  };
 
   const fetchBatches = async () => {
       try {
@@ -565,7 +549,7 @@ export default function FeedbackPortalAdmin() {
                     <TableCell className="text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="w-3.5 h-3.5" />
-                        {new Date(item.closing_date).toLocaleDateString()}
+                        {new Date(item.closing_date).toLocaleDateString('en-GB')}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

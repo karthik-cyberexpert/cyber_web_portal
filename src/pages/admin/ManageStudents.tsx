@@ -321,7 +321,7 @@ export default function ManageStudents() {
         email: formData.email,
         phone: formData.phone,
         roll_number: formData.rollNumber,
-        register_number: formData.regNumber || '',
+        register_number: formData.regNumber || formData.rollNumber, // Use rollNumber if regNumber not set
         batch_id: formData.batch, 
         section_id: formData.section,
         dob: formData.dateOfBirth || '2000-01-01',
@@ -361,6 +361,7 @@ export default function ManageStudents() {
         email: formData.email,
         phone: formData.phone,
         roll_number: formData.rollNumber,
+        register_number: formData.regNumber || formData.rollNumber, // Ensure both are synced
         batch_id: formData.batch, // IDs are now stored
         section_id: formData.section,
         dob: formData.dateOfBirth,
@@ -507,11 +508,12 @@ export default function ManageStudents() {
                         body: JSON.stringify({
                             name: row['Full Name'],
                             roll_number: row['Roll Number'],
+                            register_number: row['Roll Number'], // Sync with Roll Number
                             email: row['Email'],
                             phone: row['Phone'] || '',
-                            batch_id: row['Batch ID'] || 1, // Validation needed for ID vs Name
-                            section_id: row['Section ID'] || 1, // Validation needed
-                            dob: '2000-01-01', // Default
+                            batch_id: row['Batch ID'] || 1, 
+                            section_id: row['Section ID'] || 1, 
+                            dob: '2000-01-01', 
                             gender: row['Gender'] || 'Not Specified',
                             // Add other fields as necessary mapped from Excel
                         })
@@ -847,7 +849,7 @@ export default function ManageStudents() {
               <Input
                 id="rollNumber"
                 value={formData.rollNumber || ''}
-                onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value, regNumber: e.target.value })}
                 placeholder="e.g., 21CSS001"
               />
             </div>

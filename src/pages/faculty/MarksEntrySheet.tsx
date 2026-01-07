@@ -55,7 +55,7 @@ export default function MarksEntrySheet() {
     setLoading(true);
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/faculty/marks?sectionId=${section}&subjectCode=${subject}&examType=${exam}`, {
+        const res = await fetch(`${API_BASE_URL}/marks/faculty/marks?sectionId=${section}&subjectCode=${subject}&examType=${exam}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -180,7 +180,7 @@ export default function MarksEntrySheet() {
         };
 
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/faculty/marks`, {
+        const res = await fetch(`${API_BASE_URL}/marks/faculty/marks`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

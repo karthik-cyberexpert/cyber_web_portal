@@ -88,6 +88,7 @@ export default function ExamSchedule() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedExamType, setSelectedExamType] = useState<string>("");
+  const [selectedUTType, setSelectedUTType] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch batches and subjects
@@ -166,6 +167,7 @@ export default function ExamSchedule() {
       setSelectedDate(date);
       setSelectedSubject("");
       setSelectedExamType("");
+      setSelectedUTType("");
       setIsDialogOpen(true);
   };
 
@@ -176,6 +178,8 @@ export default function ExamSchedule() {
       }
 
       setIsSaving(true);
+      const finalCategory = selectedExamType === 'UT' ? selectedUTType : selectedExamType;
+      
       try {
           const res = await fetch(`${API_BASE_URL}/calendar/events`, {
               method: 'POST',
@@ -184,22 +188,23 @@ export default function ExamSchedule() {
                   Authorization: `Bearer ${token}` 
               },
               body: JSON.stringify({
-                  event_type: selectedExamType,
+                  event_type: finalCategory,
                   date: format(selectedDate, 'yyyy-MM-dd'),
                   batch_id: selectedBatchId,
                   semester: selectedSemester,
                   subject_id: selectedSubject,
-                  description: `${selectedExamType} - ${subjects.find(s => s.id.toString() === selectedSubject)?.name}`
+                  description: `${finalCategory} - ${subjects.find(s => s.id.toString() === selectedSubject)?.name}`
               })
           });
 
           if (res.ok) {
               const subjectName = subjects.find(s => s.id.toString() === selectedSubject)?.name || "Exam";
-              toast.success(`Scheduled ${subjectName} (${selectedExamType})`);
+              toast.success(`Scheduled ${subjectName} (${finalCategory})`);
               setIsDialogOpen(false);
               fetchEvents(); // Refresh
           } else {
-              toast.error("Failed to schedule exam");
+              const errorData = await res.json();
+              toast.error(errorData.message || "Failed to schedule exam");
           }
       } catch (error) {
           toast.error("Network error");
@@ -242,7 +247,10 @@ export default function ExamSchedule() {
 
   const getEventColor = (type: string) => {
       switch(type) {
-          case 'UT': return 'bg-blue-500/10 border-blue-500/20 text-blue-200';
+          case 'UT':
+          case 'UT-1':
+          case 'UT-2':
+          case 'UT-3': return 'bg-blue-500/10 border-blue-500/20 text-blue-200';
           case 'MODEL': return 'bg-purple-500/10 border-purple-500/20 text-purple-200';
           case 'SEMESTER': return 'bg-orange-500/10 border-orange-500/20 text-orange-200';
           default: return 'bg-gray-500/10 border-gray-500/20 text-gray-200';
@@ -467,6 +475,22 @@ export default function ExamSchedule() {
                         </Select>
                     </div>
 
+                    {selectedExamType === 'UT' && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="ut-type">UT Sub-type</Label>
+                            <Select value={selectedUTType} onValueChange={setSelectedUTType}>
+                                <SelectTrigger id="ut-type" className="bg-white/5 border-white/10">
+                                    <SelectValue placeholder="Select UT Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="UT-1">UT-1</SelectItem>
+                                    <SelectItem value="UT-2">UT-2</SelectItem>
+                                    <SelectItem value="UT-3">UT-3</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
                     <div className="grid gap-2">
                         <Label htmlFor="subject">Subject</Label>
                         <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -489,7 +513,11 @@ export default function ExamSchedule() {
                 </div>
                 <DialogFooter>
                     <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={handleScheduleExam} className="bg-primary text-primary-foreground" disabled={filteredSubjects.length === 0 || isSaving}>
+                    <Button 
+                        onClick={handleScheduleExam} 
+                        className="bg-primary text-primary-foreground" 
+                        disabled={filteredSubjects.length === 0 || isSaving || !selectedExamType || (selectedExamType === 'UT' && !selectedUTType)}
+                    >
                         {isSaving ? <Clock className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                         {isSaving ? 'Scheduling...' : 'Schedule'}
                     </Button>

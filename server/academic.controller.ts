@@ -1,14 +1,13 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 
-// Get All Batches with Department and Section Count
+// Get All Batches with Section Count
 export const getBatches = async (req: Request, res: Response) => {
   try {
     const [rows]: any = await pool.query(`
-      SELECT b.*, d.name as department_name, d.code as department_code,
-      (SELECT COUNT(*) FROM sections s WHERE s.batch_id = b.id) as section_count
+      SELECT b.*,
+      (SELECT COUNT(*) FROM sections s WHERE s.batch_id = b.id) as section_count_actual
       FROM batches b 
-      JOIN departments d ON b.department_id = d.id 
       ORDER BY b.start_year DESC
     `);
     res.json(rows);
@@ -20,21 +19,40 @@ export const getBatches = async (req: Request, res: Response) => {
 
 // Create Batch
 export const createBatch = async (req: Request, res: Response) => {
-  const { department_id, name, start_year, end_year } = req.body;
+  const { name, start_year, end_year, sections_count } = req.body;
   
-  if (!department_id || !name || !start_year || !end_year) {
+  if (!name || !start_year || !end_year) {
       return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  const connection = await pool.getConnection();
   try {
-    const [result]: any = await pool.execute(
-      'INSERT INTO batches (department_id, name, start_year, end_year) VALUES (?, ?, ?, ?)',
-      [department_id, name, start_year, end_year]
+    await connection.beginTransaction();
+
+    const [result]: any = await connection.execute(
+      'INSERT INTO batches (name, start_year, end_year, sections_count) VALUES (?, ?, ?, ?)',
+      [name, start_year, end_year, sections_count || 1]
     );
-    res.status(201).json({ id: result.insertId, message: 'Batch created successfully' });
+    const batchId = result.insertId;
+
+    // Auto-create sections
+    const count = parseInt(sections_count) || 1;
+    for (let i = 0; i < count; i++) {
+        const sectionName = String.fromCharCode(65 + i); // 65 is 'A'
+        await connection.execute(
+            'INSERT INTO sections (batch_id, name) VALUES (?, ?)',
+            [batchId, sectionName]
+        );
+    }
+
+    await connection.commit();
+    res.status(201).json({ id: batchId, message: 'Batch created successfully' });
   } catch (error: any) {
+    await connection.rollback();
     console.error('Create Batch Error:', error);
     res.status(500).json({ message: 'Error creating batch' });
+  } finally {
+    connection.release();
   }
 };
 
@@ -52,12 +70,12 @@ export const getSections = async (req: Request, res: Response) => {
 
 // Create Section
 export const createSection = async (req: Request, res: Response) => {
-  const { batch_id, name, capacity } = req.body;
+  const { batch_id, name } = req.body;
 
   try {
     const [result]: any = await pool.execute(
-      'INSERT INTO sections (batch_id, name, capacity) VALUES (?, ?, ?)',
-      [batch_id, name, capacity || 60]
+      'INSERT INTO sections (batch_id, name) VALUES (?, ?)',
+      [batch_id, name]
     );
     res.status(201).json({ id: result.insertId, message: 'Section created successfully' });
   } catch (error: any) {
@@ -135,19 +153,17 @@ export const getPendingSemesterUpdates = async (req: Request, res: Response) => 
 
         // Now fetch all batches that need semester date configuration
         const [rows]: any = await pool.query(`
-            SELECT b.id, b.name, b.current_semester, b.semester_start_date, b.semester_end_date,
-                   d.name as department_name
+            SELECT b.id, b.name, b.current_semester, b.semester_start_date, b.semester_end_date
             FROM batches b
-            JOIN departments d ON b.department_id = d.id
-            WHERE b.semester_dates_pending = TRUE
+            WHERE b.semester_start_date IS NULL OR b.semester_end_date IS NULL
             ORDER BY b.name ASC
         `);
 
         res.json(rows);
-    } catch (error: any) {
-        console.error('Get Pending Semester Updates Error:', error);
-        res.status(500).json({ message: 'Error checking pending semester updates' });
-    }
+  } catch (error: any) {
+    console.error('Get Pending Semester Updates Error:', error);
+    res.status(500).json({ message: 'Error checking pending semester updates' });
+  }
 };
 
 // Set Semester Dates for a Batch
@@ -270,8 +286,8 @@ export const createSubject = async (req: Request, res: Response) => {
 
   try {
     const [result]: any = await pool.execute(
-      'INSERT INTO subjects (name, code, credits, semester, type, department_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, code, credits, semester, type || 'theory', 1]
+      'INSERT INTO subjects (name, code, credits, semester, type) VALUES (?, ?, ?, ?, ?)',
+      [name, code, credits, semester, type || 'theory']
     );
     res.status(201).json({ id: result.insertId, message: 'Subject created successfully' });
   } catch (error: any) {
@@ -379,8 +395,7 @@ export const getTimetable = async (req: Request, res: Response) => {
       LEFT JOIN sections sec ON ts.section_id = sec.id
       LEFT JOIN batches b ON sec.batch_id = b.id
       WHERE 1=1 
-      AND s.semester = b.current_semester
-      AND sa.is_active = TRUE
+      AND (sa.id IS NULL OR sa.is_active = TRUE)
     `;
     const params: any[] = [];
 
@@ -499,7 +514,10 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
                 [subjectId, faculty_id, section_id]
             );
             allocationId = ins.insertId;
+            console.log(`Implicitly created allocation ${allocationId} for subject ${subjectId}, faculty ${faculty_id}, section ${section_id}`);
         }
+    } else {
+        console.log(`Clearing slot for section ${section_id}, day ${day}, period ${period}`);
     }
 
     // 3. Upsert Timetable Slot

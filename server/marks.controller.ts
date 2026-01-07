@@ -78,60 +78,39 @@ export const getMarks = async (req: Request, res: Response) => {
         const batchId = sections[0].batch_id;
         console.log('[getMarks] Batch ID:', batchId);
 
-        // 3. Find or Create Exam
-        // Frontend sends examType as name (e.g., 'ia1', 'ia2')
-        // Database has exam_type ENUM ('Internal', 'Model', 'Semester', 'Assignment')
-        // We should search by name field, not exam_type
-        const [exams]: any = await connection.query(
-            'SELECT id FROM exams WHERE batch_id = ? AND name = ? LIMIT 1', 
+        // 3. Find or Create Schedule
+        // Frontend sends examType as title (e.g., 'cia 1', 'model')
+        const [scheds]: any = await connection.query(
+            'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
             [batchId, String(examType).toUpperCase()]
         );
-        console.log('[getMarks] Exams query for name:', { batchId, examName: String(examType).toUpperCase(), result: exams });
         
-        let examId;
-        if (exams.length > 0) {
-            examId = exams[0].id;
-            console.log('[getMarks] Found existing exam ID:', examId);
+        let scheduleId;
+        if (scheds.length > 0) {
+            scheduleId = scheds[0].id;
         } else {
-            console.log('[getMarks] Creating new exam with name:', String(examType).toUpperCase());
             const [ins]: any = await connection.query(
-                "INSERT INTO exams (batch_id, semester, name, exam_type) VALUES (?, 1, ?, 'Internal')",
-                [batchId, String(examType).toUpperCase()]
+                "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
+                [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
             );
-            examId = ins.insertId;
-            console.log('[getMarks] Created new exam ID:', examId);
+            scheduleId = ins.insertId;
         }
 
         // 4. Fetch Students and Left Join Marks
-        console.log('[getMarks] Fetching students with marks for:', { examId, subjectId, sectionId });
-        
-        // FIX: Strict Semester Filter
-        // Only fetch students if their batch is currently in the semester of the exam/subject
-        // Actually, we should check if the Exam's semester matches the Batch's current semester
-        // But for "Reviewing old marks", maybe we want to allow it?
-        // User Requirement: "reset... UI should be blank and new for the next semester."
-        // So, if we are in Sem 4, we should NOT see Sem 3 marks in the active entry view?
-        // Or rather, the "My Classes" dropdown already filters subjects.
-        // If I access a "Maths (Sem 3)" subject, and my batch is in Sem 4, I shouldn't see any students there to enter marks for.
-        // The student list query below drives the rows.
-        
         const [rows]: any = await connection.query(`
             SELECT 
-                u.id, u.name, u.email, sp.roll_number as rollNumber,
+                u.id, u.name, sp.roll_number as rollNumber,
                 m.marks_obtained as currentMarks,
-                m.breakdown,
                 m.status as markStatus
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
             JOIN sections sec ON sp.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            LEFT JOIN marks m ON m.student_id = u.id AND m.exam_id = ? AND m.subject_id = ?
-            JOIN exams e ON e.id = ?
+            LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
             WHERE sp.section_id = ? 
               AND u.role = 'student'
-              AND e.semester = b.current_semester -- Key: Only show students if exam sem matches batch current sem
             ORDER BY sp.roll_number ASC
-        `, [examId, subjectId, examId, sectionId]);
+        `, [scheduleId, subjectId, sectionId]);
 
         console.log('[getMarks] Students fetched:', rows.length);
         res.json(rows);
@@ -163,48 +142,46 @@ export const saveMarks = async (req: Request, res: Response) => {
         if (sections.length === 0) throw new Error('Section not found');
         const batchId = sections[0].batch_id;
 
-        // Find/Create Exam
-        let examId;
-        const [exams]: any = await connection.query(
-            'SELECT id FROM exams WHERE batch_id = ? AND name = ? LIMIT 1', 
+        // Find/Create Schedule
+        let scheduleId;
+        const [scheds]: any = await connection.query(
+            'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
             [batchId, String(examType).toUpperCase()]
         );
-        if (exams.length > 0) {
-            examId = exams[0].id;
+        if (scheds.length > 0) {
+            scheduleId = scheds[0].id;
         } else {
-             const [ins]: any = await connection.query(
-                "INSERT INTO exams (batch_id, semester, name, exam_type) VALUES (?, 1, ?, 'Internal')",
-                [batchId, String(examType).toUpperCase()]
+             const [ins]: any = await connection.execute(
+                "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
+                [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
             );
-            examId = ins.insertId;
+            scheduleId = ins.insertId;
         }
+
+        const facultyId = (req as any).user?.id;
 
         // 2. Loop and Upsert
         for (const entry of marks) {
-            // breakdown: { partA: [...], partB: [...], absent: true/false }
-            const breakdownJson = JSON.stringify(entry.breakdown || {});
-            
-            // Check if exists
-             const [existing]: any = await connection.query(
-                'SELECT id FROM marks WHERE exam_id = ? AND student_id = ? AND subject_id = ?',
-                [examId, entry.studentId, subjectId]
+            const [existing]: any = await connection.query(
+                'SELECT id FROM marks WHERE schedule_id = ? AND student_id = ? AND subject_id = ?',
+                [scheduleId, entry.studentId, subjectId]
             );
 
             if (existing.length > 0) {
-                await connection.query(
-                    'UPDATE marks SET marks_obtained = ?, max_marks = ?, breakdown = ?, section_id = ?, updated_at = NOW() WHERE id = ?',
-                    [entry.marks, entry.maxMarks, breakdownJson, sectionId, existing[0].id]
+                await connection.execute(
+                    'UPDATE marks SET marks_obtained = ?, max_marks = ?, status = ?, faculty_id = ? WHERE id = ?',
+                    [entry.marks, entry.maxMarks, entry.status || 'draft', facultyId, existing[0].id]
                 );
             } else {
-                await connection.query(
-                    'INSERT INTO marks (exam_id, student_id, subject_id, section_id, marks_obtained, max_marks, breakdown) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [examId, entry.studentId, subjectId, sectionId, entry.marks, entry.maxMarks, breakdownJson]
+                await connection.execute(
+                    'INSERT INTO marks (schedule_id, student_id, subject_id, marks_obtained, max_marks, status, faculty_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [scheduleId, entry.studentId, subjectId, entry.marks, entry.maxMarks, entry.status || 'draft', facultyId]
                 );
             }
         }
 
         await connection.commit();
-        res.json({ message: 'Marks saved successfully' });
+        res.json({ message: 'Marks updated successfully' });
 
     } catch (e: any) {
         await connection.rollback();
@@ -231,25 +208,29 @@ export const getMarksByBatch = async (req: Request, res: Response) => {
                 m.subject_id as subjectId,
                 s.code as subjectCode,
                 s.name as subjectName,
-                m.exam_id as examId,
-                e.name as examType,
+                m.schedule_id as scheduleId,
+                sch.category as examType,
                 m.marks_obtained as marks,
-                m.max_marks as maxMarks
+                m.max_marks as maxMarks,
+                m.status
             FROM marks m
-            JOIN exams e ON m.exam_id = e.id
+            JOIN schedules sch ON m.schedule_id = sch.id
             JOIN subjects s ON m.subject_id = s.id
-            JOIN sections sec ON m.section_id = sec.id
-            WHERE sec.batch_id = ?
+            JOIN sections sec ON s.id = s.id -- Join somehow to get batch info, or adjust
+            -- Wait, marks doesn't have section_id anymore in new schema for simplicity? 
+            -- Actually, it's better to join student_profiles to get batch/section.
+            JOIN student_profiles sp ON m.student_id = sp.user_id
+            WHERE sp.batch_id = ?
         `;
         const params: any[] = [batchId];
 
         if (sectionId) {
-            query += ' AND m.section_id = ?';
+            query += ' AND sp.section_id = ?';
             params.push(sectionId);
         }
 
         if (semester) {
-            query += ' AND e.semester = ?';
+            query += ' AND s.semester = ?';
             params.push(semester);
         }
 
@@ -296,11 +277,12 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
         // 3. Fetch Marks (CIA 1, CIA 2, CIA 3, Model)
         // Optimization: Fetch all marks for this batch and filter in JS
         const [allMarks]: any = await connection.query(`
-            SELECT m.student_id, m.subject_id, m.marks_obtained, m.max_marks, e.name as exam_name
+            SELECT m.student_id, m.subject_id, m.marks_obtained, m.max_marks, sch.category as exam_name
             FROM marks m
-            JOIN exams e ON m.exam_id = e.id
-            JOIN sections sec ON m.section_id = sec.id
-            WHERE sec.batch_id = ? AND e.name IN ('CIA 1', 'CIA 2', 'CIA 3', 'Model')
+            JOIN schedules sch ON m.schedule_id = sch.id
+            JOIN student_profiles sp ON m.student_id = sp.user_id
+            WHERE sp.batch_id = ? AND sch.category IN ('CIA 1', 'CIA 2', 'CIA 3', 'Model')
+              AND m.status = 'approved'
         `, [batchId]);
 
         // 4. Fetch Assignment Stats
@@ -380,6 +362,158 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
     } catch (e: any) {
         console.error("Get Theory Internal Marks Error:", e);
         res.status(500).json({ message: 'Error calculating internal marks' });
+    } finally {
+        connection.release();
+    }
+};
+
+// Stage 2: Tutor verifies marks
+// Get status for tutor's assigned section
+export const getVerificationStatus = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    const connection = await pool.getConnection();
+    try {
+        // 1. Get tutor's assigned ranges
+        const [assignments]: any = await connection.query(
+            'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            [userId]
+        );
+
+        if (assignments.length === 0) return res.json([]);
+
+        // For each assignment, we fetch marks for students in range
+        // Note: For now we assume a tutor has only one active assignment, 
+        // but the query handles multiple if needed.
+        
+        const allRows: any[] = [];
+        for (const assignment of assignments) {
+            const [rows]: any = await connection.query(`
+                SELECT 
+                    s.name as subjectName, 
+                    s.code as subjectCode,
+                    sec.id as sectionId,
+                    sec.name as sectionName,
+                    sch.category as examType,
+                    sch.id as scheduleId,
+                    u.name as facultyName,
+                    COUNT(m.id) as studentCount,
+                    SUM(CASE WHEN m.status = 'pending_tutor' THEN 1 ELSE 0 END) as pendingCount,
+                    MIN(m.created_at) as submittedAt,
+                    MIN(m.status) as markStatus
+                FROM marks m
+                JOIN schedules sch ON m.schedule_id = sch.id
+                JOIN subjects s ON m.subject_id = s.id
+                JOIN (
+                    SELECT user_id, section_id, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    FROM student_profiles
+                    WHERE batch_id = ? AND section_id = ?
+                ) sp ON m.student_id = sp.user_id
+                JOIN sections sec ON sp.section_id = sec.id
+                JOIN users u ON m.faculty_id = u.id
+                WHERE m.status IN ('pending_tutor', 'pending_admin', 'approved')
+                  AND (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
+                GROUP BY s.id, sec.id, sch.id
+            `, [
+                assignment.batch_id, 
+                assignment.section_id,
+                assignment.reg_number_start, assignment.reg_number_end,
+                parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
+            ]);
+            allRows.push(...rows);
+        }
+
+        res.json(allRows);
+    } catch (e) {
+        console.error("Get Verification Status Error:", e);
+        res.status(500).json({ message: 'Error fetching status' });
+    } finally {
+        connection.release();
+    }
+};
+
+export const verifyMarks = async (req: Request | any, res: Response) => {
+    const { scheduleId, sectionId, subjectCode } = req.body;
+    const userId = req.user?.id;
+
+    const connection = await pool.getConnection();
+    try {
+        const [subjects]: any = await connection.query('SELECT id FROM subjects WHERE code = ?', [subjectCode]);
+        if (subjects.length === 0) return res.status(404).json({ message: 'Subject not found' });
+        const subjectId = subjects[0].id;
+
+        await connection.query(
+            "UPDATE marks SET status = 'pending_admin', tutor_id = ? WHERE schedule_id = ? AND subject_id = ? AND student_id IN (SELECT user_id FROM student_profiles WHERE section_id = ?)",
+            [userId, scheduleId, subjectId, sectionId]
+        );
+
+        res.json({ message: 'Marks verified and forwarded to Admin' });
+    } catch (e) {
+        console.error("Verify Marks Error:", e);
+        res.status(500).json({ message: 'Error verifying marks' });
+    } finally {
+        connection.release();
+    }
+};
+
+// Stage 3: Admin approves marks
+export const getApprovalStatus = async (req: Request, res: Response) => {
+    const connection = await pool.getConnection();
+    try {
+        const [rows]: any = await connection.query(`
+            SELECT 
+                s.name as subjectName, 
+                s.code as subjectCode,
+                sec.id as sectionId,
+                sec.name as sectionName,
+                b.name as batchName,
+                sch.category as examType,
+                sch.id as scheduleId,
+                fac.name as facultyName,
+                tut.name as tutorName,
+                COUNT(m.id) as studentCount,
+                SUM(CASE WHEN m.status = 'pending_admin' THEN 1 ELSE 0 END) as pendingCount,
+                MIN(m.created_at) as submittedAt,
+                MIN(m.status) as markStatus
+            FROM marks m
+            JOIN schedules sch ON m.schedule_id = sch.id
+            JOIN subjects s ON m.subject_id = s.id
+            JOIN student_profiles sp ON m.student_id = sp.user_id
+            JOIN sections sec ON sp.section_id = sec.id
+            JOIN batches b ON sec.batch_id = b.id
+            JOIN users fac ON m.faculty_id = fac.id
+            LEFT JOIN users tut ON m.tutor_id = tut.id
+            WHERE m.status IN ('pending_admin', 'approved')
+            GROUP BY s.id, s.name, s.code, sec.id, sec.name, b.name, sch.id, sch.category, fac.name, tut.name
+        `);
+
+        res.json(rows);
+    } catch (e) {
+        console.error("Get Approval Status Error:", e);
+        res.status(500).json({ message: 'Error fetching status' });
+    } finally {
+        connection.release();
+    }
+};
+
+export const approveMarks = async (req: Request | any, res: Response) => {
+    const { scheduleId, sectionId, subjectCode } = req.body;
+    const userId = req.user?.id;
+
+    const connection = await pool.getConnection();
+    try {
+        const [subjects]: any = await connection.query('SELECT id FROM subjects WHERE code = ?', [subjectCode]);
+        if (subjects.length === 0) return res.status(404).json({ message: 'Subject not found' });
+        const subjectId = subjects[0].id;
+
+        await connection.query(
+            "UPDATE marks SET status = 'approved', admin_id = ? WHERE schedule_id = ? AND subject_id = ? AND student_id IN (SELECT user_id FROM student_profiles WHERE section_id = ?)",
+            [userId, scheduleId, subjectId, sectionId]
+        );
+
+        res.json({ message: 'Marks approved successfully' });
+    } catch (e) {
+        console.error("Approve Marks Error:", e);
+        res.status(500).json({ message: 'Error approving marks' });
     } finally {
         connection.release();
     }

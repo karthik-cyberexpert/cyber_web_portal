@@ -705,9 +705,8 @@ export default function ManageFaculty() {
               >
                   <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
                   <SelectContent>
-                      <SelectItem value="Computer Science">Computer Science</SelectItem>
-                      <SelectItem value="Information Technology">Information Technology</SelectItem>
-                      <SelectItem value="Electronics">Electronics</SelectItem>
+                      <SelectItem value="Cyber Security">Cyber Security</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
               </Select>
             </div>

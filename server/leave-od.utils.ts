@@ -1,7 +1,7 @@
 import { pool } from './db.js';
 
 /**
- * Get holidays from calendar_events table for a date range
+ * Get holidays from schedules table for a date range
  * @param startDate - Start date (YYYY-MM-DD)
  * @param endDate - End date (YYYY-MM-DD)
  * @returns Array of holiday date strings
@@ -9,11 +9,28 @@ import { pool } from './db.js';
 export async function getHolidaysInRange(startDate: string, endDate: string): Promise<string[]> {
     try {
         const [holidays]: any = await pool.query(
-            `SELECT DATE_FORMAT(date, '%Y-%m-%d') as date FROM calendar_events 
-             WHERE event_type = 'HOLIDAY' AND date BETWEEN ? AND ?`,
-            [startDate, endDate]
+            `SELECT DATE_FORMAT(start_date, '%Y-%m-%d') as date, 
+                    DATE_FORMAT(end_date, '%Y-%m-%d') as end_date 
+             FROM schedules 
+             WHERE category = 'Holiday' 
+             AND (
+                (start_date BETWEEN ? AND ?) OR
+                (end_date BETWEEN ? AND ?) OR
+                (start_date <= ? AND end_date >= ?)
+             )`,
+            [startDate, endDate, startDate, endDate, startDate, endDate]
         );
-        return holidays.map((h: any) => h.date);
+        
+        const holidayDates: string[] = [];
+        holidays.forEach((h: any) => {
+            let curr = new Date(h.date);
+            const end = new Date(h.end_date);
+            while (curr <= end) {
+                holidayDates.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+        });
+        return holidayDates;
     } catch (error) {
         console.error('Error fetching holidays:', error);
         return [];
@@ -21,7 +38,7 @@ export async function getHolidaysInRange(startDate: string, endDate: string): Pr
 }
 
 /**
- * Check if there are any exam dates in the given range for a student
+ * Check if there any exam dates in the given range for a student
  * @param userId - Student user ID
  * @param startDate - Start date (YYYY-MM-DD)
  * @param endDate - End date (YYYY-MM-DD)
@@ -33,11 +50,10 @@ export async function checkExamDatesInRange(
     endDate: string
 ): Promise<{ hasExams: boolean; examDates: string[] }> {
     try {
-        // Get student's batch and semester
+        // Get student's batch
         const [studentProfile]: any = await pool.query(
-            `SELECT sp.batch_id, b.current_semester as semester 
+            `SELECT sp.batch_id 
              FROM student_profiles sp
-             JOIN batches b ON sp.batch_id = b.id
              WHERE sp.user_id = ?`,
             [userId]
         );
@@ -46,23 +62,33 @@ export async function checkExamDatesInRange(
             return { hasExams: false, examDates: [] };
         }
 
-        const { batch_id, semester } = studentProfile[0];
+        const { batch_id } = studentProfile[0];
 
-        // Check for exams in the date range for this batch/semester
+        // Check for exams in the date range for this batch
+        // Exams are CIA 1, CIA 2, CIA 3, Model, Semester
         const [exams]: any = await pool.query(
-            `SELECT DATE_FORMAT(date, '%Y-%m-%d') as date, event_type, s.name as subject_name
-             FROM calendar_events ce
-             LEFT JOIN subjects s ON ce.subject_id = s.id
-             WHERE ce.event_type IN ('UT', 'MODEL', 'SEMESTER')
-             AND ce.date BETWEEN ? AND ?
-             AND (ce.batch_id = ? OR ce.batch_id IS NULL)
-             AND (ce.semester = ? OR ce.semester IS NULL)`,
-            [startDate, endDate, batch_id, semester]
+            `SELECT DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
+                    DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
+                    category, title
+             FROM schedules
+             WHERE category IN ('CIA 1', 'CIA 2', 'CIA 3', 'Model', 'Semester')
+             AND (batch_id = ? OR batch_id IS NULL)
+             AND (
+                (start_date BETWEEN ? AND ?) OR
+                (end_date BETWEEN ? AND ?) OR
+                (start_date <= ? AND end_date >= ?)
+             )`,
+            [batch_id, startDate, endDate, startDate, endDate, startDate, endDate]
         );
+
+        const examDetails: string[] = [];
+        exams.forEach((e: any) => {
+            examDetails.push(`${e.start_date} to ${e.end_date} (${e.category}: ${e.title})`);
+        });
 
         return {
             hasExams: exams.length > 0,
-            examDates: exams.map((e: any) => `${e.date} (${e.event_type}: ${e.subject_name || 'Exam'})`)
+            examDates: examDetails
         };
     } catch (error) {
         console.error('Error checking exam dates:', error);
@@ -202,11 +228,24 @@ export async function getTutorForStudent(studentId: number): Promise<number | nu
         
         const { batch_id, section_id } = studentProfile[0];
         
-        // Get tutor for that batch/section
-        const [tutorAssignment]: any = await pool.query(
-            'SELECT faculty_id FROM tutor_assignments WHERE batch_id = ? AND section_id = ? AND is_active = TRUE LIMIT 1',
-            [batch_id, section_id]
-        );
+        // Get tutor for that specific student based on their rank in the section
+        const [tutorAssignment]: any = await pool.query(`
+            SELECT ta.faculty_id 
+            FROM tutor_assignments ta
+            JOIN (
+                SELECT user_id, batch_id, section_id, 
+                       ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                FROM student_profiles
+                WHERE batch_id = ? AND section_id = ?
+            ) sp_ranked ON ta.batch_id = sp_ranked.batch_id AND ta.section_id = sp_ranked.section_id
+            WHERE sp_ranked.user_id = ? 
+              AND ta.is_active = TRUE
+              AND (ta.reg_number_start IS NULL OR ta.reg_number_end IS NULL 
+                   OR (sp_ranked.row_num >= CAST(ta.reg_number_start AS UNSIGNED) 
+                       AND sp_ranked.row_num <= CAST(ta.reg_number_end AS UNSIGNED)))
+            ORDER BY (ta.reg_number_start IS NOT NULL AND ta.reg_number_end IS NOT NULL) DESC
+            LIMIT 1
+        `, [batch_id, section_id, studentId]);
         
         return tutorAssignment.length > 0 ? tutorAssignment[0].faculty_id : null;
         

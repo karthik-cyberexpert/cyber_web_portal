@@ -65,7 +65,7 @@ export default function HolidaysSchedule() {
       if (!token) return;
       try {
           const query = new URLSearchParams({
-              type: 'HOLIDAY',
+              category: 'Holiday',
               month: (currentMonth.getMonth() + 1).toString(),
               year: currentMonth.getFullYear().toString()
           });
@@ -118,7 +118,7 @@ export default function HolidaysSchedule() {
                   Authorization: `Bearer ${token}` 
               },
               body: JSON.stringify({
-                  event_type: 'HOLIDAY',
+                  event_type: 'Holiday',
                   date: format(selectedDate, 'yyyy-MM-dd'),
                   title: holidayName,
                   description: 'Holiday'

@@ -1,1 +1,56 @@
-:3007/api/academic/subjects/1/faculties:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+Restructure all the database tables
+The tables are users, departments, academic_years, batches, sections, 
+tutor_assignments, faculty_profiles, student_profiles, subjects, subject_allocations, 
+timetable_slots, attendance, leave_requests, od_requests, notes, assignments, 
+assignment_submissions, exams, marks, circulars, notifications, calendar_events, 
+eca_achievements, grievances, lost_and_found_items, feedback_forms, 
+feedback_questions, feedback_responses, feedback_answers
+
+
+
+Now that, based on this connect everything with other using foreign key constraints. 
+Let me tell you the work flow of our project. 
+Remeber thing, this is a not a entire college web portal, it is a specific department's portal. So we don't have any department table to specify the department. And our department where the web portal is going to launch is Cyber Security.
+Next move on to the logic. At first we have a admin login, so users table. 
+The roles are admin, faculty, student, tutor(also act as faculty).
+After that, we have a batch table with sections column to specify total section available for the batch. The first thing is batch creation.
+The batch creation is based on our web logic, we do have a four year program with 8 semester. 
+Based on our logic, as per the batch year and the current date, we can calculate the current semester for the initial time. 
+When for the first time semester is auto created, admin needs to specify the start and end date of the semester. 
+LEt's say if we are at current semester 4, admin need to specify the start and end date of the semester 4 like starting = 05/01/2026 and ending = 10/05/2026.
+After 10/05/2026, the semester 4 will be closed and semester 5 will be opened, and admin will again get the prompt for adding the semester start and end date of the 5th semester.
+
+When batch is created, admin can now add students to the batch. Note that, that students are needs to correctly map to the respective batch.
+And next we do have a faculty creation. And another thing is we can able to assign a faculty as tutor for a specific batch for a specific section. We do have a option range to assign tutor for a specific batch for a specific section like register number 1 to 30, and another tutor for the same batch for the same section of student register number 31 to 60 like that.
+Then we have a subject creation. When creating the subject, very important things are the semester. And subject created, we can able to assign faculties to the subject. A single subject can have one or more faculties as well.
+LEt's say with a example, if we creates a subject for semester 4, and if any batch's current semester is 4, then that subject should auto map to the batch. When the batch current semester got increased, then auto remove the subject from that batch students.
+Remeber a thing, in the faculty portal we have many fields like Under My Classes, we have My Subjects and Students. The My subjects will change only if admin changes the faculty allocations to the subject. And in the students tab, it will show all the list of students if the faculty handling subject is mapped to the student's batch. If the subject allocation from the students batch is removed, then faculty cannot able to see the subject, unless other subject they are handling is mapping to the students batch.
+This same logic will goes to the marks entry as well. Marks entry will have the subject selection first, next we have the batch selection and section selection with examination selection. But remeber a thing, the batch selection should show only the list of current active batches assigned to the subject.
+Same goes for the notes upload, assignments and circulars as well, faculty can only able to upload notes, create assignments and post circulars only to the active available batch and section of the subejct. Remeber a thing, when a semester ends, all the notes uploaded files, and assignments files needs to auto delete from the storage folder and the relevent notes upload database details and assignments database details should also needs to get auto removed.
+
+The next is time table. Note that, we do have a time table creation with dynamic linking. When admin creates the time table, let's say when admin creates the time table for batch 2024-2028, it should reflect on students of 2024-2028, and when creating time table admin needs to specify the subject, and needs to assign the faculty as well. That period should also needs to reflect in the respective faculty portal as well.
+
+In the Marks Entry, note that, for every exam like CIA 1, CIA 2, CIA 3, Model we need verification process. When faculty finalize the marks and enter all the marks, they will have a submit for approval button. When the button is clicked, it needs to go to the respective batch's section's tutor for first approval. And when tutor reviews it and apprvoes, it auto goes to the admin approval pages as well. When admin approves, it needs to reflect in the respective student's portal, but one thing even when semester changes, te marks should not be deleted. At any semester, the students can able to see their current semester mark details and the before semester marks details as well, not for future semester.
+
+And next we have the scheduling table. Keep both exam and holiday schedule as a single table but seperate as category. For the exam we have the category dropdown values as CIA 1, CIA 2, CIA 3, Model, Semester and for the Holiday specify the category as holdiay only. 
+Next we have the leave portal. Student can able to sent a leave request (half day[first half / second half] or full day) to the tutor, and as per the logic, if leave days is less than or equal to 2, they can able to accept the leave. If leave is 3 days or more, then tutor cannot able to accept the leave, they can forward the leave request to admin, and admin can accept/reject it. Whatever the status, it needs to reflect to the respective tutor and the student's portal as well. 
+The same leave portal logic will be for the Od portal as well, but the only thing is, even the od if half day, tutor can only able to forward it. They cannot able to accept it.
+For the exam scheduling, we do need to maintain a logic, that if a batch got a exam on a particular date, that batch's students cannot able to apply for leave or od on that date. 
+The next is attendance table, based on the current semester startig date, till the current date based on the total leave taken, let's say the student got a single day leave out of 10 day, then the attendance percentage is 90%. Like that, the logic will be there. attendance needs to be dynamically connect across the stduent, tutor and admin page. 
+
+NExt is the grievances table, feedback table and lost & found portal table, grievances, feedback and lost & found portal table will be the same as that of the final_schame.sql file, but if any depatment related things is there, remove that. 
+
+And the last is LMS Management, and ECA Analytics. For the LMS just use the placeholder. And for the ECA Analytics, the same as that of schema file, but the thing, we should not delete the files from the storage dir even when semester is changed. Remove the semester logic if there in the ECA table.
+
+If I miss any table, create it and make it connect correctly.
+
+
+Drop the existing database table, and create this logic based table. Also analyse the frontend to match the database logic. If frontend and database table mismatch, then update the froneend to match the database.
+
+Do the migration by yourself, keep the final_schema file and create a new_schema.sql file for this new schema. 
+
+Recreate the backend endpoints and routes wherever required. 
+
+After all these has done, do a detailed, fully depth based test scripts to test all the backend endpoints and connections.
+
+Also make all the website pages and contents dynamically connect to the database. No page, no field and no area should throw error. Add a in depth error handling as well.

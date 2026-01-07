@@ -84,9 +84,9 @@ export async function getTutorODRequests(req: Request, res: Response) {
     try {
         const tutorId = (req as any).user.id;
 
-        // Get tutor's assigned batch and section
+        // Get tutor's assigned ranges
         const [assignments]: any = await pool.query(
-            'SELECT batch_id, section_id FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
             [tutorId]
         );
 
@@ -94,27 +94,37 @@ export async function getTutorODRequests(req: Request, res: Response) {
             return res.json([]);
         }
 
-        const { batch_id, section_id } = assignments[0];
+        const allRequests: any[] = [];
+        for (const assignment of assignments) {
+            const [requests]: any = await pool.query(
+                `SELECT od.id, od.user_id as userId, od.category as type, od.start_date as startDate, 
+                        od.end_date as endDate, od.is_half_day as isHalfDay, od.session, 
+                        od.duration_type as durationType, od.reason, od.place_to_visit as placeToVisit, od.proof_url as proofUrl, 
+                        od.working_days as workingDays, od.status, od.tutor_id as tutorId, 
+                        od.admin_id as adminId, 
+                        od.rejection_reason as rejectionReason,
+                        u.name as user_name, sp.roll_number, b.current_semester, b.name as batch_name 
+                FROM od_requests od
+                JOIN (
+                    SELECT user_id, batch_id, section_id, roll_number, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    FROM student_profiles
+                    WHERE batch_id = ? AND section_id = ?
+                ) sp ON od.user_id = sp.user_id
+                JOIN users u ON od.user_id = u.id
+                LEFT JOIN batches b ON sp.batch_id = b.id
+                WHERE (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
+                ORDER BY od.created_at DESC`,
+                [
+                    assignment.batch_id, 
+                    assignment.section_id,
+                    assignment.reg_number_start, assignment.reg_number_end,
+                    parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
+                ]
+            );
+            allRequests.push(...requests);
+        }
 
-        // Get OD requests from students in this section
-        const [requests]: any = await pool.query(
-            `SELECT od.id, od.user_id as userId, od.category as type, od.start_date as startDate, 
-                    od.end_date as endDate, od.is_half_day as isHalfDay, od.session, 
-                    od.duration_type as durationType, od.reason, od.place_to_visit as placeToVisit, od.proof_url as proofUrl, 
-                    od.working_days as workingDays, od.status, od.forwarded_by as forwardedBy, 
-                    od.forwarded_at as forwardedAt, od.approver_id as approverId, 
-                    od.approved_at as approvedAt, od.rejection_reason as rejectionReason,
-                    u.name as user_name, sp.roll_number, b.current_semester, b.name as batch_name 
-            FROM od_requests od
-            JOIN users u ON od.user_id = u.id
-            JOIN student_profiles sp ON od.user_id = sp.user_id
-            LEFT JOIN batches b ON sp.batch_id = b.id
-            WHERE sp.batch_id = ? AND sp.section_id = ?
-            ORDER BY od.created_at DESC`,
-            [batch_id, section_id]
-        );
-
-        res.json(requests);
+        res.json(allRequests);
     } catch (error: any) {
         console.error('Error getting tutor OD requests:', error);
         res.status(500).json({ error: 'Failed to fetch OD requests' });
@@ -129,16 +139,16 @@ export async function getAdminODRequests(req: Request, res: Response) {
             `SELECT od.id, od.user_id as userId, od.category as type, od.start_date as startDate, 
                     od.end_date as endDate, od.is_half_day as isHalfDay, od.session, 
                     od.duration_type as durationType, od.reason, od.place_to_visit as placeToVisit, od.proof_url as proofUrl, 
-                    od.working_days as workingDays, od.status, od.forwarded_by as forwardedBy, 
-                    od.forwarded_at as forwardedAt, od.approver_id as approverId, 
-                    od.approved_at as approvedAt, od.rejection_reason as rejectionReason,
+                    od.working_days as workingDays, od.status, od.tutor_id as tutorId, 
+                    od.admin_id as adminId, 
+                    od.rejection_reason as rejectionReason,
                     u.name as user_name, sp.roll_number, sp.batch_id, sp.section_id, b.current_semester,
-                    b.name as batch_name, f.name as forwarded_by_name
+                    b.name as batch_name, t.name as tutor_name
             FROM od_requests od
             JOIN users u ON od.user_id = u.id
             JOIN student_profiles sp ON od.user_id = sp.user_id
             LEFT JOIN batches b ON sp.batch_id = b.id
-            LEFT JOIN users f ON od.forwarded_by = f.id
+            LEFT JOIN users t ON od.tutor_id = t.id
             ORDER BY od.created_at DESC`,
             []
         );
@@ -158,7 +168,7 @@ export async function forwardODRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE od_requests 
-            SET status = 'pending_admin', forwarded_by = ?, forwarded_at = NOW() 
+            SET status = 'forwarded_to_admin', tutor_id = ? 
             WHERE id = ?`,
             [userId, id]
         );
@@ -229,7 +239,7 @@ export async function adminApproveODRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE od_requests 
-            SET status = 'approved', approved_by = 'Admin', approver_id = ?, approved_at = NOW() 
+            SET status = 'approved', admin_id = ? 
             WHERE id = ?`,
             [userId, id]
         );
@@ -385,13 +395,13 @@ export async function getMyODRequests(req: Request, res: Response) {
             `SELECT od.id, od.user_id as userId, od.category as type, od.start_date as startDate, 
                     od.end_date as endDate, od.is_half_day as isHalfDay, od.session, 
                     od.duration_type as durationType, od.reason, od.place_to_visit as placeToVisit, od.proof_url as proofUrl, 
-                    od.working_days as workingDays, od.status, od.forwarded_by as forwardedBy, 
-                    od.forwarded_at as forwardedAt, od.approver_id as approverId, 
-                    od.approved_at as approvedAt, od.rejection_reason as rejectionReason,
-                    u.name as approver_name, f.name as forwarded_by_name
+                    od.working_days as workingDays, od.status, od.tutor_id as tutorId, 
+                    od.admin_id as adminId, 
+                    od.rejection_reason as rejectionReason,
+                    t.name as tutor_name, a.name as admin_name
             FROM od_requests od
-            LEFT JOIN users u ON od.approver_id = u.id
-            LEFT JOIN users f ON od.forwarded_by = f.id
+            LEFT JOIN users t ON od.tutor_id = t.id
+            LEFT JOIN users a ON od.admin_id = a.id
             WHERE od.user_id = ?
             ORDER BY od.created_at DESC`,
             [userId]

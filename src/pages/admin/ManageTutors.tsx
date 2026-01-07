@@ -40,8 +40,10 @@ interface TutorAssignment {
   section_name: string;
   batch_id: number;
   batch_name: string;
-  department_name: string;
+  reg_number_start: string;
+  reg_number_end: string;
   assigned_at: string;
+  created_at: string;
 }
 
 interface Faculty {
@@ -82,6 +84,8 @@ export default function ManageTutors() {
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>('');
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+  const [regStart, setRegStart] = useState<string>('');
+  const [regEnd, setRegEnd] = useState<string>('');
 
   const fetchTutors = async () => {
     try {
@@ -183,8 +187,10 @@ export default function ManageTutors() {
               },
               body: JSON.stringify({
                   facultyId: parseInt(selectedFacultyId),
+                  batchId: parseInt(selectedBatchId),
                   sectionId: parseInt(selectedSectionId),
-                  batchId: parseInt(selectedBatchId)
+                  reg_number_start: regStart,
+                  reg_number_end: regEnd
               })
           });
 
@@ -196,6 +202,8 @@ export default function ManageTutors() {
               setSelectedFacultyId('');
               setSelectedBatchId('');
               setSelectedSectionId('');
+              setRegStart('');
+              setRegEnd('');
           } else {
               const err = await res.json();
               toast.error(err.message || "Failed to assign tutor");
@@ -233,7 +241,7 @@ export default function ManageTutors() {
   const stats = {
       total: tutors.length,
       active: tutors.length, // All fetched are active
-      departments: new Set(tutors.map(t => t.department_name)).size
+      sections: new Set(tutors.map(t => t.section_id)).size
   };
 
   const totalPages = Math.ceil(filteredTutors.length / ITEMS_PER_PAGE);
@@ -277,8 +285,8 @@ export default function ManageTutors() {
           delay={0.2}
         />
         <StatCard
-          title="Departments"
-          value={stats.departments}
+          title="Assigned Sections"
+          value={stats.sections}
           icon={GraduationCap}
           variant="warning"
           delay={0.3}
@@ -310,7 +318,7 @@ export default function ManageTutors() {
               <tr>
                 <th className="text-left p-4 font-medium text-muted-foreground">Faculty</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Assigned Class</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Department</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Student Range</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Assigned Date</th>
                 <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -341,8 +349,18 @@ export default function ManageTutors() {
                         <div className="font-medium">{tutor.batch_name}</div>
                         <div className="text-xs text-muted-foreground">Section {tutor.section_name}</div>
                     </td>
-                    <td className="p-4 text-sm">{tutor.department_name}</td>
-                    <td className="p-4 text-sm">{new Date(tutor.assigned_at).toLocaleDateString('en-GB')}</td>
+                    <td className="p-4">
+                        <div className="font-medium text-primary">
+                            {tutor.reg_number_start && tutor.reg_number_end ? 
+                                `${tutor.reg_number_start} — ${tutor.reg_number_end}` : 
+                                'All Students'
+                            }
+                        </div>
+                    </td>
+                    <td className="p-4 text-sm">
+                        {tutor.assigned_at ? new Date(tutor.assigned_at).toLocaleDateString('en-GB') : 
+                         tutor.created_at ? new Date(tutor.created_at).toLocaleDateString('en-GB') : '—'}
+                    </td>
                     <td className="p-4 text-right">
                         <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(tutor)}>
                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -410,6 +428,29 @@ export default function ManageTutors() {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Student Range Start (Optional)</Label>
+                            <Input 
+                                type="number"
+                                placeholder="e.g., 1"
+                                value={regStart}
+                                onChange={(e) => setRegStart(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Student Range End (Optional)</Label>
+                            <Input 
+                                type="number"
+                                placeholder="e.g., 30"
+                                value={regEnd}
+                                onChange={(e) => setRegEnd(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Leave blank to assign all students in the selected batch and section.
+                    </p>
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>

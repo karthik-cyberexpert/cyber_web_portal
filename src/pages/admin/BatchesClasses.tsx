@@ -39,8 +39,7 @@ interface Batch {
     current_semester: number;
     semester_start_date: string | null;
     semester_end_date: string | null;
-    department_name: string;
-    section_count: number;
+    sections_count: number;
 }
 
 interface Section {
@@ -154,9 +153,6 @@ export default function BatchesClasses() {
         return;
     }
 
-    // Default 1 (CSS) for now as we don't have department selection in UI yet
-    // In real app, Admin might select department or it's inferred from Admin's department
-    const department_id = 1; 
     const end_year = year + 4;
     const name = `${year}-${end_year}`;
 
@@ -168,35 +164,15 @@ export default function BatchesClasses() {
                 Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
-                department_id,
                 name,
                 start_year: year,
-                end_year
+                end_year,
+                sections_count: secs
             })
         });
 
         if (res.ok) {
-            const data = await res.json();
-            const batchId = data.id;
-
-            // Auto-create sections
-            for (let i = 0; i < secs; i++) {
-                const sectionName = String.fromCharCode(65 + i);
-                await fetch(`${API_BASE_URL}/academic/sections`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        batch_id: batchId,
-                        name: sectionName,
-                        capacity: 60
-                    })
-                });
-            }
-
-            toast.success("Batch created successfully");
+            toast.success("Batch and sections created successfully");
             setIsAddBatchOpen(false);
             fetchBatches();
         } else {
@@ -344,7 +320,6 @@ export default function BatchesClasses() {
             id: semesterEditBatch.id,
             name: semesterEditBatch.name,
             current_semester: semesterEditBatch.current_semester,
-            department_name: semesterEditBatch.department_name,
             semester_start_date: semesterEditBatch.semester_start_date,
             semester_end_date: semesterEditBatch.semester_end_date
           }}
@@ -451,7 +426,7 @@ export default function BatchesClasses() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-bold">{batch.section_count}</span>
+                        <span className="font-bold">{batch.sections_count}</span>
                       </div>
                     </TableCell>
                     <TableCell>

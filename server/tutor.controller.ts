@@ -18,14 +18,15 @@ export const getAllTutors = async (req: Request, res: Response) => {
         s.name as section_name,
         ta.batch_id,
         b.name as batch_name,
-        d.name as department_name,
-        d.code as department_code,
-        ta.assigned_at
+        ta.reg_number_start,
+        ta.reg_number_end,
+        ta.assigned_at,
+        ta.created_at,
+        ta.is_active
       FROM tutor_assignments ta
       JOIN users u ON ta.faculty_id = u.id
       JOIN sections s ON ta.section_id = s.id
       JOIN batches b ON ta.batch_id = b.id
-      JOIN departments d ON b.department_id = d.id
       WHERE ta.is_active = TRUE
       ORDER BY b.start_year DESC, s.name ASC
     `);
@@ -36,64 +37,29 @@ export const getAllTutors = async (req: Request, res: Response) => {
   }
 };
 
-// Assign Tutor (Faculty -> Section)
+// Assign Tutor (Faculty -> Section with Range)
 export const assignTutor = async (req: Request, res: Response) => {
-  const { facultyId, sectionId, batchId } = req.body;
-  // academic_year could be derived or passed. For now, we'll keep it simple or null.
+  const { facultyId, sectionId, batchId, reg_number_start, reg_number_end } = req.body;
   
-  const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction();
-
-    // 1. Check if section already has an active tutor?
-    // Ideally, a section has only one active class in-charge.
-    const [existing]: any = await connection.query(
-      'SELECT id FROM tutor_assignments WHERE section_id = ? AND is_active = TRUE',
-      [sectionId]
-    );
-
-    if (existing.length > 0) {
-      // Deactivate previous tutor for this section? Or block?
-      // Let's block for now, or auto-revoke. Auto-revoke is better UX usually, or explicit replace.
-      // We'll throw error to let user decide, or just deactivate old one.
-      // Let's deactivate old one.
-      await connection.query(
-        'UPDATE tutor_assignments SET is_active = FALSE, revoked_at = NOW() WHERE section_id = ? AND is_active = TRUE',
-        [sectionId]
-      );
-      
-      // Also update section table to NULL
-      await connection.query('UPDATE sections SET class_incharge_id = NULL WHERE id = ?', [sectionId]);
-    }
-
-    // 2. Create new assignment
-    await connection.execute(
-      'INSERT INTO tutor_assignments (faculty_id, section_id, batch_id) VALUES (?, ?, ?)',
-      [facultyId, sectionId, batchId]
-    );
-
-    // 3. Update sections table denormalized column
-    await connection.execute(
-      'UPDATE sections SET class_incharge_id = ? WHERE id = ?',
-      [facultyId, sectionId]
-    );
+    // We allow multiple tutors per section now based on ranges.
+    // Overlap check could be added here later if needed.
     
-    // 4. Also Ensure user has 'tutor' role? 
-    // The requirement says "faculty = tutor". So maybe we don't strictly need 'tutor' role in users table 
-    // unless we want to distinguish. But users.role is ENUM.
-    // If we want them to have tutor privileges, we might need to handle roles. 
-    // For now, checks are often `role IN ('faculty', 'tutor')`.
-    // We won't change their primary role to 'tutor' because they are still 'faculty'.
-    
-    await connection.commit();
+    await pool.execute(
+      'INSERT INTO tutor_assignments (faculty_id, section_id, batch_id, reg_number_start, reg_number_end) VALUES (?, ?, ?, ?, ?)',
+      [
+        facultyId || null, 
+        sectionId || null, 
+        batchId || null, 
+        reg_number_start || null, 
+        reg_number_end || null
+      ]
+    );
+
     res.status(201).json({ message: 'Tutor assigned successfully' });
-
   } catch (error) {
-    await connection.rollback();
     console.error('Assign Tutor Error:', error);
     res.status(500).json({ message: 'Error assigning tutor' });
-  } finally {
-    connection.release();
   }
 };
 
@@ -101,38 +67,12 @@ export const assignTutor = async (req: Request, res: Response) => {
 export const deleteTutor = async (req: Request, res: Response) => {
   const { id } = req.params; // assignment id
 
-  const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction();
-
-    // Get details to clean up sections table
-    const [rows]: any = await connection.query('SELECT section_id FROM tutor_assignments WHERE id = ?', [id]);
-    
-    if (rows.length > 0) {
-        const { section_id } = rows[0];
-        
-        // Soft delete / Deactivate
-        await connection.query(
-            'UPDATE tutor_assignments SET is_active = FALSE, revoked_at = NOW() WHERE id = ?',
-            [id]
-        );
-        
-        // Clean up section
-        await connection.query(
-            'UPDATE sections SET class_incharge_id = NULL WHERE id = ?',
-            [section_id]
-        );
-    }
-
-    await connection.commit();
+    await pool.query('UPDATE tutor_assignments SET is_active = FALSE WHERE id = ?', [id]);
     res.json({ message: 'Tutor assignment revoked successfully' });
-
   } catch (error) {
-    await connection.rollback();
     console.error('Revoke Tutor Error:', error);
     res.status(500).json({ message: 'Error revoking tutor assignment' });
-  } finally {
-    connection.release();
   }
 };
 
@@ -148,7 +88,9 @@ export const getTutorClass = async (req: Request | any, res: Response) => {
                 ta.batch_id, 
                 b.name as batch_name,
                 ta.section_id, 
-                s.name as section_name
+                s.name as section_name,
+                ta.reg_number_start,
+                ta.reg_number_end
             FROM tutor_assignments ta
             JOIN batches b ON ta.batch_id = b.id
             JOIN sections s ON ta.section_id = s.id
@@ -160,28 +102,40 @@ export const getTutorClass = async (req: Request | any, res: Response) => {
             return res.json({ 
                 hasAssignment: false, 
                 students: [],
-                message: "You are not assigned as a Class In-charge." 
+                message: "You are not assigned as a Tutor." 
             });
         }
 
         const assignment = assignments[0];
 
-        // 2. Fetch Students in that Batch & Section
-        const [rows]: any = await pool.query(`
-             SELECT 
-                u.id, 
-                u.name, 
-                u.email, 
-                u.phone,
-                u.avatar_url as avatar,
-                sp.roll_number as rollNumber,
-                sp.register_number as registerNumber,
-                sp.cgpa
-            FROM users u
-            JOIN student_profiles sp ON u.id = sp.user_id
-            WHERE sp.batch_id = ? AND sp.section_id = ? AND u.role = 'student'
-            ORDER BY sp.roll_number ASC
-        `, [assignment.batch_id, assignment.section_id]);
+        // 2. Fetch Students in that Batch & Section within the Range
+        let studentQuery = `
+             SELECT * FROM (
+                 SELECT 
+                    u.id, 
+                    u.name, 
+                    u.email, 
+                    u.phone,
+                    u.avatar_url as avatar,
+                    sp.roll_number as rollNumber,
+                    sp.register_number as registerNumber,
+                    sp.cgpa,
+                    ROW_NUMBER() OVER (ORDER BY sp.roll_number ASC) as row_num
+                FROM users u
+                JOIN student_profiles sp ON u.id = sp.user_id
+                WHERE sp.batch_id = ? AND sp.section_id = ? AND u.role = 'student'
+            ) as ranked_students
+        `;
+        const queryParams: any[] = [assignment.batch_id, assignment.section_id];
+
+        if (assignment.reg_number_start && assignment.reg_number_end) {
+            studentQuery += ` WHERE row_num >= ? AND row_num <= ?`;
+            queryParams.push(parseInt(assignment.reg_number_start), parseInt(assignment.reg_number_end));
+        }
+
+        studentQuery += ` ORDER BY rollNumber ASC`;
+
+        const [rows]: any = await pool.query(studentQuery, queryParams);
 
         // Calculate attendance and certifications for each student
         const studentsWithData = await Promise.all(

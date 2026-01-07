@@ -12,13 +12,11 @@ export const getStudents = async (req: Request, res: Response) => {
         sp.roll_number, sp.register_number, sp.dob, sp.gender, sp.blood_group,
         sp.guardian_name, sp.guardian_phone,
         b.name as batch_name, sp.batch_id,
-        s.name as section_name, sp.section_id,
-        d.name as department_name
+        s.name as section_name, sp.section_id
       FROM users u
       JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN batches b ON sp.batch_id = b.id
       LEFT JOIN sections s ON sp.section_id = s.id
-      LEFT JOIN departments d ON b.department_id = d.id
       WHERE u.role = 'student'
       ORDER BY u.name ASC
     `);
@@ -45,11 +43,12 @@ export const getStudents = async (req: Request, res: Response) => {
 export const createStudent = async (req: Request, res: Response) => {
   const { 
     email, name, password, phone, 
-    roll_number, batch_id, section_id, dob, gender 
+    roll_number, register_number, batch_id, section_id, dob, gender 
   } = req.body;
 
-  // Rule: Register Number should be same as Roll Number
-  const register_number = roll_number;
+  if (!register_number) {
+    return res.status(400).json({ message: 'Register Number is required' });
+  }
 
   const connection = await pool.getConnection();
 
@@ -97,12 +96,13 @@ export const createStudent = async (req: Request, res: Response) => {
 export const updateStudent = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { 
-    name, phone, email, roll_number, batch_id, section_id,
+    name, phone, email, roll_number, register_number, batch_id, section_id,
     dob, gender, address, guardian_name, guardian_phone
   } = req.body;
 
-  // Rule: Register Number should be same as Roll Number
-  const register_number = roll_number;
+  if (!register_number) {
+    return res.status(400).json({ message: 'Register Number is required' });
+  }
 
   const connection = await pool.getConnection();
 
@@ -202,7 +202,7 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
 
     try {
         const [rows]: any = await pool.query(`
-             SELECT 
+            SELECT 
                 u.id, u.email, u.name, u.phone, u.avatar_url as avatar,
                 sp.roll_number as rollNumber, 
                 sp.register_number as registerNumber, 
@@ -217,7 +217,7 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
                 b.id as batchId,
                 s.name as section,
                 s.id as sectionId,
-                d.name as department,
+                'Cyber Security' as department,
                 'B.Tech' as programme,  
                 'Active' as status,     
                 'Regular' as admissionType,
@@ -236,7 +236,6 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
             JOIN student_profiles sp ON u.id = sp.user_id
             LEFT JOIN batches b ON sp.batch_id = b.id
             LEFT JOIN sections s ON sp.section_id = s.id
-            LEFT JOIN departments d ON b.department_id = d.id
             WHERE u.id = ?
         `, [userId]);
 
@@ -272,15 +271,14 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
             SELECT 
                 s.name as subjectName,
                 s.code as subjectCode,
-                e.name as examName,
-                e.exam_type as examType,
+                sc.category as examType,
+                sc.title as examName,
                 m.marks_obtained as marks,
-                m.max_marks as maxMarks,
-                m.breakdown
+                m.max_marks as maxMarks
             FROM marks m
-            JOIN exams e ON m.exam_id = e.id
+            JOIN schedules sc ON m.schedule_id = sc.id
             JOIN subjects s ON m.subject_id = s.id
-            WHERE m.student_id = ?
+            WHERE m.student_id = ? AND m.status = 'approved'
         `, [userId]);
         
         // Transform mapped ExamTypes to frontend keys if needed (ia1, ia2...)
@@ -291,14 +289,13 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
         // Let's assume the inserted data uses lowercase codes or we map them.
         
         const mapped = rows.map((r: any) => {
-            // Simple mapping heuristic
             let type = 'unknown';
-            const name = r.examName.toLowerCase();
-            if (name.includes('ia1') || name.includes('cia 1')) type = 'ia1';
-            else if (name.includes('ia2') || name.includes('cia 2')) type = 'ia2';
-            else if (name.includes('ia3') || name.includes('cia 3')) type = 'cia3'; // note frontend uses cia3 key
-            else if (name.includes('model')) type = 'model';
-            else if (name.includes('assignment')) type = 'assignment';
+            const category = r.examType;
+            if (category === 'CIA 1') type = 'ia1';
+            else if (category === 'CIA 2') type = 'ia2';
+            else if (category === 'CIA 3') type = 'cia3';
+            else if (category === 'Model') type = 'model';
+            else if (category === 'Semester') type = 'semester';
 
             return {
                 subjectCode: r.subjectCode,

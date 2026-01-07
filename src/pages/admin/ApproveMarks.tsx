@@ -33,28 +33,24 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
-import { getMarks, getStudents, getFaculty, updateMarkStatus, MarkEntry, Student, Faculty } from '@/lib/data-store';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/api-config';
 
 interface MarksSubmission {
-  id: string;
-  subject: string;
+  subjectName: string;
   subjectCode: string;
-  faculty: string;
-  batch: string;
-  year: number;
-  semester: number;
-  section: string;
+  sectionId: number;
+  sectionName: string;
+  batchName: string;
   examType: string;
-  submittedAt: string;
-  verifiedBy: string;
-  verifiedAt: string;
-  status: 'pending' | 'verified' | 'approved' | 'rejected';
+  scheduleId: number;
+  facultyName: string;
+  tutorName: string;
   studentCount: number;
-  avgScore: number;
-  maxScore: number;
-  rawMarks: MarkEntry[];
+  pendingCount: number;
+  submittedAt: string;
+  markStatus: string;
 }
 
 const getStatusIcon = (status: string) => {
@@ -69,7 +65,7 @@ const getStatusIcon = (status: string) => {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'approved': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-    case 'verified': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    case 'pending_admin': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
     case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
     default: return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
   }
@@ -97,55 +93,19 @@ export default function ApproveMarks() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [submissions, setSubmissions] = useState<MarksSubmission[]>([]);
 
-  const refreshData = () => {
-    const marks = getMarks();
-    const students = getStudents();
-    const facultyList = getFaculty();
-
-    const groups: Record<string, any> = {};
-
-    marks.forEach(mark => {
-        const student = students.find(s => s.id === mark.studentId);
-        if (!student) return;
-
-        const key = `${mark.subjectCode}-${mark.examType}-${student.section}`;
-        if (!groups[key]) {
-            const faculty = facultyList.find(f => f.id === mark.submittedBy);
-            groups[key] = {
-                id: key,
-                subject: mark.subjectCode, 
-                subjectCode: mark.subjectCode,
-                faculty: faculty?.name || 'Unknown Faculty',
-                batch: student.batch,
-                year: student.year,
-                semester: student.semester,
-                section: student.section,
-                examType: mark.examType,
-                submittedAt: (mark.createdAt || mark.date || new Date().toISOString()).split('T')[0],
-                verifiedBy: mark.verifiedBy || '',
-                verifiedAt: (mark.updatedAt || mark.date || new Date().toISOString()).split('T')[0],
-                status: mark.status,
-                studentCount: 0,
-                totalScore: 0,
-                maxScore: mark.maxMarks,
-                rawMarks: []
-            };
+  const refreshData = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/approval-status`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setSubmissions(data);
         }
-
-        groups[key].studentCount++;
-        groups[key].totalScore += mark.marks;
-        groups[key].rawMarks.push(mark);
-
-        if (mark.status === 'verified') groups[key].status = 'verified';
-        else if (mark.status === 'submitted' && groups[key].status !== 'verified') groups[key].status = 'pending';
-    });
-
-    const processed = Object.values(groups).map((g: any) => ({
-        ...g,
-        avgScore: g.studentCount > 0 ? parseFloat((g.totalScore / g.studentCount).toFixed(1)) : 0
-    }));
-
-    setSubmissions(processed);
+    } catch (error) {
+        console.error("Fetch Approval Error", error);
+    }
   };
 
   useEffect(() => {
@@ -153,50 +113,55 @@ export default function ApproveMarks() {
   }, []);
 
   const stats = {
-    pending: submissions.filter(s => s.status === 'pending').length,
-    verified: submissions.filter(s => s.status === 'verified').length,
-    approved: submissions.filter(s => s.status === 'approved').length,
-    rejected: submissions.filter(s => s.status === 'rejected').length,
+    pending: submissions.filter(s => s.markStatus === 'pending_admin').length,
+    approved: submissions.filter(s => s.markStatus === 'approved').length,
   };
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch =
-      sub.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sub.faculty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sub.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sub.facultyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const isCurrent = ['pending', 'verified'].includes(sub.status);
-    const matchesView = viewMode === 'current' ? isCurrent : !isCurrent;
-
-    const matchesStatus = statusFilter === 'all' || sub.status === statusFilter;
-    const matchesBatch = batchFilter === 'all' || sub.batch === batchFilter;
+    
+    // Simplification for now: matches all
+    const matchesStatus = statusFilter === 'all' || sub.markStatus === statusFilter;
+    const matchesBatch = batchFilter === 'all' || sub.batchName === batchFilter;
     const matchesExam = examFilter === 'all' || sub.examType === examFilter;
-    return matchesSearch && matchesStatus && matchesBatch && matchesExam && matchesView;
+    return matchesSearch && matchesStatus && matchesBatch && matchesExam;
   });
 
-  const uniqueBatches = Array.from(new Set(submissions.map(s => s.batch)));
+  const uniqueBatches = Array.from(new Set(submissions.map(s => s.batchName)));
 
-  const handleApprove = (id: string) => {
-    const submission = submissions.find(s => s.id === id);
-    if (!submission) return;
+  const handleApprove = async (sub: MarksSubmission) => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/approve`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+                scheduleId: sub.scheduleId,
+                sectionId: sub.sectionId,
+                subjectCode: sub.subjectCode
+            })
+        });
 
-    submission.rawMarks.forEach(mark => {
-        updateMarkStatus(mark.id, 'approved', 'Admin');
-    });
-
-    toast.success(`Approved marks for ${submission.subjectCode} - Section ${submission.section}`);
-    refreshData();
+        if (res.ok) {
+            toast.success(`Approved marks for ${sub.subjectCode} - Section ${sub.sectionName}`);
+            refreshData();
+        } else {
+            toast.error("Failed to approve marks");
+        }
+    } catch (e) {
+        toast.error("Network error");
+    }
   };
 
-  const handleReject = (id: string) => {
-    const submission = submissions.find(s => s.id === id);
-    if (!submission) return;
-
-    submission.rawMarks.forEach(mark => {
-        updateMarkStatus(mark.id, 'submitted', 'Admin'); 
-    });
-
-    toast.error(`Rejected marks for ${submission.subjectCode} - Section ${submission.section}`);
-    refreshData();
+  const handleReject = async (id: string) => {
+    // Rejection not implemented in backend yet, keep as placeholder
+    toast.error(`Rejection feature coming soon.`);
   };
 
   return (
@@ -230,12 +195,10 @@ export default function ApproveMarks() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
         {[
-          { label: 'Pending Verification', value: stats.pending, icon: AlertTriangle, color: 'from-orange-500 to-amber-500' },
-          { label: 'Awaiting Approval', value: stats.verified, icon: Clock, color: 'from-amber-500 to-yellow-500' },
+          { label: 'Awaiting Approval', value: stats.pending, icon: Clock, color: 'from-amber-500 to-yellow-500' },
           { label: 'Approved', value: stats.approved, icon: CheckCircle2, color: 'from-emerald-500 to-teal-500' },
-          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'from-red-500 to-rose-500' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -282,10 +245,8 @@ export default function ApproveMarks() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="verified">Verified</SelectItem>
+                            <SelectItem value="pending_admin">Awaiting Approval</SelectItem>
                             <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
 
                     </Select>
@@ -320,161 +281,66 @@ export default function ApproveMarks() {
          <CardContent className="p-0">
              <Table>
                  <TableHeader>
-                     <TableRow>
-                         <TableHead>Batch</TableHead>
-                         <TableHead>Year</TableHead>
-                         <TableHead>Semester</TableHead>
-                         <TableHead>Section</TableHead>
-                         <TableHead>Subject Name</TableHead>
-                         <TableHead>Subject Code</TableHead>
-                         <TableHead>Examination</TableHead>
-                         <TableHead className="text-right">Status</TableHead>
-                     </TableRow>
+                      <TableRow>
+                          <TableHead>Batch</TableHead>
+                          <TableHead>Section</TableHead>
+                          <TableHead>Subject Name</TableHead>
+                          <TableHead>Subject Code</TableHead>
+                          <TableHead>Examination</TableHead>
+                          <TableHead>Faculty</TableHead>
+                          <TableHead>Tutor (Verified By)</TableHead>
+                          <TableHead className="text-right">Status</TableHead>
+                      </TableRow>
                  </TableHeader>
                  <TableBody>
                      {filteredSubmissions.length === 0 ? (
                          <TableRow>
-                             <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                             <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                  No submissions found
                              </TableCell>
                          </TableRow>
                      ) : (
-                         filteredSubmissions.map((sub) => (
-                             <TableRow key={sub.id}>
-                                 <TableCell className="font-medium">{sub.batch}</TableCell>
-                                 <TableCell>{sub.year}</TableCell>
-                                 <TableCell>{sub.semester}</TableCell>
-                                 <TableCell>{sub.section}</TableCell>
-                                 <TableCell>{sub.subject}</TableCell>
-                                 <TableCell>
-                                     <Badge variant="outline">{sub.subjectCode}</Badge>
-                                 </TableCell>
-                                 <TableCell>
-                                     <Badge className={getExamTypeBadge(sub.examType)}>{sub.examType}</Badge>
-                                 </TableCell>
-                                 <TableCell className="text-right">
+                          filteredSubmissions.map((sub, idx) => (
+                              <TableRow key={`${sub.scheduleId}-${sub.sectionId}-${sub.subjectCode}`}>
+                                  <TableCell className="font-medium">{sub.batchName}</TableCell>
+                                  <TableCell>{sub.sectionName}</TableCell>
+                                  <TableCell>{sub.subjectName}</TableCell>
+                                  <TableCell>
+                                      <Badge variant="outline">{sub.subjectCode}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                      <Badge className={getExamTypeBadge(sub.examType)}>{sub.examType}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-xs">{sub.facultyName}</TableCell>
+                                  <TableCell className="text-xs">{sub.tutorName || 'Pending'}</TableCell>
+                                  <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        <Badge className={`mr-2 ${getStatusBadge(sub.status)}`}>
-                                            <span className="capitalize">{sub.status}</span>
+                                        <Badge className={`mr-2 ${getStatusBadge(sub.markStatus)}`}>
+                                            <span className="capitalize">{sub.markStatus.replace('_', ' ')}</span>
                                         </Badge>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setSelectedSubmission(sub);
-                                                setIsViewOpen(true);
-                                            }}
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                        </Button>
                                         
-                                        {sub.status === 'verified' && (
+                                        {sub.markStatus === 'pending_admin' && (
                                             <>
                                                 <Button
                                                     size="sm"
                                                     className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 w-8 p-0"
-                                                    onClick={() => handleApprove(sub.id)}
+                                                    onClick={() => handleApprove(sub)}
                                                     title="Approve"
                                                 >
                                                     <CheckCircle2 className="w-4 h-4" />
                                                 </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0"
-                                                    onClick={() => handleReject(sub.id)}
-                                                    title="Reject"
-                                                >
-                                                    <XCircle className="w-4 h-4" />
-                                                </Button>
                                             </>
                                         )}
                                     </div>
-                                 </TableCell>
-                             </TableRow>
-                         ))
+                                  </TableCell>
+                              </TableRow>
+                          ))
                      )}
                  </TableBody>
              </Table>
          </CardContent>
       </Card>
 
-      {/* View Dialog */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="glass-card border-white/10 max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Marks Details - {selectedSubmission?.subject}</DialogTitle>
-          </DialogHeader>
-          {selectedSubmission && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted-foreground">Subject Code</p>
-                  <p className="font-medium">{selectedSubmission.subjectCode}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted-foreground">Exam Type</p>
-                  <p className="font-medium">{selectedSubmission.examType}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted-foreground">Students</p>
-                  <p className="font-medium">{selectedSubmission.studentCount}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-muted-foreground">Average Score</p>
-                  <p className="font-medium">{selectedSubmission.avgScore}/{selectedSubmission.maxScore}</p>
-                </div>
-              </div>
-              <Card className="glass-card border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Score Distribution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    const bins = [0, 0, 0, 0, 0];
-                    selectedSubmission.rawMarks.forEach(m => {
-                      const percentage = (m.marks / m.maxMarks) * 100;
-                      if (percentage <= 20) bins[0]++;
-                      else if (percentage <= 40) bins[1]++;
-                      else if (percentage <= 60) bins[2]++;
-                      else if (percentage <= 80) bins[3]++;
-                      else bins[4]++;
-                    });
-                    const maxBin = Math.max(...bins, 1);
-                    return (
-                      <>
-                        <div className="h-32 flex items-end justify-around gap-2">
-                          {bins.map((count, i) => (
-                            <motion.div
-                              key={i}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${(count / maxBin) * 100}%` }}
-                              transition={{ delay: i * 0.1 }}
-                              className="w-12 bg-gradient-to-t from-primary to-accent rounded-t relative group"
-                            >
-                              <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-[10px] bg-popover px-1 rounded border">
-                                {count} students
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <div className="flex justify-around mt-2 text-[10px] text-muted-foreground uppercase tracking-wider">
-                          {['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'].map((range) => (
-                            <span key={range}>{range}</span>
-                          ))}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
