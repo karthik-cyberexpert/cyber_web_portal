@@ -11,6 +11,7 @@ router.post('/faculty/marks', authenticateToken, marksController.saveMarks);
 
 // Tutor Routes
 router.get('/verification-status', authenticateToken, marksController.getVerificationStatus);
+router.get('/detailed-verification', authenticateToken, marksController.getDetailedVerifications);
 router.post('/verify', authenticateToken, marksController.verifyMarks);
 
 // Admin Routes

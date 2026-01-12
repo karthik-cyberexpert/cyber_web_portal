@@ -46,10 +46,19 @@ export const getFacultyClasses = async (req: Request | any, res: Response) => {
 // Get Marks for a Section, Subject, Exam
 // Returns list of students in that section, with their marks if they exist
 export const getMarks = async (req: Request, res: Response) => {
-    const { sectionId, subjectCode, examType } = req.query;
+    let { sectionId, subjectCode, examType } = req.query;
 
     if (!sectionId || !subjectCode || !examType) {
         return res.status(400).json({ message: 'Missing required parameters: sectionId, subjectCode, examType' });
+    }
+    
+    // Legacy mapping support
+    const legacyMap: any = {
+        'ia1': 'UT-1', 'ia2': 'UT-2', 'ia3': 'UT-3',
+        'cia1': 'UT-1', 'cia2': 'UT-2', 'cia3': 'UT-3'
+    };
+    if (examType && legacyMap[(examType as string).toLowerCase()]) {
+        examType = legacyMap[(examType as string).toLowerCase()];
     }
 
     const connection = await pool.getConnection();
@@ -371,6 +380,7 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
 // Get status for tutor's assigned section
 export const getVerificationStatus = async (req: Request | any, res: Response) => {
     const userId = req.user?.id;
+    const { semester } = req.query; // numeric semester 1-8
     const connection = await pool.getConnection();
     try {
         // 1. Get tutor's assigned ranges
@@ -381,16 +391,13 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
 
         if (assignments.length === 0) return res.json([]);
 
-        // For each assignment, we fetch marks for students in range
-        // Note: For now we assume a tutor has only one active assignment, 
-        // but the query handles multiple if needed.
-        
         const allRows: any[] = [];
         for (const assignment of assignments) {
-            const [rows]: any = await connection.query(`
+            let query = `
                 SELECT 
                     s.name as subjectName, 
                     s.code as subjectCode,
+                    s.id as subjectId,
                     sec.id as sectionId,
                     sec.name as sectionName,
                     sch.category as examType,
@@ -412,13 +419,23 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
                 JOIN users u ON m.faculty_id = u.id
                 WHERE m.status IN ('pending_tutor', 'pending_admin', 'approved')
                   AND (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
-                GROUP BY s.id, sec.id, sch.id
-            `, [
+            `;
+            
+            const params: any[] = [
                 assignment.batch_id, 
                 assignment.section_id,
                 assignment.reg_number_start, assignment.reg_number_end,
                 parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
-            ]);
+            ];
+
+            if (semester) {
+                query += ` AND s.semester = ?`;
+                params.push(parseInt(semester as string));
+            }
+
+            query += ` GROUP BY s.id, sec.id, sch.id, u.id, u.name`;
+
+            const [rows]: any = await connection.query(query, params);
             allRows.push(...rows);
         }
 
@@ -426,6 +443,84 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
     } catch (e) {
         console.error("Get Verification Status Error:", e);
         res.status(500).json({ message: 'Error fetching status' });
+    } finally {
+        connection.release();
+    }
+};
+
+// Get Detailed Student Marks for Tutor Verification
+export const getDetailedVerifications = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    const { scheduleId, subjectId, sectionId } = req.query;
+
+    if (!scheduleId || !subjectId || !sectionId) {
+        return res.status(400).json({ message: 'Missing parameters' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        console.log('[Detailed Verification] Query Params:', req.query);
+        const user = (req as any).user;
+        console.log('[Detailed Verification] User from Token:', user);
+
+        const userRole = user?.role?.toLowerCase();
+        let rows;
+
+        if (userRole === 'admin') {
+            // Admins see everything for this section/subject/schedule
+            console.log('[Detailed Verification] Admin access granted');
+            [rows] = await connection.query(`
+                SELECT 
+                    u.id, u.name, sp.roll_number as rollNumber,
+                    m.marks_obtained as marks,
+                    m.status as status
+                FROM users u
+                JOIN student_profiles sp ON u.id = sp.user_id
+                JOIN marks m ON m.student_id = u.id
+                WHERE m.schedule_id = ? AND m.subject_id = ? AND sp.section_id = ?
+                ORDER BY sp.roll_number ASC
+            `, [scheduleId, subjectId, sectionId]);
+        } else {
+            console.log('[Detailed Verification] Tutor/Faculty access check for role:', userRole);
+            // 1. Get tutor's assigned ranges for this section
+            const [assignments]: any = await connection.query(
+                'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND section_id = ? AND is_active = TRUE',
+                [userId, sectionId]
+            );
+
+            if (assignments.length === 0) return res.status(403).json({ message: 'Not authorized for this section' });
+
+            const assignment = assignments[0];
+
+            // 2. Fetch marks for students in range
+            [rows] = await connection.query(`
+                SELECT 
+                    u.id, u.name, sp.roll_number as rollNumber,
+                    m.marks_obtained as marks,
+                    m.status as status
+                FROM users u
+                JOIN student_profiles sp ON u.id = sp.user_id
+                JOIN (
+                    SELECT user_id, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    FROM student_profiles
+                    WHERE batch_id = ? AND section_id = ?
+                ) spnum ON u.id = spnum.user_id
+                JOIN marks m ON m.student_id = u.id
+                WHERE m.schedule_id = ? AND m.subject_id = ?
+                  AND (? IS NULL OR ? IS NULL OR (spnum.row_num >= ? AND spnum.row_num <= ?))
+                ORDER BY sp.roll_number ASC
+            `, [
+                assignment.batch_id, assignment.section_id,
+                scheduleId, subjectId,
+                assignment.reg_number_start, assignment.reg_number_end,
+                parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
+            ]);
+        }
+
+        res.json(rows);
+    } catch (e) {
+        console.error("Detailed Verification Error:", e);
+        res.status(500).json({ message: 'Error fetching details' });
     } finally {
         connection.release();
     }
@@ -461,6 +556,7 @@ export const getApprovalStatus = async (req: Request, res: Response) => {
     try {
         const [rows]: any = await connection.query(`
             SELECT 
+                s.id as subjectId,
                 s.name as subjectName, 
                 s.code as subjectCode,
                 sec.id as sectionId,

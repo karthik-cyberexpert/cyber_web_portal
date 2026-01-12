@@ -40,7 +40,7 @@ export default function MarksEntrySheet() {
   // Get query params
   const section = searchParams.get('section') || '';
   const subject = searchParams.get('subject') || '';
-  const exam = searchParams.get('exam') as 'ia1' | 'ia2' | 'ia3' | 'model' | 'assignment' || 'ia1';
+  const exam = searchParams.get('exam') as 'UT-1' | 'UT-2' | 'UT-3' | 'MODEL' | 'ASSIGNMENT' || 'UT-1';
 
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,15 +110,15 @@ export default function MarksEntrySheet() {
 
   const calculateTotal = (breakdown: any, type: string) => {
      if (breakdown.absent) return 0;
-
+ 
      let total = 0;
-     if (type === 'ia1' || type === 'ia2' || type === 'ia3') {
+     if (type.startsWith('UT-')) {
          // 5 x 2m, 5 x 8m
          const partA = breakdown['partA'] || [];
          const partB = breakdown['partB'] || [];
          total += partA.reduce((a: number, b: number) => a + (b || 0), 0);
          total += partB.reduce((a: number, b: number) => a + (b || 0), 0);
-     } else if (type === 'model') {
+     } else if (type === 'MODEL') {
          // 10 x 2, 5 x 16
          const partA = breakdown['partA'] || [];
          const partB = breakdown['partB'] || [];
@@ -159,22 +159,26 @@ export default function MarksEntrySheet() {
       }));
   };
 
-  const handleSaveAll = async () => {
+  const handleSaveAll = async (targetStatus?: string) => {
     const changed = students.filter(s => s.markStatus === 'changed');
-    if (changed.length === 0) {
+    if (changed.length === 0 && !targetStatus) {
       toast.info('No changes to save');
       return;
     }
+
+    const itemsToProcess = targetStatus === 'pending_tutor' ? students : changed;
+    if (itemsToProcess.length === 0) return;
 
     try {
         const payload = {
             sectionId: section,
             subjectCode: subject,
             examType: exam,
-            marks: changed.map(s => ({
+            marks: itemsToProcess.map(s => ({
                 studentId: s.id,
                 marks: s.absent ? 0 : (s.currentMarks || 0),
-                maxMarks: exam === 'model' ? 100 : exam === 'assignment' ? 1 : 50,
+                maxMarks: exam === 'MODEL' ? 100 : exam === 'ASSIGNMENT' ? 1 : 50,
+                status: targetStatus || 'draft',
                 breakdown: { ...s.breakdown, absent: s.absent }
             }))
         };
@@ -204,8 +208,8 @@ export default function MarksEntrySheet() {
 
   // Generate headers based on exam type
   const getQuestionHeaders = () => {
-      if (exam === 'assignment') return ['Submission'];
-      if (exam === 'model') {
+      if (exam === 'ASSIGNMENT') return ['Submission'];
+      if (exam === 'MODEL') {
           // 10 Qs for Part A, 5 Qs for Part B. Total 15 columns + Absent
           const headers = [];
           for(let i=1; i<=10; i++) headers.push(`Q${i}(2M)`);
@@ -238,10 +242,16 @@ export default function MarksEntrySheet() {
                     <p className="text-muted-foreground text-sm font-medium">Entering marks for Section {section}</p>
                 </div>
             </div>
-            <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20" onClick={handleSaveAll}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-            </Button>
+            <div className="flex items-center gap-3">
+                <Button variant="outline" className="rounded-xl border-white/10" onClick={() => handleSaveAll('draft')}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Draft
+                </Button>
+                <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20" onClick={() => handleSaveAll('pending_tutor')}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Forward to Tutor
+                </Button>
+            </div>
         </motion.div>
 
         {/* Table */}
@@ -280,7 +290,7 @@ export default function MarksEntrySheet() {
                                 </td>
                                 <td className="p-2 font-mono text-muted-foreground text-xs sticky bg-background z-20" style={{left: '185px', width: '150px', minWidth: '150px', wordBreak: 'break-word'}}>{student.rollNumber}</td>
 
-                                {exam === 'assignment' ? (
+                                {exam === 'ASSIGNMENT' ? (
                                     <td className="p-4 text-center">
                                         <Checkbox 
                                             checked={student.currentMarks === 1}
@@ -291,7 +301,7 @@ export default function MarksEntrySheet() {
                                 ) : (
                                     <>
                                         {/* Part A Inputs (1-5 or 1-10) */}
-                                        {Array.from({ length: exam === 'model' ? 10 : 5 }).map((_, i) => (
+                                        {Array.from({ length: exam === 'MODEL' ? 10 : 5 }).map((_, i) => (
                                             <td key={`A-${i}`} className="p-2 text-center">
                                                 <Input
                                                     className={`w-12 h-9 text-center bg-white/5 border-white/10 ${student.absent ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -307,7 +317,7 @@ export default function MarksEntrySheet() {
                                                 <Input
                                                     className={`w-12 h-9 text-center bg-white/5 border-white/10 ${student.absent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     value={student.breakdown?.partB?.[i] ?? ''}
-                                                    onChange={(e) => handleDetailedMarkChange(student.id, 'partB', i, e.target.value, exam === 'model' ? 16 : 8)}
+                                                    onChange={(e) => handleDetailedMarkChange(student.id, 'partB', i, e.target.value, exam === 'MODEL' ? 16 : 8)}
                                                     disabled={student.absent}
                                                 />
                                             </td>

@@ -35,6 +35,9 @@ createUploadDirs();
 const notesStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(UPLOADS_BASE, 'notes');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
         cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
@@ -52,6 +55,9 @@ const notesStorage = multer.diskStorage({
 const avatarStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(UPLOADS_BASE, 'avatars');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
         cb(null, uploadPath);
     },
     filename: (req: any, file, cb) => {
@@ -65,6 +71,9 @@ const avatarStorage = multer.diskStorage({
 const assignmentStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(UPLOADS_BASE, 'assignments');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
         cb(null, uploadPath);
     },
     filename: (req, file, cb) => {

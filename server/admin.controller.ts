@@ -16,15 +16,25 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       // 3. Pending Leaves
       const [leaves]: any = await connection.query('SELECT COUNT(*) as count FROM leave_requests WHERE status = "pending"');
       
-      // 4. Pending Marks (Approved by Faculty but not Finalized by Admin?? Or just verified?)
-      // Assuming 'submitted' means pending admin approval if flow is Faculty -> Admin
-      const [marks]: any = await connection.query('SELECT COUNT(*) as count FROM marks WHERE status = "submitted"');
+      // 4. Pending Marks (Total unique groups Awaiting Admin Approval)
+      // Matches the grouping logic in ApproveMarks page
+      const [marksCount]: any = await connection.query(`
+        SELECT COUNT(*) as count FROM (
+          SELECT m.schedule_id, m.subject_id, sp.section_id
+          FROM marks m 
+          JOIN student_profiles sp ON m.student_id = sp.user_id
+          WHERE m.status = 'pending_admin'
+          GROUP BY m.schedule_id, m.subject_id, sp.section_id
+        ) as sub
+      `);
 
+      console.log('[Dashboard Stats] Marks Count Row:', marksCount[0]);
       res.json({
         students: students[0].count,
         faculty: faculty[0].count,
         pendingLeaves: leaves[0].count,
-        pendingMarks: marks[0].count
+        pendingMarks: marksCount[0].count,
+        debug_ts: new Date().toISOString()
       });
 
     } finally {

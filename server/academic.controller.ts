@@ -109,53 +109,77 @@ export const updateBatch = async (req: Request, res: Response) => {
 // Get Pending Semester Updates - Returns batches that need new semester dates
 export const getPendingSemesterUpdates = async (req: Request, res: Response) => {
     try {
-        // First, find batches that need semester increment
-        const [batchesToIncrement]: any = await pool.query(`
-            SELECT id, current_semester 
-            FROM batches 
-            WHERE semester_end_date IS NOT NULL 
-              AND semester_end_date < CURDATE()
-              AND semester_dates_pending = FALSE
-              AND current_semester < 8
-        `);
+        const [allBatches]: any = await pool.query('SELECT id, name, current_semester, semester_end_date, semester_dates_pending FROM batches');
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth(); // 0-indexed
 
-        // For each batch being incremented, deactivate old semester subject allocations
-        for (const batch of batchesToIncrement) {
-            const oldSemester = batch.current_semester;
+        for (const batch of allBatches) {
+            const startYear = parseInt(batch.name.split('-')[0]);
+            if (isNaN(startYear)) continue;
+
+            const yearDiff = currentYear - startYear;
+            let expectedSemester = (currentMonth >= 5) ? (yearDiff * 2) + 1 : (yearDiff * 2);
             
-            // Deactivate all subject_allocations where subject.semester = oldSemester
-            // and the allocation is for a section in this batch
-            await pool.execute(`
-                UPDATE subject_allocations sa
-                JOIN subjects s ON sa.subject_id = s.id
-                JOIN sections sec ON sa.section_id = sec.id
-                SET sa.is_active = FALSE
-                WHERE sec.batch_id = ?
-                  AND s.semester = ?
-                  AND sa.is_active = TRUE
-            `, [batch.id, oldSemester]);
-            
-            console.log(`Deactivated allocations for batch ${batch.id}, semester ${oldSemester}`);
+            // Clamp
+            if (expectedSemester < 1) expectedSemester = 1;
+            if (expectedSemester > 8) expectedSemester = 8;
+
+            // If DB is lagging behind calendar expected semester
+            if (batch.current_semester < expectedSemester) {
+                console.log(`Auto-incrementing batch ${batch.name} from Sem ${batch.current_semester} to Sem ${expectedSemester}`);
+                
+                // Deactivate old allocations
+                await pool.execute(`
+                    UPDATE subject_allocations sa
+                    JOIN subjects s ON sa.subject_id = s.id
+                    JOIN sections sec ON sa.section_id = sec.id
+                    SET sa.is_active = FALSE
+                    WHERE sec.batch_id = ?
+                      AND s.semester < ?
+                      AND sa.is_active = TRUE
+                `, [batch.id, expectedSemester]);
+
+                await pool.execute(`
+                    UPDATE batches 
+                    SET current_semester = ?,
+                        semester_dates_pending = TRUE,
+                        semester_start_date = NULL,
+                        semester_end_date = NULL
+                    WHERE id = ?
+                `, [expectedSemester, batch.id]);
+            } 
+            // Also handle the case where the current semester dates have passed
+            else if (batch.semester_end_date && new Date(batch.semester_end_date) < now && !batch.semester_dates_pending && batch.current_semester < 8) {
+                const nextSem = batch.current_semester + 1;
+                console.log(`Semester ended for batch ${batch.name} (Sem ${batch.current_semester}). Moving to Sem ${nextSem}`);
+                
+                await pool.execute(`
+                    UPDATE subject_allocations sa
+                    JOIN subjects s ON sa.subject_id = s.id
+                    JOIN sections sec ON sa.section_id = sec.id
+                    SET sa.is_active = FALSE
+                    WHERE sec.batch_id = ?
+                      AND s.semester = ?
+                      AND sa.is_active = TRUE
+                `, [batch.id, batch.current_semester]);
+
+                await pool.execute(`
+                    UPDATE batches 
+                    SET current_semester = ?,
+                        semester_dates_pending = TRUE,
+                        semester_start_date = NULL,
+                        semester_end_date = NULL
+                    WHERE id = ?
+                `, [nextSem, batch.id]);
+            }
         }
-
-        // Now increment the semesters for those batches
-        await pool.execute(`
-            UPDATE batches 
-            SET current_semester = current_semester + 1,
-                semester_dates_pending = TRUE,
-                semester_start_date = NULL,
-                semester_end_date = NULL
-            WHERE semester_end_date IS NOT NULL 
-              AND semester_end_date < CURDATE()
-              AND semester_dates_pending = FALSE
-              AND current_semester < 8
-        `);
 
         // Now fetch all batches that need semester date configuration
         const [rows]: any = await pool.query(`
             SELECT b.id, b.name, b.current_semester, b.semester_start_date, b.semester_end_date
             FROM batches b
-            WHERE b.semester_start_date IS NULL OR b.semester_end_date IS NULL
+            WHERE b.semester_dates_pending = TRUE OR b.semester_start_date IS NULL OR b.semester_end_date IS NULL
             ORDER BY b.name ASC
         `);
 

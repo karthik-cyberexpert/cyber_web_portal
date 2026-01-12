@@ -52,8 +52,9 @@ export const getFacultySubjectAllocations = async (req: Request | any, res: Resp
 
     try {
         // FIX: Handle sa.section_id IS NULL -> Join all sections in matching semester
+        // Added DISTINCT to prevent duplicate rows for same section
         const [rows]: any = await pool.query(`
-            SELECT 
+            SELECT DISTINCT
                 sa.id as allocation_id,
                 s.id as subject_id, s.name as subject_name, s.code as subject_code,
                 sec.id as section_id, sec.name as section_name,

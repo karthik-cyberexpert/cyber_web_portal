@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ClipboardCheck, 
   CheckCircle, 
@@ -10,7 +10,9 @@ import {
   ArrowRight,
   Filter,
   CheckCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
@@ -29,7 +45,6 @@ import { Users } from 'lucide-react';
 
 export default function VerifyMarks() {
   const { user } = useAuth();
-  const [tutor, setTutor] = useState<any | null>(null);
   const [verifications, setVerifications] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -37,17 +52,24 @@ export default function VerifyMarks() {
     verified: 0,
     completion: 0
   });
-  const [selectedExam, setSelectedExam] = useState('ia1');
+  const [selectedExam, setSelectedExam] = useState('UT-1');
+  const [selectedSemester, setSelectedSemester] = useState<string>('1');
+
+  // Detailed Modal State
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [details, setDetails] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchVerifications();
-  }, [user]);
+  }, [user, selectedSemester]);
 
   const fetchVerifications = async () => {
     if (!user) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/marks/verification-status`, {
+        const res = await fetch(`${API_BASE_URL}/marks/verification-status?semester=${selectedSemester}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -97,7 +119,29 @@ export default function VerifyMarks() {
     }
   };
 
-  const filteredVerifications = verifications.filter(v => v.examType === selectedExam);
+  const fetchDetails = async (v: any) => {
+    setSelectedSubject(v);
+    setIsDetailsOpen(true);
+    setLoadingDetails(true);
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/detailed-verification?scheduleId=${v.scheduleId}&subjectId=${v.subjectId || 1}&sectionId=${v.sectionId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setDetails(data);
+        }
+    } catch (error) {
+        toast.error("Failed to fetch detailed marks");
+    } finally {
+        setLoadingDetails(false);
+    }
+  };
+
+  const filteredVerifications = useMemo(() => {
+    return verifications.filter(v => v.examType === selectedExam);
+  }, [verifications, selectedExam]);
 
   return (
     <div className="space-y-6">
@@ -149,9 +193,22 @@ export default function VerifyMarks() {
 
       <div className="glass-card rounded-3xl overflow-hidden border-none shadow-2xl bg-white/[0.02]">
         <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4 bg-white/5 p-1.5 rounded-2xl w-full md:w-auto">
-            <Button variant="ghost" size="sm" className="rounded-xl bg-background shadow-sm font-black uppercase text-[9px] tracking-widest italic px-4">Odd Sem</Button>
-            <Button variant="ghost" size="sm" className="rounded-xl font-black uppercase text-[9px] tracking-widest italic px-4">Even Sem</Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Semester</span>
+              <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <SelectTrigger className="w-[140px] bg-background border-none rounded-xl font-bold uppercase text-[10px] tracking-widest italic shadow-sm h-9">
+                  <SelectValue placeholder="Semester" />
+                </SelectTrigger>
+                <SelectContent className="bg-background/95 backdrop-blur-xl border-white/10">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                    <SelectItem key={sem} value={sem.toString()} className="font-bold cursor-pointer italic uppercase text-[10px]">
+                      Semester {sem}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Select value={selectedExam} onValueChange={setSelectedExam}>
@@ -159,10 +216,11 @@ export default function VerifyMarks() {
                 <SelectValue placeholder="Select Exam" />
               </SelectTrigger>
               <SelectContent className="bg-background/95 backdrop-blur-xl border-white/10">
-                <SelectItem value="ia1" className="font-bold cursor-pointer">Internal Assessment 1</SelectItem>
-                <SelectItem value="ia2" className="font-bold cursor-pointer">Internal Assessment 2</SelectItem>
-                <SelectItem value="ia3" className="font-bold cursor-pointer">Internal Assessment 3</SelectItem>
-                <SelectItem value="model" className="font-bold cursor-pointer">Model Exam</SelectItem>
+                <SelectItem value="UT-1" className="font-bold cursor-pointer italic uppercase">Unit Test 1 (UT-1)</SelectItem>
+                <SelectItem value="UT-2" className="font-bold cursor-pointer italic uppercase">Unit Test 2 (UT-2)</SelectItem>
+                <SelectItem value="UT-3" className="font-bold cursor-pointer italic uppercase">Unit Test 3 (UT-3)</SelectItem>
+                <SelectItem value="MODEL" className="font-bold cursor-pointer italic uppercase">Model Exam</SelectItem>
+                <SelectItem value="ASSIGNMENT" className="font-bold cursor-pointer italic uppercase">Assignment</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon" className="rounded-xl border-white/10">
@@ -174,7 +232,7 @@ export default function VerifyMarks() {
         <div className="divide-y divide-white/5">
           {filteredVerifications.length > 0 ? filteredVerifications.map((subject, index) => (
             <motion.div
-              key={subject.id}
+              key={`${subject.scheduleId}-${subject.subjectCode}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -200,31 +258,36 @@ export default function VerifyMarks() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-8">
-                   <div className="text-right hidden sm:block">
+                <div className="flex items-center gap-3">
+                   <div className="text-right hidden sm:block mr-5">
                      <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black">Submitted On</p>
                      <p className="text-sm font-bold italic mt-1">{subject.submittedAt ? subject.submittedAt.split('T')[0] : 'N/A'}</p>
                    </div>
                    
-                   <div className="flex items-center gap-3">
-                     {subject.markStatus !== 'pending_tutor' ? (
-                       <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none">
-                          <CheckCheck className="w-3.5 h-3.5" /> Forwarded
-                        </Badge>
-                     ) : (
-                       <div className="flex items-center gap-3">
-                         <Button 
-                          variant="gradient" 
-                          size="sm"
-                          className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8"
-                          onClick={() => handleVerify(subject)}
-                         >
-                           Verify & Forward
-                           <ArrowRight className="w-4 h-4 ml-2" />
-                         </Button>
-                       </div>
-                     )}
-                   </div>
+                   <Button 
+                    variant="ghost" 
+                    className="rounded-xl font-black uppercase text-[10px] tracking-widest italic border border-white/10 hover:bg-white/5"
+                    onClick={() => fetchDetails(subject)}
+                   >
+                     <Eye className="w-4 h-4 mr-2" />
+                     View Marks
+                   </Button>
+
+                   {subject.markStatus !== 'pending_tutor' ? (
+                     <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none ml-3">
+                        <CheckCheck className="w-3.5 h-3.5" /> Forwarded
+                      </Badge>
+                   ) : (
+                     <Button 
+                      variant="gradient" 
+                      size="sm"
+                      className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8 ml-3"
+                      onClick={() => handleVerify(subject)}
+                     >
+                       Verify & Forward
+                       <ArrowRight className="w-4 h-4 ml-2" />
+                     </Button>
+                   )}
                 </div>
               </div>
             </motion.div>
@@ -235,6 +298,77 @@ export default function VerifyMarks() {
           )}
         </div>
       </div>
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto rounded-3xl border-none glass-card p-0 shadow-2xl">
+          <DialogHeader className="p-8 border-b border-white/5">
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <span>Student Marks View</span>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">
+                  {selectedSubject?.subjectName} ({selectedSubject?.subjectCode}) • {selectedSubject?.sectionName}
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-8">
+            <div className="rounded-2xl border border-white/5 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-white/5">
+                  <TableRow className="border-white/5 hover:bg-transparent">
+                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Roll No</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Student Name</TableHead>
+                    <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-4">Marks</TableHead>
+                    <TableHead className="text-center text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingDetails ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-32 text-center py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          <p className="font-bold italic uppercase text-[10px] tracking-widest text-muted-foreground">Fetching Data...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : details.length > 0 ? (
+                    details.map((row) => (
+                      <TableRow key={row.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell className="font-mono text-xs font-bold py-4">{row.rollNumber}</TableCell>
+                        <TableCell className="font-bold italic uppercase text-sm py-4">{row.name}</TableCell>
+                        <TableCell className="text-right font-black italic text-base text-primary py-4">{row.marks}</TableCell>
+                        <TableCell className="text-center py-4">
+                          <Badge 
+                            variant="secondary" 
+                            className={`rounded-lg font-black uppercase text-[8px] tracking-widest px-2 ${
+                              row.status === 'pending_tutor' ? 'bg-warning/20 text-warning' : 
+                              row.status === 'pending_admin' ? 'bg-primary/20 text-primary' : 
+                              'bg-success/20 text-success'
+                            }`}
+                          >
+                            {row.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center italic text-muted-foreground font-medium">
+                        No student marks found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

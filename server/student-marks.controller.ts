@@ -26,7 +26,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
              FROM marks m
              JOIN schedules sch ON m.schedule_id = sch.id
              JOIN subjects s ON m.subject_id = s.id
-             WHERE m.student_id = ? AND m.status = 'approved'
+             WHERE m.student_id = ? AND m.status IN ('approved', 'pending_admin')
              ORDER BY s.name, sch.category`,
             [studentId]
         );
@@ -47,28 +47,26 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                     model: null,
                     assignment: null,
                     total: 0,
-                    grade: null
+                    grade: null,
+                    status: mark.status
                 };
             }
 
             const subject = subjectMarksMap[mark.subject_id];
             
             // Map schedule types to fields
-            // New schema uses schedules.type which might be 'Internal', 'Model', etc.
-            const type = mark.exam_type.toLowerCase();
-            const title = mark.exam_name.toUpperCase();
+            const type = mark.exam_type?.toUpperCase() || '';
+            const title = mark.exam_name?.toUpperCase() || '';
 
-            if (type.includes('internal') || type.includes('ia')) {
-                if (title.includes('1') || title.includes('I')) {
-                    subject.ia1 = mark.marks_obtained;
-                } else if (title.includes('2') || title.includes('II')) {
-                    subject.ia2 = mark.marks_obtained;
-                } else if (title.includes('3') || title.includes('III')) {
-                    subject.cia3 = mark.marks_obtained;
-                }
-            } else if (type.includes('model')) {
+            if (type === 'UT-1' || type === 'IA1' || title.includes('UNIT TEST 1') || title.includes('IA-1')) {
+                subject.ia1 = mark.marks_obtained;
+            } else if (type === 'UT-2' || type === 'IA2' || title.includes('UNIT TEST 2') || title.includes('IA-2')) {
+                subject.ia2 = mark.marks_obtained;
+            } else if (type === 'UT-3' || type === 'IA3' || type === 'CIA 3' || title.includes('UNIT TEST 3') || title.includes('CIA-3')) {
+                subject.cia3 = mark.marks_obtained;
+            } else if (type === 'MODEL' || title.includes('MODEL')) {
                 subject.model = mark.marks_obtained;
-            } else if (type.includes('assignment')) {
+            } else if (type === 'ASSIGNMENT' || title.includes('ASSIGNMENT')) {
                 subject.assignment = mark.marks_obtained;
             }
         });

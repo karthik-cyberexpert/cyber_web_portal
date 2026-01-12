@@ -21,7 +21,6 @@ export const getAllTutors = async (req: Request, res: Response) => {
         ta.reg_number_start,
         ta.reg_number_end,
         ta.assigned_at,
-        ta.created_at,
         ta.is_active
       FROM tutor_assignments ta
       JOIN users u ON ta.faculty_id = u.id

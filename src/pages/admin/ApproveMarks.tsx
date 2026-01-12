@@ -38,6 +38,7 @@ import { useEffect } from 'react';
 import { API_BASE_URL } from '@/lib/api-config';
 
 interface MarksSubmission {
+  subjectId: number;
   subjectName: string;
   subjectCode: string;
   sectionId: number;
@@ -109,6 +110,7 @@ export default function ApproveMarks() {
   };
 
   useEffect(() => {
+    console.log('[ApproveMarks] Component Mounted, refreshing data...');
     refreshData();
   }, []);
 
@@ -162,6 +164,34 @@ export default function ApproveMarks() {
   const handleReject = async (id: string) => {
     // Rejection not implemented in backend yet, keep as placeholder
     toast.error(`Rejection feature coming soon.`);
+  };
+
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<MarksSubmission | null>(null);
+  const [details, setDetails] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const fetchDetails = async (sub: MarksSubmission) => {
+    console.log('[ApproveMarks] Fetching details for sub:', sub);
+    setSelectedSubject(sub);
+    setIsDetailsOpen(true);
+    setLoadingDetails(true);
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/marks/detailed-verification?scheduleId=${sub.scheduleId}&subjectId=${sub.subjectId}&sectionId=${sub.sectionId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setDetails(data);
+        } else {
+            toast.error("Failed to fetch detailed marks");
+        }
+    } catch (error) {
+        toast.error("Failed to fetch detailed marks");
+    } finally {
+        setLoadingDetails(false);
+    }
   };
 
   return (
@@ -318,6 +348,16 @@ export default function ApproveMarks() {
                                         <Badge className={`mr-2 ${getStatusBadge(sub.markStatus)}`}>
                                             <span className="capitalize">{sub.markStatus.replace('_', ' ')}</span>
                                         </Badge>
+
+                                        <Button
+                                            variant="ghost" 
+                                            size="sm"
+                                            className="h-8 w-8 p-0 rounded-lg border border-white/10 hover:bg-white/5"
+                                            onClick={() => fetchDetails(sub)}
+                                            title="View Details"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </Button>
                                         
                                         {sub.markStatus === 'pending_admin' && (
                                             <>
@@ -340,6 +380,89 @@ export default function ApproveMarks() {
              </Table>
          </CardContent>
       </Card>
+
+      {/* Detailed Marks Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col glass-card border-white/10 p-0">
+          <DialogHeader className="p-6 border-b border-white/5">
+            <DialogTitle className="text-xl font-bold flex items-center justify-between pr-8">
+               <div className="flex flex-col gap-1">
+                 <span className="text-2xl font-black italic tracking-tighter uppercase">{selectedSubject?.subjectName}</span>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    Section {selectedSubject?.sectionName} • {selectedSubject?.batchName} • {selectedSubject?.examType}
+                 </p>
+               </div>
+               <Badge className={getStatusBadge(selectedSubject?.markStatus || '')}>
+                 {selectedSubject?.markStatus?.replace('_', ' ')}
+               </Badge>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-0">
+            {loadingDetails ? (
+              <div className="flex flex-col items-center justify-center py-24 gap-4">
+                <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                <p className="font-black uppercase tracking-widest text-[10px] text-muted-foreground italic">Fetching data...</p>
+              </div>
+            ) : (
+                <Table>
+                    <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                        <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
+                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Marks</TableHead>
+                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest pr-6">Status</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {details.map((student) => (
+                        <TableRow key={student.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell className="font-mono font-bold text-xs pl-6">{student.rollNumber}</TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Users className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-bold text-sm tracking-tight">{student.name}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                            <span className="font-black text-lg italic text-primary">{student.marks ?? '-'}</span>
+                        </TableCell>
+                        <TableCell className="text-center pr-6">
+                            <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest border-none ${
+                                student.status === 'approved' ? 'text-success bg-success/10' : 
+                                student.status === 'pending_admin' ? 'text-warning bg-warning/10' : 
+                                'text-muted-foreground bg-white/5'
+                            }`}>
+                                {student.status?.replace('_', ' ') || 'Missing'}
+                            </Badge>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            )}
+          </div>
+          
+          <div className="p-6 border-t border-white/5 flex justify-end gap-3 bg-white/[0.01]">
+            <Button variant="outline" onClick={() => setIsDetailsOpen(false)} className="rounded-xl font-black uppercase text-[10px] tracking-widest italic">
+              Close
+            </Button>
+            {selectedSubject?.markStatus === 'pending_admin' && (
+                <Button 
+                    className="rounded-xl font-black uppercase text-[10px] tracking-widest italic shadow-xl shadow-primary/20"
+                    onClick={() => {
+                        handleApprove(selectedSubject);
+                        setIsDetailsOpen(false);
+                    }}
+                >
+                    Approve Marks
+                </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

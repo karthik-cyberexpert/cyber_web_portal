@@ -231,9 +231,10 @@ interface DashboardSidebarProps {
   onToggle: () => void;
   onNavigate?: () => void;
   isMobile: boolean;
+  className?: string;
 }
 
-export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMobile }: DashboardSidebarProps) {
+export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMobile, className }: DashboardSidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -247,7 +248,10 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
       initial={false}
       animate={{ width: collapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-screen bg-sidebar flex flex-col z-50 border-r border-sidebar-border"
+      className={cn(
+        "fixed left-0 top-0 h-screen bg-sidebar flex flex-col z-50 border-r border-sidebar-border",
+        className
+      )}
     >
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">

@@ -1,0 +1,12 @@
+{
+  "total": 1,
+  "nonZero": 1,
+  "category": "UT-1",
+  "allMarks": [
+    {
+      "student_id": 3,
+      "marks_obtained": "41.00",
+      "status": "approved"
+    }
+  ]
+}

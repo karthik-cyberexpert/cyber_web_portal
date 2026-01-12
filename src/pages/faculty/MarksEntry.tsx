@@ -25,7 +25,7 @@ import { API_BASE_URL } from '@/lib/api-config';
 export default function MarksEntrySelection() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [selectedExam, setSelectedExam] = useState<'ia1' | 'ia2' | 'ia3' | 'model' | 'assignment'>('ia1');
+  const [selectedExam, setSelectedExam] = useState<'UT-1' | 'UT-2' | 'UT-3' | 'MODEL' | 'ASSIGNMENT'>('UT-1');
   const [selectedSubject, setSelectedSubject] = useState(''); 
   const [selectedSection, setSelectedSection] = useState('');
   
@@ -153,11 +153,11 @@ export default function MarksEntrySelection() {
                                 <SelectValue placeholder="Select Batch" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="ia1">CIA 1 (Internal Assessment)</SelectItem>
-                                <SelectItem value="ia2">CIA 2 (Internal Assessment)</SelectItem>
-                                <SelectItem value="ia3">CIA 3 (Internal Assessment)</SelectItem>
-                                <SelectItem value="model">Model Examination</SelectItem>
-                                <SelectItem value="assignment">Assignment</SelectItem>
+                                <SelectItem value="UT-1">Unit Test 1 (UT-1)</SelectItem>
+                                <SelectItem value="UT-2">Unit Test 2 (UT-2)</SelectItem>
+                                <SelectItem value="UT-3">Unit Test 3 (UT-3)</SelectItem>
+                                <SelectItem value="MODEL">Model Examination</SelectItem>
+                                <SelectItem value="ASSIGNMENT">Assignment</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

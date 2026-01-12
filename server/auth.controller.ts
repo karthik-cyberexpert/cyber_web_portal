@@ -9,16 +9,23 @@ export const login = async (req: Request, res: Response) => {
   const { email, password, role } = req.body;
 
   try {
+    console.log(`[LOGIN DEBUG] Request Body:`, req.body);
     const [rows]: any = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    console.log(`[LOGIN DEBUG] DB Query result length: ${rows.length}`);
     
     if (rows.length === 0) {
+      console.log(`[LOGIN DEBUG] User not found for email: ${email}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = rows[0];
+    console.log(`[LOGIN DEBUG] User found: ${user.email}, Hash: ${user.password_hash}`);
 
     // Verify password
+    console.log(`[LOGIN DEBUG] Comparing password: '${password}' with hash...`);
     const validPassword = await bcrypt.compare(password, user.password_hash);
+    console.log(`[LOGIN DEBUG] Password match result: ${validPassword}`);
+    
     if (!validPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
