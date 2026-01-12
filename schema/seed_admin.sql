@@ -6,8 +6,9 @@ USE Cyber_Dept_Portal;
 -- Insert Admin User
 -- Note: 'password_hash' currently contains a dummy bcrypt hash ($2b$12$Kue.o9.W8E6R6qE.L9W7Qe9w9w9w9w9w9w9w9w9w9w9w9w9w9w9w) 
 -- You should replace this with a proper hash for your production password.
--- Use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
-INSERT INTO `users` (
+-- Use INSERT IGNORE to create the admin user only if it doesn't exist (preserves password changes)
+-- INSERT IGNORE will skip if admin@css.com already exists, preserving any password changes
+INSERT IGNORE INTO `users` (
     `email`, 
     `name`, 
     `password_hash`, 
@@ -23,7 +24,4 @@ INSERT INTO `users` (
     '1234567890', 
     TRUE,
     FALSE
-)
-ON DUPLICATE KEY UPDATE 
-    `password_hash` = VALUES(`password_hash`),
-    `password_changed` = VALUES(`password_changed`);
+);
