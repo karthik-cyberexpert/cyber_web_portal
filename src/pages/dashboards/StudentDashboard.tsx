@@ -56,7 +56,10 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (studentData && studentData.batch) {
-        setAcademicState(calculateCurrentAcademicState(studentData.batch));
+        console.log('[DASHBOARD] Student batch:', studentData.batch);
+        const state = calculateCurrentAcademicState(studentData.batch);
+        console.log('[DASHBOARD] Calculated academic state:', state);
+        setAcademicState(state);
     }
   }, [studentData]);
 

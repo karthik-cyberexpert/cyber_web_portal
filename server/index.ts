@@ -119,6 +119,9 @@ app.use('/api/attendance-trend', attendanceTrendRoutes);
 import notificationRoutes from './notifications.routes.js';
 app.use('/api/notifications', notificationRoutes);
 
+import { debugRouter } from './debug.routes.js';
+app.use('/api', debugRouter);
+
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {

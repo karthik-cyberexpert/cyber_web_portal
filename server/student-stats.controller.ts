@@ -61,8 +61,9 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
                 COUNT(DISTINCT a.id) as total_assignments,
                 COUNT(DISTINCT asub.id) as submitted_assignments
              FROM assignments a
+             JOIN subject_allocations sa ON a.subject_allocation_id = sa.id
              LEFT JOIN assignment_submissions asub ON a.id = asub.assignment_id AND asub.student_id = ?
-             WHERE a.section_id = ?`,
+             WHERE sa.section_id = ?`,
             [studentId, student.section_id]
         );
 

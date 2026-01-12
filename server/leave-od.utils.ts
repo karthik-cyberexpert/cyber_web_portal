@@ -59,19 +59,21 @@ export async function checkExamDatesInRange(
         );
 
         if (studentProfile.length === 0) {
+            console.log('[EXAM CHECK] No student profile found for userId:', userId);
             return { hasExams: false, examDates: [] };
         }
 
         const { batch_id } = studentProfile[0];
+        console.log('[EXAM CHECK] Checking exams for userId:', userId, 'batch_id:', batch_id, 'date range:', startDate, 'to', endDate);
 
         // Check for exams in the date range for this batch
-        // Exams are CIA 1, CIA 2, CIA 3, Model, Semester
+        // Exams are stored as: UT-1, UT-2, UT-3, MODEL, SEMESTER (or the old CIA format)
         const [exams]: any = await pool.query(
             `SELECT DATE_FORMAT(start_date, '%Y-%m-%d') as start_date, 
                     DATE_FORMAT(end_date, '%Y-%m-%d') as end_date, 
-                    category, title
+                    category, title, batch_id, semester
              FROM schedules
-             WHERE category IN ('CIA 1', 'CIA 2', 'CIA 3', 'Model', 'Semester')
+             WHERE category IN ('CIA 1', 'CIA 2', 'CIA 3', 'UT-1', 'UT-2', 'UT-3', 'Model', 'MODEL', 'Semester', 'SEMESTER')
              AND (batch_id = ? OR batch_id IS NULL)
              AND (
                 (start_date BETWEEN ? AND ?) OR
@@ -80,6 +82,8 @@ export async function checkExamDatesInRange(
              )`,
             [batch_id, startDate, endDate, startDate, endDate, startDate, endDate]
         );
+
+        console.log('[EXAM CHECK] Found', exams.length, 'exam(s):', exams);
 
         const examDetails: string[] = [];
         exams.forEach((e: any) => {

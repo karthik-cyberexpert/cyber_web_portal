@@ -59,16 +59,20 @@ router.post('/events', async (req: Request, res: Response) => {
 
         // Map frontend categories to DB ENUM
         let mappedCategory = event_type;
-        if (event_type === 'UT') {
-            // Check if it's CIA 1, 2, or 3 based on title or other logic
-            // For now, let's assume 'CIA 1' if it's UT. 
-            // Better to update frontend to send 'CIA 1', etc.
-            mappedCategory = title && title.includes('2') ? 'CIA 2' : title && title.includes('3') ? 'CIA 3' : 'CIA 1';
+        if (event_type === 'UT-1') {
+            mappedCategory = 'CIA 1';
+        } else if (event_type === 'UT-2') {
+            mappedCategory = 'CIA 2';
+        } else if (event_type === 'UT-3') {
+            mappedCategory = 'CIA 3';
+        } else if (event_type === 'UT') {
+            // Fallback for old UT format (if still used)
+            mappedCategory = 'CIA 1';
         } else if (event_type === 'MODEL') {
             mappedCategory = 'Model';
         } else if (event_type === 'SEMESTER') {
             mappedCategory = 'Semester';
-        } else if (event_type === 'HOLIDAY') {
+        } else if (event_type === 'HOLIDAY' || event_type === 'Holiday') {
             mappedCategory = 'Holiday';
         }
 

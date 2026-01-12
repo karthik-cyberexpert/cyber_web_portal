@@ -31,6 +31,8 @@ export const getClassStatistics = async (req: Request | any, res: Response) => {
             LEFT JOIN sections s ON sa.section_id = s.id
             LEFT JOIN batches b ON s.batch_id = b.id
             WHERE sa.faculty_id = ?
+              AND sa.is_active = TRUE
+              AND s.id IS NOT NULL
             ORDER BY b.name, s.name, sub.name
         `;
 
@@ -40,7 +42,7 @@ export const getClassStatistics = async (req: Request | any, res: Response) => {
         console.log('Faculty ID:', facultyId);
         console.log('Allocations found:', allocations.length);
         if (allocations.length > 0) {
-            console.log('Sample allocation:', allocations[0]);
+            console.log('Allocations:', allocations);
         }
 
         // Get next class timing from timetable_slots
