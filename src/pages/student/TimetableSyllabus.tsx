@@ -63,7 +63,7 @@ export default function TimetableSyllabus() {
           const data = await res.json();
           console.log('Timetable loaded:', data);
           setTimetableData(data.timetable || {});
-          setSyllabus(data.syllabus || []);
+          // setSyllabus(data.syllabus || []); // Old logic
         } else {
           console.error('Failed to load timetable');
         }
@@ -73,8 +73,25 @@ export default function TimetableSyllabus() {
         setLoading(false);
       }
     };
+
+    const fetchSyllabus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/syllabus/student`, {
+           headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           setSyllabus(data);
+        }
+      } catch (err) {
+         console.error('Error loading syllabus', err);
+         toast.error('Failed to load syllabus');
+      }
+    }
     
     fetchTimetable();
+    fetchSyllabus();
   }, [user]);
 
   const getSlot = (day: string, period: number | string) => {
@@ -87,6 +104,24 @@ export default function TimetableSyllabus() {
     const s2 = getSlot(day, p2);
     if (!s1 || !s2) return false;
     return s1.subject === s2.subject && s1.type === s2.type && s1.code === s2.code;
+  };
+
+  const handleDownload = async (url: string, filename: string) => {
+      try {
+          const response = await fetch(`${API_BASE_URL}${url}`);
+          const blob = await response.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = filename || 'syllabus'; // Use original filename if available
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          toast.success(`Downloaded syllabus for ${filename}`);
+      } catch (error) {
+          console.error('Download error:', error);
+          toast.error('Failed to download syllabus');
+      }
   };
 
   return (
@@ -283,6 +318,7 @@ export default function TimetableSyllabus() {
                             <TableHead>Subject Name</TableHead>
                             <TableHead>Subject Code</TableHead>
                             <TableHead>Faculty Name</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -305,32 +341,45 @@ export default function TimetableSyllabus() {
                                             <span className="text-sm">{course.faculty_name || 'Not Assigned'}</span>
                                         </div>
                                     </TableCell>
+                                    <TableCell>
+                                       {course.status === 'Uploaded' ? (
+                                           <span className="text-xs bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20">Uploaded</span>
+                                       ) : (
+                                           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Not Uploaded</span>
+                                       )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                onClick={() => toast.success(`Viewing syllabus for ${course.subject_name}`)}
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
-                                                onClick={() => toast.success(`Downloading syllabus for ${course.subject_name}`)}
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </Button>
+                                            {course.status === 'Uploaded' ? (
+                                                <>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                                        onClick={() => window.open(`${API_BASE_URL}${course.file_url}`, '_blank')}
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
+                                                        onClick={() => handleDownload(course.file_url, course.original_filename)}
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic">No Action</span>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
                              );
                          }) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                    No syllabus data available.
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                    No syllabus data available for your section.
                                 </TableCell>
                             </TableRow>
                         )}

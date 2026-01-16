@@ -119,6 +119,9 @@ app.use('/api/attendance-trend', attendanceTrendRoutes);
 import notificationRoutes from './notifications.routes.js';
 app.use('/api/notifications', notificationRoutes);
 
+import syllabusRoutes from './syllabus.routes.js';
+app.use('/api/syllabus', syllabusRoutes);
+
 import { debugRouter } from './debug.routes.js';
 app.use('/api', debugRouter);
 

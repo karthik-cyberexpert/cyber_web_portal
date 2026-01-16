@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, 
@@ -9,16 +9,22 @@ import {
   TrendingUp,
   Award,
   AlertCircle,
-  X
+  X,
+  FileText,
+  UploadCloud,
+  Trash2,
+  Eye,
+  MoreVertical
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
-import { getFaculty, getStudents, Faculty, Student } from '@/lib/data-store';
+import { toast } from 'sonner';
 
 interface ClassSection {
   id: string;
@@ -33,6 +39,17 @@ interface ClassSection {
   room: string;
 }
 
+interface SyllabusItem {
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  semester: number;
+  syllabus_id: number | null;
+  file_url: string | null;
+  original_filename: string | null;
+  status: 'Uploaded' | 'Pending';
+}
+
 export default function MyClasses() {
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassSection[]>([]);
@@ -45,11 +62,24 @@ export default function MyClasses() {
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
+  // Syllabus State
+  const [syllabusOpen, setSyllabusOpen] = useState(false);
+  const [syllabusList, setSyllabusList] = useState<SyllabusItem[]>([]);
+  const [loadingSyllabus, setLoadingSyllabus] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+
   useEffect(() => {
     if (user && (user.role === 'faculty' || user.role === 'tutor')) {
       loadFacultyClasses();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (syllabusOpen) {
+      loadSyllabus();
+    }
+  }, [syllabusOpen]);
 
   const loadFacultyClasses = async () => {
     try {
@@ -98,6 +128,94 @@ export default function MyClasses() {
       setClasses([]);
       setStats({ totalCourses: 0, totalStudents: 0, avgAttendance: 0 });
     }
+  };
+
+  const loadSyllabus = async () => {
+    setLoadingSyllabus(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/syllabus`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyllabusList(data);
+      }
+    } catch (error) {
+      console.error('Error loading syllabus:', error);
+      toast.error('Failed to load syllabus list');
+    } finally {
+      setLoadingSyllabus(false);
+    }
+  };
+
+  const handleUploadClick = (subjectId: number) => {
+    setSelectedSubjectId(subjectId);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedSubjectId) return;
+
+    if (file.size > 1024 * 1024) {
+      toast.error('File size must be less than 1MB');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('subjectId', String(selectedSubjectId));
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/syllabus/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      if (res.ok) {
+        toast.success('Syllabus uploaded successfully');
+        loadSyllabus(); // Refresh list
+      } else {
+        const error = await res.json();
+        toast.error(error.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading syllabus:', error);
+      toast.error('Error uploading syllabus');
+    } finally {
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setSelectedSubjectId(null);
+    }
+  };
+
+  const handleDeleteSyllabus = async (syllabusId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/syllabus/${syllabusId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        toast.success('Syllabus deleted successfully');
+        loadSyllabus();
+      } else {
+        toast.error('Failed to delete syllabus');
+      }
+    } catch (error) {
+      console.error('Error deleting syllabus:', error);
+      toast.error('Error deleting syllabus');
+    }
+  };
+
+  const handleViewSyllabus = (fileUrl: string) => {
+    window.open(`${API_BASE_URL}${fileUrl}`, '_blank');
   };
 
   const handleViewStudents = async (classSection: ClassSection) => {
@@ -149,8 +267,15 @@ export default function MyClasses() {
           <p className="text-muted-foreground mt-1">Welcome back, {user.name}. Monitor course progress and student engagement.</p>
         </div>
         <div className="flex gap-3">
-           <Button variant="outline" className="rounded-xl">Course Syllabus</Button>
-           <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20">Bulk Attendance</Button>
+           <Button 
+            variant="outline" 
+            className="rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary"
+            onClick={() => setSyllabusOpen(true)}
+           >
+            <FileText className="w-4 h-4 mr-2" />
+            Course Syllabus
+           </Button>
+           {/* Bulk Attendance Button Removed */}
         </div>
       </motion.div>
 
@@ -336,6 +461,97 @@ export default function MyClasses() {
                     </div>
                   </div>
                 </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Syllabus Management Modal */}
+      <Dialog open={syllabusOpen} onOpenChange={setSyllabusOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Course Syllabus Management
+            </DialogTitle>
+          </DialogHeader>
+
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          />
+
+          {loadingSyllabus ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : syllabusList.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No subjects assigned to you.
+            </div>
+          ) : (
+            <div className="space-y-4 mt-2">
+              <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 rounded-lg text-xs font-bold uppercase text-muted-foreground">
+                <div className="col-span-4">Subject Info</div>
+                <div className="col-span-2">Semester</div>
+                <div className="col-span-3">Status</div>
+                <div className="col-span-3 text-right">Actions</div>
+              </div>
+
+              {syllabusList.map((item) => (
+                <div key={item.subject_id} className="grid grid-cols-12 gap-4 items-center p-4 border rounded-xl hover:bg-muted/20 transition-colors">
+                  <div className="col-span-4">
+                    <h4 className="font-bold text-sm">{item.subject_name}</h4>
+                    <p className="text-xs text-muted-foreground font-mono">{item.subject_code}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Badge variant="secondary" className="font-mono">Sem {item.semester}</Badge>
+                  </div>
+                  <div className="col-span-3">
+                    <Badge className={item.status === 'Uploaded' ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25' : 'bg-yellow-500/15 text-yellow-600 hover:bg-yellow-500/25'}>
+                      {item.status}
+                    </Badge>
+                  </div>
+                  <div className="col-span-3 flex justify-end gap-2">
+                    {item.status === 'Pending' ? (
+                      <Button size="sm" onClick={() => handleUploadClick(item.subject_id)}>
+                        <UploadCloud className="w-4 h-4 mr-2" />
+                        Upload
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => item.file_url && handleViewSyllabus(item.file_url)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Syllabus
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUploadClick(item.subject_id)}>
+                              <UploadCloud className="w-4 h-4 mr-2" />
+                              Re-upload
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => item.syllabus_id && handleDeleteSyllabus(item.syllabus_id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}
