@@ -5,11 +5,16 @@ export const getNotifications = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.id;
         
+        console.log('[GET NOTIFICATIONS] User ID:', userId, 'Role:', (req as any).user.role);
+        
         // Fetch notifications for the user or system-wide (user_id IS NULL)
         const [rows]: any = await pool.query(
             'SELECT * FROM notifications WHERE (user_id = ? OR user_id IS NULL) AND is_read = FALSE ORDER BY created_at DESC',
             [userId]
         );
+        
+        console.log('[GET NOTIFICATIONS] Found', rows.length, 'notifications');
+        console.log('[GET NOTIFICATIONS] Rows:', JSON.stringify(rows, null, 2));
         
         res.json(rows);
     } catch (error: any) {

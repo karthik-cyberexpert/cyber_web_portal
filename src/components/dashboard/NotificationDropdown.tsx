@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Check, X, BellOff } from 'lucide-react';
 import {
     DropdownMenu,
@@ -15,6 +16,7 @@ import { Notification, fetchNotifications, markNotificationAsRead, markAllNotifi
 import { formatDistanceToNow } from 'date-fns';
 
 export default function NotificationDropdown() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
@@ -35,7 +37,7 @@ export default function NotificationDropdown() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleMarkAsRead = async (id: number) => {
+    const handleMarkAsRead = async (id: number, actionUrl?: string) => {
         try {
             await markNotificationAsRead(id);
             // Remove from UI as requested: "Clicked notifications and mark as read should clear up all the notification from the UI"
@@ -44,6 +46,11 @@ export default function NotificationDropdown() {
             // and "mark as read" (the button) as clearing all.
             setNotifications(notifications.filter(n => n.id !== id));
             setUnreadCount(prev => Math.max(0, prev - 1));
+            
+            // Navigate to action URL if provided
+            if (actionUrl) {
+                navigate(actionUrl);
+            }
         } catch (error) {
             console.error('Failed to mark as read:', error);
         }
@@ -101,7 +108,7 @@ export default function NotificationDropdown() {
                                 <DropdownMenuItem 
                                     key={notification.id} 
                                     className="p-4 cursor-pointer focus:bg-muted/50 border-b border-border/50 last:border-0"
-                                    onClick={() => handleMarkAsRead(notification.id)}
+                                    onClick={() => handleMarkAsRead(notification.id, notification.action_url)}
                                 >
                                     <div className="flex gap-3 w-full">
                                         <div className="mt-1">

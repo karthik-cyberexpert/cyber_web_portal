@@ -53,6 +53,7 @@ import StudentsFaculty from "@/pages/faculty/Students";
 import TutorDashboard from "@/pages/dashboards/TutorDashboard";
 import PersonalDetails from "@/pages/tutor/PersonalDetails";
 import ClassManagement from "@/pages/tutor/ClassManagement";
+import StudentProfileView from "@/pages/tutor/StudentProfileView";
 import TimetableTutor from "@/pages/tutor/Timetable";
 import VerifyMarks from "@/pages/tutor/VerifyMarks";
 import NotesStatus from "@/pages/tutor/NotesStatus";
@@ -175,6 +176,7 @@ const App = () => {
                   <Route index element={<TutorDashboard />} />
                     <Route path="personal" element={<PersonalDetails />} />
                     <Route path="class" element={<ClassManagement />} />
+                    <Route path="student/:id" element={<StudentProfileView />} />
                     <Route path="timetable" element={<TimetableTutor />} />
                     <Route path="marks" element={<VerifyMarks />} />
                   <Route path="notes" element={<NotesStatus />} />

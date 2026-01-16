@@ -72,6 +72,24 @@ export async function createODRequest(req: Request, res: Response) {
             [userId, category, start_date, end_date, isHalfDay, mappedSession, duration_type || 'Full-Day', reason, place_to_visit, fileUrl, working_days]
         );
 
+        // Notify tutor
+        const tutorIdQuery = await pool.query(
+            `SELECT ta.faculty_id FROM tutor_assignments ta
+             JOIN student_profiles sp ON ta.batch_id = sp.batch_id AND ta.section_id = sp.section_id
+             WHERE sp.user_id = ? AND ta.is_active = TRUE
+             LIMIT 1`,
+            [userId]
+        );
+        if ((tutorIdQuery as any)[0].length > 0) {
+            const tutorId = (tutorIdQuery as any)[0][0].faculty_id;
+            await createNotification(
+                tutorId,
+                'New OD Request',
+                `A student has submitted an OD request for ${category} (${working_days} day(s))`,
+                '/tutor/od'
+            );
+        }
+
         res.json({ message: 'OD request submitted successfully', working_days });
     } catch (error: any) {
         console.error('Error creating OD request:', error);
@@ -181,7 +199,8 @@ export async function forwardODRequest(req: Request, res: Response) {
             await createNotification(
                 odInfo[0].user_id,
                 'OD Forwarded',
-                `Your OD request for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`
+                `Your OD request for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`,
+                '/student/od'
             );
         }
     } catch (error: any) {
@@ -203,9 +222,13 @@ export async function rejectODRequest(req: Request, res: Response) {
             return res.status(404).json({ error: 'Request not found' });
         }
         const request = requests[0];
+        const currentStatus = String(request.status).trim().toLowerCase();
 
         // If it was a cancellation request, rejection means it stays approved or goes back to previous state?
-        const newStatus = request.status === 'cancel_requested' ? 'approved' : 'rejected';
+        const isCancellationReject = currentStatus === 'cancel_requested';
+        const newStatus = isCancellationReject ? 'approved' : 'rejected';
+        
+        console.log(`[REJECT DEBUG] Processing OD rejection for ID ${id}. Raw Status: "${request.status}", Trimmed: "${currentStatus}", IsCancellation: ${isCancellationReject}, New Status: "${newStatus}"`);
 
         await pool.query(
             `UPDATE od_requests 
@@ -222,7 +245,8 @@ export async function rejectODRequest(req: Request, res: Response) {
             await createNotification(
                 odInfo[0].user_id,
                 `OD ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
-                `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'OD request'} for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`
+                `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'OD request'} for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`,
+                '/student/od'
             );
         }
     } catch (error: any) {
@@ -237,22 +261,42 @@ export async function adminApproveODRequest(req: Request, res: Response) {
         const { id } = req.params;
         const userId = (req as any).user.id;
 
+        // Get current status first
+        const [requests]: any = await pool.query('SELECT status, user_id, start_date FROM od_requests WHERE id = ?', [id]);
+        if (requests.length === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        const request = requests[0];
+        const currentStatus = String(request.status).trim().toLowerCase();
+        const isCancellationApprove = currentStatus === 'cancel_requested';
+        const newStatus = isCancellationApprove ? 'cancelled' : 'approved';
+        
+        console.log(`[APPROVE DEBUG] Admin approving OD request ${id}. Raw Status: "${request.status}", Trimmed: "${currentStatus}", IsCancellation: ${isCancellationApprove}, New Status: "${newStatus}"`);
+
         await pool.query(
             `UPDATE od_requests 
-            SET status = 'approved', admin_id = ? 
+            SET status = ?, admin_id = ? 
             WHERE id = ?`,
-            [userId, id]
+            [newStatus, userId, id]
         );
 
-        res.json({ message: 'OD request approved by admin' });
+        res.json({ message: newStatus === 'cancelled' ? 'OD cancelled successfully' : 'OD request approved by admin' });
 
         // Notification
-        const [odInfo]: any = await pool.query('SELECT user_id, start_date FROM od_requests WHERE id = ?', [id]);
-        if (odInfo.length > 0) {
+        if (newStatus === 'cancelled') {
             await createNotification(
-                odInfo[0].user_id,
+                request.user_id,
+                'OD Cancelled',
+                `Your OD request for ${new Date(request.start_date).toLocaleDateString()} has been cancelled as requested by Admin.`,
+                '/student/od'
+            );
+        } else {
+            await createNotification(
+                request.user_id,
                 'OD Approved',
-                `Your OD request for ${new Date(odInfo[0].start_date).toLocaleDateString()} has been approved by Admin.`
+                `Your OD request for ${new Date(request.start_date).toLocaleDateString()} has been approved by Admin.`,
+                '/student/od'
             );
         }
     } catch (error: any) {

@@ -135,7 +135,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
   const uniqueBatches = Array.from(new Set(getStudents().map(s => s.batch))).sort();
 
   const filteredRequests = requests
-    .filter(r => activeTab === 'current' ? r.status === 'pending' : r.status !== 'pending')
+    .filter(r => activeTab === 'current' ? (r.status === 'pending' || r.status === 'cancel_requested') : (r.status !== 'pending' && r.status !== 'cancel_requested'))
     .filter(r => {
         // Status Filter
         if (statusFilter !== 'all' && r.status !== statusFilter) return false;
@@ -503,23 +503,29 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                       </div>
                   )}
 
-                  {selectedRequest?.status === 'pending' && (
+                  {(selectedRequest?.status === 'pending' || selectedRequest?.status === 'cancel_requested') && (
                     <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
                       <div className="flex flex-1 gap-2">
                         <Button 
-                          className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-emerald-500 hover:bg-emerald-600 shadow-glow-emerald" 
+                          className={`flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest shadow-glow-emerald ${
+                            selectedRequest?.status === 'cancel_requested' 
+                              ? 'bg-amber-500 hover:bg-amber-600' 
+                              : 'bg-emerald-500 hover:bg-emerald-600'
+                          }`}
                           onClick={() => handleAction(selectedRequest.id, 'approve')}
                         >
                             <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                            Approve
+                            {selectedRequest?.status === 'cancel_requested' ? 'Accept Cancellation' : 'Approve'}
                         </Button>
-                        <Button 
-                          className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-amber-500 hover:bg-amber-600 shadow-glow-amber text-white" 
-                          onClick={() => handleAction(selectedRequest.id, 'forward')}
-                        >
-                            <ChevronRight className="w-3.5 h-3.5 mr-1.5" />
-                            Forward
-                        </Button>
+                        {selectedRequest?.status === 'pending' && (
+                          <Button 
+                            className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-amber-500 hover:bg-amber-600 shadow-glow-amber text-white" 
+                            onClick={() => handleAction(selectedRequest.id, 'forward')}
+                          >
+                              <ChevronRight className="w-3.5 h-3.5 mr-1.5" />
+                              Forward
+                          </Button>
+                        )}
                       </div>
                       <Button 
                         className="w-full sm:w-auto px-6 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest border-destructive/20 text-destructive hover:bg-destructive/5" 
@@ -530,7 +536,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                         }}
                       >
                           <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                          Reject
+                          {selectedRequest?.status === 'cancel_requested' ? 'Reject Cancellation' : 'Reject'}
                       </Button>
                     </DialogFooter>
                   )}
@@ -552,10 +558,12 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500" />
-                Reject Request
+                {selectedRequest?.status === 'cancel_requested' ? 'Reject Cancellation Request' : 'Reject Leave Request'}
             </DialogTitle>
             <DialogDescription className="text-xs font-medium text-muted-foreground pt-1">
-                Please provide a reason for rejecting this request. This will be visible to the student.
+                {selectedRequest?.status === 'cancel_requested' 
+                  ? 'Provide a reason for rejecting this cancellation. The leave will remain approved.' 
+                  : 'Please provide a reason for rejecting this request. This will be visible to the student.'}
             </DialogDescription>
           </DialogHeader>
           
@@ -581,7 +589,7 @@ export default function LeaveApprovals({ filterType }: { filterType?: 'leave' | 
                 disabled={!rejectionReason.trim()}
                 className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 shadow-glow-destructive"
              >
-                Reject Request
+                {selectedRequest?.status === 'cancel_requested' ? 'Reject Cancellation' : 'Reject Request'}
              </Button>
           </DialogFooter>
         </DialogContent>

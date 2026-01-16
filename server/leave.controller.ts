@@ -90,6 +90,24 @@ export async function createLeaveRequest(req: Request, res: Response) {
             [userId, category, start_date, end_date, isHalfDay, mappedSession, duration_type || 'Full-Day', reason, fileUrl, working_days]
         );
 
+        // Get tutor for notification
+        console.log('[LEAVE CREATE] Getting tutor for student:', userId);
+        const tutorId = await getTutorForStudent(userId);
+        console.log('[LEAVE CREATE] Tutor ID found:', tutorId);
+        
+        if (tutorId) {
+            console.log('[LEAVE CREATE] Creating notification for tutor:', tutorId);
+            await createNotification(
+                tutorId,
+                'New Leave Request',
+                `A student has submitted a ${category} request for ${working_days} day(s)`,
+                '/tutor/leave'
+            );
+            console.log('[LEAVE CREATE] Notification created successfully');
+        } else {
+            console.log('[LEAVE CREATE] WARNING: No tutor found for student');
+        }
+
         console.log('Leave request created successfully');
         res.json({ message: 'Leave request submitted successfully', working_days });
     } catch (error: any) {
@@ -194,30 +212,43 @@ export async function approveLeaveRequest(req: Request, res: Response) {
         }
 
         const request = requests[0];
+        const currentStatus = String(request.status).trim().toLowerCase();
 
-        // Tutor can only approve if <=2 working days
-        if (request.working_days > 2) {
+        // Tutor can only approve if <=2 working days (or cancellation)
+        if (currentStatus !== 'cancel_requested' && request.working_days > 2) {
             return res.status(400).json({ error: 'Cannot approve leave > 2 days. Please forward to admin.' });
         }
 
         // Update status based on current status
-        const newStatus = request.status === 'cancel_requested' ? 'cancelled' : 'approved';
+        const isCancellationApprove = currentStatus === 'cancel_requested';
+        const newStatus = isCancellationApprove ? 'cancelled' : 'approved';
+        console.log(`[APPROVE DEBUG] Tutor approving request ${id}. Raw Status: "${request.status}", Trimmed: "${currentStatus}", IsCancellation: ${isCancellationApprove}, New Status: "${newStatus}"`);
 
         await pool.query(
             `UPDATE leave_requests
-            SET status = 'approved', tutor_id = ?
+            SET status = ?, tutor_id = ?
             WHERE id = ?`,
-            [userId, id]
+            [newStatus, userId, id]
         );
 
-        res.json({ message: 'Leave request approved' });
+        res.json({ message: newStatus === 'cancelled' ? 'Leave cancelled successfully' : 'Leave request approved' });
 
         // Notification
-        await createNotification(
-            request.user_id,
-            'Leave Approved',
-            `Your leave request for ${new Date(request.start_date).toLocaleDateString()} to ${new Date(request.end_date).toLocaleDateString()} has been approved by ${request.status === 'cancel_requested' ? 'Tutor (Cancellation)' : 'Tutor'}.`
-        );
+        if (newStatus === 'cancelled') {
+            await createNotification(
+                request.user_id,
+                'Leave Cancelled',
+                `Your leave request for ${new Date(request.start_date).toLocaleDateString()} to ${new Date(request.end_date).toLocaleDateString()} has been cancelled as requested.`,
+                '/student/leave'
+            );
+        } else {
+            await createNotification(
+                request.user_id,
+                'Leave Approved',
+                `Your leave request for ${new Date(request.start_date).toLocaleDateString()} to ${new Date(request.end_date).toLocaleDateString()} has been approved by Tutor.`,
+                '/student/leave'
+            );
+        }
     } catch (error: any) {
         console.error('Error approving leave request:', error);
         res.status(500).json({ error: 'Failed to approve leave request' });
@@ -245,7 +276,8 @@ export async function forwardLeaveRequest(req: Request, res: Response) {
             await createNotification(
                 leaveInfo[0].user_id,
                 'Leave Forwarded',
-                `Your leave request for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`
+                `Your leave request for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been forwarded to Admin for approval.`,
+                '/student/leave'
             );
         }
     } catch (error: any) {
@@ -259,37 +291,49 @@ export async function rejectLeaveRequest(req: Request, res: Response) {
     try {
         const { id } = req.params;
         const userId = (req as any).user.id;
+        const role = (req as any).user.role;
         const { rejection_reason } = req.body;
 
         // Get the request to check current status
-        const [requests]: any = await pool.query('SELECT status FROM leave_requests WHERE id = ?', [id]);
+        const [requests]: any = await pool.query('SELECT status, user_id FROM leave_requests WHERE id = ?', [id]);
         if (requests.length === 0) {
             return res.status(404).json({ error: 'Request not found' });
         }
         const request = requests[0];
+        const currentStatus = String(request.status).trim().toLowerCase();
 
-        // If it was a cancellation request, rejection means it stays approved or goes back to previous state?
-        // Usually, rejecting a cancellation means it remains in its previous active state.
-        const newStatus = request.status === 'cancel_requested' ? 'approved' : 'rejected';
+        // If it was a cancellation request, rejection means it stays approved or goes back to previous state
+        const isCancellationReject = currentStatus === 'cancel_requested';
+        const newStatus = isCancellationReject ? 'approved' : 'rejected';
+        
+        console.log(`[REJECT DEBUG] Processing rejection for ID ${id}. Raw Status: "${request.status}", Trimmed: "${currentStatus}", IsCancellation: ${isCancellationReject}, New Status: "${newStatus}"`);
 
-        await pool.query(
-            `UPDATE leave_requests
-            SET status = ?, approved_by = ?, approver_id = ?, rejection_reason = ?, approved_at = NOW()
-            WHERE id = ?`,
-            [newStatus, userId === 1 ? 'Admin' : 'Tutor', userId, rejection_reason, id]
-        );
+        // Update based on role
+        if (role === 'admin') {
+            await pool.query(
+                `UPDATE leave_requests
+                SET status = ?, admin_id = ?, rejection_reason = ?
+                WHERE id = ?`,
+                [newStatus, userId, rejection_reason, id]
+            );
+        } else {
+            await pool.query(
+                `UPDATE leave_requests
+                SET status = ?, tutor_id = ?, rejection_reason = ?
+                WHERE id = ?`,
+                [newStatus, userId, rejection_reason, id]
+            );
+        }
 
         res.json({ message: 'Leave request processed' });
 
         // Notification
-        const [leaveInfo]: any = await pool.query('SELECT user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
-        if (leaveInfo.length > 0) {
-            await createNotification(
-                leaveInfo[0].user_id,
-                `Leave ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
-                `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'leave request'} for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`
-            );
-        }
+        await createNotification(
+            request.user_id,
+            `Leave ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
+            `Your ${request.status === 'cancel_requested' ? 'cancellation request' : 'leave request'} has been ${newStatus}. Reason: ${rejection_reason || 'N/A'}`,
+            '/student/leave'
+        );
     } catch (error: any) {
         console.error('Error rejecting leave request:', error);
         res.status(500).json({ error: 'Failed to process leave request' });
@@ -302,22 +346,39 @@ export async function adminApproveLeaveRequest(req: Request, res: Response) {
         const { id } = req.params;
         const userId = (req as any).user.id;
 
+        // Get current status first
+        const [requests]: any = await pool.query('SELECT status, user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
+        if (requests.length === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        const request = requests[0];
+        const newStatus = request.status === 'cancel_requested' ? 'cancelled' : 'approved';
+        console.log(`[APPROVE DEBUG] Admin approving request ${id}. Current status: "${request.status}", New status: "${newStatus}"`);
+
         await pool.query(
             `UPDATE leave_requests 
-            SET status = 'approved', admin_id = ? 
+            SET status = ?, admin_id = ? 
             WHERE id = ?`,
-            [userId, id]
+            [newStatus, userId, id]
         );
 
-        res.json({ message: 'Leave request approved by admin' });
+        res.json({ message: newStatus === 'cancelled' ? 'Leave cancelled successfully' : 'Leave request approved by admin' });
 
         // Notification
-        const [leaveInfo]: any = await pool.query('SELECT user_id, start_date, end_date FROM leave_requests WHERE id = ?', [id]);
-        if (leaveInfo.length > 0) {
+        if (newStatus === 'cancelled') {
             await createNotification(
-                leaveInfo[0].user_id,
+                request.user_id,
+                'Leave Cancelled',
+                `Your leave request for ${new Date(request.start_date).toLocaleDateString()} has been cancelled as requested by Admin.`,
+                '/student/leave'
+            );
+        } else {
+            await createNotification(
+                request.user_id,
                 'Leave Approved',
-                `Your leave request for ${new Date(leaveInfo[0].start_date).toLocaleDateString()} has been approved by Admin.`
+                `Your leave request for ${new Date(request.start_date).toLocaleDateString()} has been approved by Admin.`,
+                '/student/leave'
             );
         }
     } catch (error: any) {
@@ -362,16 +423,20 @@ export async function adminRevokeLeaveRequest(req: Request, res: Response) {
 export async function tutorRevokeLeaveRequest(req: Request, res: Response) {
     try {
         const { id } = req.params;
+        console.log('[TUTOR REVOKE] Request ID:', id);
 
         // Check if leave has already started and is NOT forwarded
-        const [requests]: any = await pool.query('SELECT start_date, status FROM leave_requests WHERE id = ?', [id]);
+        const [requests]: any = await pool.query('SELECT start_date, status, working_days, approved_by FROM leave_requests WHERE id = ?', [id]);
+        console.log('[TUTOR REVOKE] Request found:', requests);
+        
         if (requests.length === 0) {
             return res.status(404).json({ error: 'Request not found' });
         }
 
         const request = requests[0];
+        console.log('[TUTOR REVOKE] Request details:', request);
         
-        if (request.status === 'pending_admin') {
+        if (request.status === 'pending_admin' || request.status === 'forwarded_to_admin') {
             return res.status(400).json({ error: 'Cannot revoke a request that has been forwarded to admin' });
         }
 
@@ -394,17 +459,20 @@ export async function tutorRevokeLeaveRequest(req: Request, res: Response) {
             return res.status(400).json({ error: 'Cannot revoke request as it has already started' });
         }
 
+        // Update leave request back to pending status
+        console.log('[TUTOR REVOKE] Updating request to pending...');
         await pool.query(
             `UPDATE leave_requests 
-            SET status = 'pending', approved_by = NULL, approver_id = NULL, approved_at = NULL, rejection_reason = NULL 
+            SET status = 'pending', tutor_id = NULL, admin_id = NULL, rejection_reason = NULL 
             WHERE id = ?`,
             [id]
         );
 
+        console.log('[TUTOR REVOKE] Success!');
         res.json({ message: 'Leave request revoked and moved to pending' });
     } catch (error: any) {
-        console.error('Error revoking leave request:', error);
-        res.status(500).json({ error: 'Failed to revoke leave request' });
+        console.error('[TUTOR REVOKE ERROR]:', error);
+        res.status(500).json({ error: 'Failed to revoke leave request', details: error.message });
     }
 }
 
@@ -470,6 +538,7 @@ export async function requestCancelLeave(req: Request, res: Response) {
             "UPDATE leave_requests SET status = 'cancel_requested' WHERE id = ?",
             [id]
         );
+        console.log(`[CANCEL REQUEST DEBUG] Set status to cancel_requested for ID: ${id}`);
 
         res.json({ message: 'Cancellation request sent to tutor' });
     } catch (error: any) {

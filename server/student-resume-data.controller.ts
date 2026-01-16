@@ -29,18 +29,27 @@ export const getStudentResumeData = async (req: Request | any, res: Response) =>
         let profileData: any = {};
         try {
             const [profile]: any = await pool.query(
-                `SELECT linkedin_url, github_url, portfolio_url, education_degree, education_institution FROM student_profiles WHERE user_id = ?`,
+                `SELECT 
+                    linkedin_url, 
+                    github_url, 
+                    portfolio_url
+                FROM student_profiles 
+                WHERE user_id = ?`,
                 [studentId]
             );
             if (profile.length > 0) {
                 profileData = profile[0];
-                console.log('SUCCESS: Profile found:', profileData);
+                console.log('✓ Profile data found for user_id:', studentId);
+                console.log('  - LinkedIn:', profileData.linkedin_url || 'Not set');
+                console.log('  - GitHub:', profileData.github_url || 'Not set');
+                console.log('  - Portfolio:', profileData.portfolio_url || 'Not set');
             } else {
-                console.log('WARNING: No profile found for user_id:', studentId);
+                console.log('⚠ WARNING: No profile found for user_id:', studentId);
             }
         } catch (err: any) {
-            console.log('ERROR: student_profiles query failed:', err.message);
+            console.log('❌ ERROR: student_profiles query failed:', err.message);
         }
+
 
 
         // 2. ECA Achievements - with error handling
@@ -76,8 +85,8 @@ export const getStudentResumeData = async (req: Request | any, res: Response) =>
             },
             education: [
                 {
-                    institution: profileData.education_institution || 'Your Institution',
-                    degree: profileData.education_degree || 'B.Tech in Computer Science',
+                    institution: 'B.Tech in Computer Science',
+                    degree: 'Your Institution',
                     batch: 'Current',
                     year: '2023 - 2027'
                 }

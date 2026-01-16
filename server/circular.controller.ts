@@ -98,7 +98,7 @@ export const createCircular = async (req: Request | any, res: Response) => {
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { title, description, audience, priority, target_batch_id, target_section_id, type } = req.body;
+    const { title, content, description, audience, priority, target_batch_id, target_section_id, type } = req.body;
     const file = req.file;
 
     try {
@@ -157,11 +157,11 @@ export const createCircular = async (req: Request | any, res: Response) => {
         }
 
         await pool.query(`
-            INSERT INTO circulars (title, description, audience, priority, target_batch_id, target_section_id, type, attachment_url, created_by)
+            INSERT INTO circulars (title, content, audience, priority, target_batch_id, target_section_id, type, attachment_url, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             title, 
-            description || null, 
+            content || description || null, 
             audience || 'All', 
             priority || 'Medium', 
             (role === 'tutor' ? tutorBatchId : target_batch_id) || null, 
@@ -175,7 +175,7 @@ export const createCircular = async (req: Request | any, res: Response) => {
 
         // Notifications
         if (audience === 'All') {
-            await createNotification(null, `New Circular: ${title}`, description || 'A new circular has been published.');
+            await createNotification(null, `New Circular: ${title}`, content || description || 'A new circular has been published.');
         } else if (audience === 'Students') {
             const finalBatchId = role === 'tutor' ? tutorBatchId : target_batch_id;
             const finalSectionId = role === 'tutor' ? tutorSectionId : (target_section_id && target_section_id !== 'all' ? target_section_id : null);
@@ -192,17 +192,17 @@ export const createCircular = async (req: Request | any, res: Response) => {
             }
             const [students]: any = await pool.query(studentQuery, studentParams);
             const studentIds = students.map((s: any) => s.user_id);
-            await createBulkNotifications(studentIds, `New Circular: ${title}`, description || 'A new circular has been published for your batch/section.');
+            await createBulkNotifications(studentIds, `New Circular: ${title}`, content || description || 'A new circular has been published for your batch/section.');
         } else if (audience === 'Faculty') {
             // Get all faculty users
             const [faculty]: any = await pool.query("SELECT id FROM users WHERE role = 'faculty'");
             const facultyIds = faculty.map((f: any) => f.id);
-            await createBulkNotifications(facultyIds, `New Circular: ${title}`, description || 'A new circular has been published for faculty.');
+            await createBulkNotifications(facultyIds, `New Circular: ${title}`, content || description || 'A new circular has been published for faculty.');
         } else if (audience === 'Tutors') {
             // Get all tutors (who are faculty with tutor assignments)
             const [tutors]: any = await pool.query("SELECT id FROM users WHERE role = 'tutor'");
             const tutorIds = tutors.map((t: any) => t.id);
-            await createBulkNotifications(tutorIds, `New Circular: ${title}`, description || 'A new circular has been published for tutors.');
+            await createBulkNotifications(tutorIds, `New Circular: ${title}`, content || description || 'A new circular has been published for tutors.');
         }
 
     } catch (error) {
@@ -219,7 +219,7 @@ export const updateCircular = async (req: Request | any, res: Response) => {
 
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { title, description, audience, priority, target_batch_id, target_section_id, type } = req.body;
+    const { title, content, description, audience, priority, target_batch_id, target_section_id, type } = req.body;
     const file = req.file;
 
     try {
@@ -266,12 +266,12 @@ export const updateCircular = async (req: Request | any, res: Response) => {
 
         await pool.query(`
             UPDATE circulars 
-            SET title = ?, description = ?, audience = ?, priority = ?, 
+            SET title = ?, content = ?, audience = ?, priority = ?, 
                 target_batch_id = ?, target_section_id = ?, type = ?, attachment_url = ?
             WHERE id = ?
         `, [
             title, 
-            description || null, 
+            content || description || null, 
             audience || 'All', 
             priority || 'Medium', 
             target_batch_id || null, 

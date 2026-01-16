@@ -2,9 +2,10 @@ import { API_BASE_URL } from './api-config';
 
 export interface Notification {
     id: number;
-    user_id: number | null;
+    user_id: number;
     title: string;
     message: string;
+    action_url?: string;
     is_read: boolean;
     created_at: string;
 }

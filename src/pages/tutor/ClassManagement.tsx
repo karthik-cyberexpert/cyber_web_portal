@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Search, 
@@ -31,6 +32,7 @@ import { getTutors, getStudents, Tutor, Student } from '@/lib/data-store';
 
 export default function ClassManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -243,22 +245,61 @@ export default function ClassManagement() {
                   </td>
                   <td className="py-5 text-right pr-4">
                     <div className="flex items-center justify-end gap-2 opacity-20 group-hover:opacity-100 transition-all transform group-hover:translate-x-0 translate-x-4">
-                      <Button variant="ghost" size="icon" className="w-9 h-9 rounded-xl text-primary hover:bg-primary/10">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-9 h-9 rounded-xl text-primary hover:bg-primary/10"
+                        onClick={() => window.location.href = `mailto:${student.email}`}
+                        title="Send Email"
+                      >
                         <Mail className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="w-9 h-9 rounded-xl text-info hover:bg-info/10">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-9 h-9 rounded-xl text-info hover:bg-info/10"
+                        onClick={() => {
+                          // Navigate to student profile
+                          navigate(`/tutor/student/${student.id}`);
+                        }}
+                        title="View Student Profile"
+                      >
                         <ArrowUpRight className="w-4 h-4" />
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="w-9 h-9 rounded-xl">
+                          <Button variant="ghost" size="icon" className="w-9 h-9 rounded-xl" title="More Actions">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-xl border-white/10">
-                          <DropdownMenuItem className="font-bold">View Profile</DropdownMenuItem>
-                          <DropdownMenuItem className="font-bold">Academic History</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive font-bold">Send Alert</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="font-bold cursor-pointer"
+                            onClick={() => {
+                              // Navigate to student profile
+                              navigate(`/tutor/student/${student.id}`);
+                            }}
+                          >
+                            View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="font-bold cursor-pointer"
+                            onClick={() => {
+                              // Navigate to tutor leave report
+                              navigate(`/tutor/reports/leave`);
+                            }}
+                          >
+                            View Reports
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive font-bold cursor-pointer"
+                            onClick={() => {
+                              // Navigate to profile to send alert
+                              navigate(`/tutor/student/${student.id}?sendAlert=true`);
+                            }}
+                          >
+                            Send Alert
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

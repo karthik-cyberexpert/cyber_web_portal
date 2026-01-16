@@ -134,7 +134,36 @@ export default function TutorDashboard() {
           setStats(prev => ({ ...prev, academicAlerts: myAlerts.length }));
         }
 
-        // 3. Attendance Trend (Semester-based from new API)
+        // 3. Fetch Pending Approvals (Leave + OD)
+        const leaveRes = await fetch(`${API_BASE_URL}/leave/tutor`, { headers });
+        const leaveData = await leaveRes.json();
+        const pendingLeave = leaveData.filter((r: any) => r.status === 'pending' || r.status === 'cancel_requested');
+        
+        const odRes = await fetch(`${API_BASE_URL}/od/tutor`, { headers });
+        const odData = await odRes.json();
+        const pendingOD = odData.filter((r: any) => r.status === 'pending' || r.status === 'cancel_requested');
+        
+        const totalPending = pendingLeave.length + pendingOD.length;
+        setStats(prev => ({ ...prev, pendingApprovals: totalPending }));
+        
+        // Format for approval queue display
+        const approvalItems = [
+          ...pendingLeave.slice(0, 3).map((r: any) => ({
+            id: r.id,
+            student: r.user_name || r.userName || 'Student',
+            type: 'Leave',
+            reason: `${r.category || r.type} - ${r.working_days || 1} day(s)`
+          })),
+          ...pendingOD.slice(0, 3 - pendingLeave.slice(0, 3).length).map((r: any) => ({
+            id: r.id,
+            student: r.user_name || r.userName || 'Student',
+            type: 'OD',
+            reason: `${r.category || r.type} - ${r.working_days || 1} day(s)`
+          }))
+        ];
+        setApprovals(approvalItems);
+
+        // 4. Attendance Trend (Semester-based from new API)
         const trendRes = await fetch(`${API_BASE_URL}/attendance-trend/tutor`, { headers });
         const trendData = await trendRes.json();
         // Map to expected format for chart
