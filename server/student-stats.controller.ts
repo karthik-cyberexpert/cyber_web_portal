@@ -11,9 +11,18 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
     }
 
     try {
-        // Get student profile info
+        console.log(`[StudentStats] Fetching stats for student ID: ${studentId}`);
+        
+        // Get student profile info with exact academic details
         const [students]: any = await pool.query(
-            `SELECT sp.*, u.name, u.email, s.name as section_name, b.name as batch_name
+            `SELECT 
+                sp.*, 
+                u.name, 
+                u.email, 
+                s.name as section_name, 
+                b.name as batch_name,
+                IFNULL(b.current_semester, 1) as current_semester,
+                CEIL(IFNULL(b.current_semester, 1) / 2) as current_year
              FROM student_profiles sp
              JOIN users u ON sp.user_id = u.id
              LEFT JOIN sections s ON sp.section_id = s.id
@@ -23,6 +32,7 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
         );
 
         if (students.length === 0) {
+            console.log(`[StudentStats] Student profile not found for ID: ${studentId}`);
             return res.status(404).json({ message: 'Student profile not found' });
         }
 
@@ -30,10 +40,10 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
 
         // Calculate attendance using new leave-based calculation
         const attendanceData = await getStudentAttendancePercentage(studentId);
-        const attendance = Math.round(attendanceData.attendancePercentage);
+        // Use the precise percentage
+        const attendance = Number(attendanceData.attendancePercentage.toFixed(1)); 
 
         // Calculate internal average (marks)
-        // This will fetch from marks table once it's populated
         const [marksData]: any = await pool.query(
             `SELECT 
                 AVG(marks_obtained) as avg_marks
@@ -42,20 +52,12 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
             [studentId]
         );
 
-        const internalAverage = marksData[0]?.avg_marks 
-            ? Number(marksData[0].avg_marks.toFixed(1)) 
+        const rawAvg = marksData[0]?.avg_marks;
+        const internalAverage = rawAvg 
+            ? Number(Number(rawAvg).toFixed(1)) 
             : 0;
 
         // Count pending assignments
-        // Get all subjects this student is enrolled in
-        const [subjects]: any = await pool.query(
-            `SELECT DISTINCT sa.id as allocation_id, sa.subject_id
-             FROM subject_allocations sa
-             WHERE sa.section_id = ?`,
-            [student.section_id]
-        );
-
-        // Count assignments not yet submitted
         const [assignmentCounts]: any = await pool.query(
             `SELECT 
                 COUNT(DISTINCT a.id) as total_assignments,
@@ -75,27 +77,20 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
             attendance,
             internalAverage,
             pendingTasks,
-            ecaPoints: 0, // Placeholder - needs ECA table
+            ecaPoints: 0, 
             studentInfo: {
                 name: student.name,
                 email: student.email,
                 rollNumber: student.roll_number,
                 registerNumber: student.register_number || student.roll_number,
                 section: student.section_name,
-                batch: student.batch_name
+                batch: student.batch_name,
+                semester: student.current_semester,
+                year: student.current_year > 4 ? 4 : (student.current_year < 1 ? 1 : student.current_year) // Clamp year 1-4
             }
         };
 
-        console.log('=== STUDENT STATS DEBUG ===');
-        console.log('Student ID:', studentId);
-        console.log('Student Name:', student.name);
-        console.log('Section ID:', student.section_id);
-        console.log('Attendance:', attendance, '%');
-        console.log('Total Days:', attendanceData.totalDays);
-        console.log('Leave Days:', attendanceData.leaveDays);
-        console.log('Pending Tasks:', pendingTasks);
-        console.log('Stats:', stats);
-
+        console.log('[StudentStats] Returning stats:', stats);
         res.json(stats);
     } catch (error) {
         console.error('Get Student Stats Error:', error);

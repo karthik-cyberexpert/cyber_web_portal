@@ -55,11 +55,15 @@ export default function StudentDashboard() {
   const [studentData, setStudentData] = useState<any>(null);
 
   useEffect(() => {
-    if (studentData && studentData.batch) {
-        console.log('[DASHBOARD] Student batch:', studentData.batch);
-        const state = calculateCurrentAcademicState(studentData.batch);
-        console.log('[DASHBOARD] Calculated academic state:', state);
-        setAcademicState(state);
+    if (studentData) {
+        if (studentData.year && studentData.semester) {
+             console.log('[DASHBOARD] Using backend academic state:', { year: studentData.year, semester: studentData.semester });
+             setAcademicState({ year: studentData.year, semester: studentData.semester });
+        } else if (studentData.batch) {
+             console.log('[DASHBOARD] Calculating academic state from batch:', studentData.batch);
+             const state = calculateCurrentAcademicState(studentData.batch);
+             setAcademicState(state);
+        }
     }
   }, [studentData]);
 
