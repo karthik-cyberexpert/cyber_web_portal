@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Lock, Eye, EyeOff, X, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3007/api';
+import { API_BASE_URL } from '@/lib/api-config';
+
+const API_BASE = API_BASE_URL;
 
 interface UpdatePasswordModalProps {
   isOpen: boolean;

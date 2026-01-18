@@ -102,7 +102,7 @@ export default function ODApprovals() {
     try {
       let endpoint = action === 'approve' ? 'approve' : (action === 'reject' ? 'reject' : (action === 'forward' ? 'forward' : 'revoke'));
       
-      const response = await fetch(`http://localhost:3007/api/od/${id}/${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/od/${id}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
