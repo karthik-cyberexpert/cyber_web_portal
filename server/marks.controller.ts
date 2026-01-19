@@ -136,7 +136,7 @@ export const getMarks = async (req: Request, res: Response) => {
 // Bulk Save Marks
 export const saveMarks = async (req: Request, res: Response) => {
     const { sectionId, subjectCode, examType, marks } = req.body;
-    // marks: [{ studentId, marks, maxMarks, breakdown, absent }]
+    // marks: [{ studentId, marks, maxMarks, breakdown, absent, grade }]
 
     const connection = await pool.getConnection();
     try {
@@ -178,13 +178,13 @@ export const saveMarks = async (req: Request, res: Response) => {
 
             if (existing.length > 0) {
                 await connection.execute(
-                    'UPDATE marks SET marks_obtained = ?, max_marks = ?, status = ?, faculty_id = ? WHERE id = ?',
-                    [entry.marks, entry.maxMarks, entry.status || 'draft', facultyId, existing[0].id]
+                    'UPDATE marks SET marks_obtained = ?, grade = ?, max_marks = ?, status = ?, faculty_id = ? WHERE id = ?',
+                    [entry.marks, entry.grade || null, entry.maxMarks, entry.status || 'draft', facultyId, existing[0].id]
                 );
             } else {
                 await connection.execute(
-                    'INSERT INTO marks (schedule_id, student_id, subject_id, marks_obtained, max_marks, status, faculty_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [scheduleId, entry.studentId, subjectId, entry.marks, entry.maxMarks, entry.status || 'draft', facultyId]
+                    'INSERT INTO marks (schedule_id, student_id, subject_id, marks_obtained, grade, max_marks, status, faculty_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [scheduleId, entry.studentId, subjectId, entry.marks, entry.grade || null, entry.maxMarks, entry.status || 'draft', facultyId]
                 );
             }
         }
@@ -404,9 +404,11 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
                     sch.id as scheduleId,
                     u.name as facultyName,
                     COUNT(m.id) as studentCount,
+                    COUNT(m.id) as studentCount,
                     SUM(CASE WHEN m.status = 'pending_tutor' THEN 1 ELSE 0 END) as pendingCount,
                     MIN(m.created_at) as submittedAt,
-                    MIN(m.status) as markStatus
+                    MIN(m.status) as markStatus,
+                    MAX(m.grade) as hasGrades
                 FROM marks m
                 JOIN schedules sch ON m.schedule_id = sch.id
                 JOIN subjects s ON m.subject_id = s.id
@@ -472,7 +474,10 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
             [rows] = await connection.query(`
                 SELECT 
                     u.id, u.name, sp.roll_number as rollNumber,
+                    u.id, u.name, sp.roll_number as rollNumber,
                     m.marks_obtained as marks,
+                    m.grade,
+                    m.grade,
                     m.status as status
                 FROM users u
                 JOIN student_profiles sp ON u.id = sp.user_id
