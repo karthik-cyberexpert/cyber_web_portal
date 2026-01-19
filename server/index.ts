@@ -24,7 +24,6 @@ app.use(cors());
 app.use(express.json());
 
 // Serve uploaded files statically (Corrected path)
-// Serve uploaded files statically (Corrected path)
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 app.use('/api/uploads', express.static(uploadsPath));

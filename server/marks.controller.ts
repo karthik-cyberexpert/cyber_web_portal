@@ -110,6 +110,7 @@ export const getMarks = async (req: Request, res: Response) => {
             SELECT 
                 u.id, u.name, sp.roll_number as rollNumber,
                 m.marks_obtained as currentMarks,
+                m.grade,
                 m.status as markStatus
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
@@ -620,3 +621,80 @@ export const approveMarks = async (req: Request | any, res: Response) => {
     }
 };
 
+// Get All Tutor Subjects (for External Marks Entry)
+export const getTutorSubjects = async (req: Request | any, res: Response) => {
+    const userId = req.user?.id;
+    const { semester } = req.query;
+
+    const connection = await pool.getConnection();
+    try {
+        // 1. Get tutor's assigned ranges
+        const [assignments]: any = await connection.query(
+            'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            [userId]
+        );
+
+        if (assignments.length === 0) return res.json([]);
+
+        const allRows: any[] = [];
+
+        for (const assignment of assignments) {
+            // 2. Get Subjects for this Batch/Section
+            // We want to show ALL subjects so they can enter marks
+            let query = `
+                SELECT 
+                    s.name as subjectName,
+                    s.code as subjectCode,
+                    s.id as subjectId,
+                    sec.id as sectionId,
+                    sec.name as sectionName,
+                    'SEMESTER' as examType,
+                    NULL as scheduleId,
+                    u.name as facultyName,
+                    (
+                        SELECT COUNT(*) FROM student_profiles sp 
+                        WHERE sp.section_id = sec.id
+                    ) as studentCount,
+                    (
+                        SELECT COUNT(m.id) FROM marks m 
+                        JOIN schedules sch ON m.schedule_id = sch.id 
+                        WHERE m.subject_id = s.id AND sch.category = 'SEMESTER' AND m.student_id IN (
+                             SELECT user_id FROM student_profiles sp2 WHERE sp2.section_id = sec.id
+                        )
+                    ) as markedCount
+                FROM subjects s
+                JOIN batches b ON b.current_semester = s.semester -- Filter by current semester subjects
+                JOIN sections sec ON sec.batch_id = b.id
+                JOIN users u ON u.id = ? -- Current Tutor as 'faculty' context
+                WHERE sec.id = ? 
+            `;
+
+            const params: any[] = [userId, assignment.section_id];
+
+            if (semester) {
+                query += ` AND s.semester = ?`;
+                params.push(semester);
+            }
+
+            const [subjects]: any = await connection.query(query, params);
+            
+            // Map to match the frontend 'verification' interface partially
+            const mapped = subjects.map((sub: any) => ({
+                ...sub,
+                pendingCount: sub.studentCount - sub.markedCount, // Treat un-marked as pending
+                verified: sub.markedCount,
+                markStatus: sub.markedCount === sub.studentCount ? 'completed' : 'pending_tutor', // Just for UI color
+                submittedAt: new Date().toISOString() // Dummy date
+            }));
+
+            allRows.push(...mapped);
+        }
+
+        res.json(allRows);
+    } catch (e: any) {
+        console.error("Get Tutor Subjects Error:", e);
+        res.status(500).json({ message: 'Error fetching tutor subjects' });
+    } finally {
+        connection.release();
+    }
+};

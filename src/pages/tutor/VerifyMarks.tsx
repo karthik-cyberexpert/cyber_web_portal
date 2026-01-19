@@ -57,19 +57,31 @@ export default function VerifyMarks() {
   const [details, setDetails] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // Grade Entry State
+  const [isGradeEntryOpen, setIsGradeEntryOpen] = useState(false);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [savingGrades, setSavingGrades] = useState(false);
+
   useEffect(() => {
     fetchVerifications();
-  }, [user, selectedSemester]);
+  }, [user, selectedSemester, markType]);
 
   const fetchVerifications = async () => {
     if (!user) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/marks/verification-status?semester=${selectedSemester}`, {
+        let url = `${API_BASE_URL}/marks/verification-status?semester=${selectedSemester}`;
+        
+        if (markType === 'external') {
+            url = `${API_BASE_URL}/marks/tutor/subjects?semester=${selectedSemester}`;
+        }
+
+        const res = await fetch(url, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
             const data = await res.json();
+            console.log("Fetched Verifications:", data);
             setVerifications(data);
         }
     } catch (error) {
@@ -130,21 +142,127 @@ export default function VerifyMarks() {
 
   const fetchDetails = async (v: any) => {
     setSelectedSubject(v);
-    setIsDetailsOpen(true);
     setLoadingDetails(true);
+    
+    // If external, open grade entry
+    if (markType === 'external') {
+        setIsGradeEntryOpen(true);
+    } else {
+        setIsDetailsOpen(true);
+    }
+
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/marks/detailed-verification?scheduleId=${v.scheduleId}&subjectId=${v.subjectId || 1}&sectionId=${v.sectionId}`, {
+        // For external new entry, scheduleId might be null.
+        // If so, we pass examType='SEMESTER' (implied) and existing backend logic should handle it? 
+        // Actually getDetailedVerifications expects scheduleId.
+        // Current getDetailedVerifications logic for Admin needs scheduleId.
+        // But for Grade Entry w/o saved marks, we don't have scheduleId yet.
+        
+        // Wait, for External Marks, generic "Enter Grades" should fetch STUDENT LIST even if no marks.
+        // My new getTutorSubjects returns "NULL" for scheduleId if no marks.
+        // So I need a way to fetch student list using subjectId + sectionId if scheduleId is null.
+        
+        let url = `${API_BASE_URL}/marks/detailed-verification?subjectId=${v.subjectId}&sectionId=${v.sectionId}`;
+        if (v.scheduleId) {
+             url += `&scheduleId=${v.scheduleId}`;
+        } else if (markType === 'external') {
+             // If no schedule (first time), we still need to load students.
+             // Backend getDetailedVerifications checks for scheduleId param presence.
+             // Let's modify backend or just pass dummy scheduleId? No, better:
+             // Use a different endpoint or modify getDetailedVerifications to accept just subject/section for initial load.
+             // Actually, `getDetailedVerifications` logic relies on `schedule_id` to join marks.
+             // I need a way to get *just students* if no marks exist.
+             // BUT `getDetailedVerifications` returns `marks` TABLE.
+             
+             // WORKAROUND: Pass special flag or use a new logic?
+             // Actually, simply calling with dummy scheduleId=-1 might return empty list.
+             // I need the STUDENT LIST.
+             
+             // Let's rely on the fact that for External, if no schedule, we just want empty marks with student list.
+             // I'll update the backend `getDetailedVerifications` to be more flexible, 
+             // OR simpler: modify this frontend to call `getMarks` (faculty endpoint) which handles "Create/Find Schedule".
+             // `getMarks` in controller creates schedule if missing! 
+             // That is PERFECT for "Enter Grades" mode.
+             url = `${API_BASE_URL}/marks/faculty/marks?sectionId=${v.sectionId}&subjectCode=${v.subjectCode}&examType=SEMESTER`;
+        } else {
+             url += `&scheduleId=${v.scheduleId}`;
+        }
+
+        const res = await fetch(url, {
             headers: { Authorization: `Bearer ${token}` }
         });
+
         if (res.ok) {
             const data = await res.json();
-            setDetails(data);
+            if (markType === 'external') {
+                // Determine format based on which endpoint was called
+                // getMarks returns { id (userId), name, rollNumber, currentMarks, markStatus }
+                // detailed-verification returns { id, name, rollNumber, marks, grade, status }
+                
+                const formatted = data.map((d: any) => ({
+                    studentId: d.studentId || d.id, // getMarks returns id as userId
+                    name: d.name,
+                    rollNumber: d.rollNumber,
+                    grade: d.grade || '', // getMarks doesn't return grade? Wait, I added it to getMarks?
+                    // Let's check getMarks.
+                    status: d.markStatus || d.status
+                }));
+                setGrades(formatted);
+            } else {
+                setDetails(data);
+            }
         }
     } catch (error) {
         toast.error("Failed to fetch detailed marks");
     } finally {
         setLoadingDetails(false);
+    }
+  };
+
+  const handleGradeChange = (studentId: string, value: string) => {
+    setGrades(prev => prev.map(g => g.studentId === studentId ? { ...g, grade: value.toUpperCase() } : g));
+  };
+
+  const saveGrades = async () => {
+    if (!selectedSubject) return;
+    setSavingGrades(true);
+    try {
+        const token = localStorage.getItem('token');
+        const marksPayload = grades.map(g => ({
+            studentId: g.studentId,
+            marks: 0, // Not used for external
+            maxMarks: 0,
+            grade: g.grade,
+            status: 'approved', // Direct approval for external
+            breakdown: {}
+        }));
+
+        const res = await fetch(`${API_BASE_URL}/marks/faculty/marks`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+                sectionId: selectedSubject.sectionId,
+                subjectCode: selectedSubject.subjectCode,
+                examType: 'SEMESTER',
+                marks: marksPayload
+            })
+        });
+
+        if (res.ok) {
+            toast.success("Grades Saved Successfully");
+            setIsGradeEntryOpen(false);
+            fetchVerifications();
+        } else {
+            toast.error("Failed to save grades");
+        }
+    } catch (error) {
+        toast.error("Error saving grades");
+    } finally {
+        setSavingGrades(false);
     }
   };
 
@@ -320,7 +438,7 @@ export default function VerifyMarks() {
                     onClick={() => fetchDetails(subject)}
                    >
                      <Eye className="w-4 h-4 mr-2" />
-                     View Marks
+                     {markType === 'external' ? 'Enter Grades' : 'View Marks'}
                    </Button>
 
                    {subject.markStatus !== 'pending_tutor' ? (
@@ -410,6 +528,76 @@ export default function VerifyMarks() {
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center italic text-muted-foreground font-medium">
                         No student marks found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grade Entry Dialog */}
+      <Dialog open={isGradeEntryOpen} onOpenChange={setIsGradeEntryOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto rounded-3xl border-none glass-card p-0 shadow-2xl">
+          <DialogHeader className="p-8 border-b border-white/5 flex flex-row items-center justify-between sticky top-0 bg-background/95 backdrop-blur z-10">
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                <FileSpreadsheet className="w-6 h-6" />
+              </div>
+              <div>
+                <span>Grade Entry</span>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">
+                  {selectedSubject?.subjectName} • {selectedSubject?.sectionName}
+                </p>
+              </div>
+            </DialogTitle>
+            <Button onClick={saveGrades} disabled={savingGrades} className="rounded-xl font-black uppercase text-[10px] tracking-widest italic shadow-lg shadow-primary/20" variant="gradient">
+                {savingGrades ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                Save Grades
+            </Button>
+          </DialogHeader>
+          
+          <div className="p-8">
+            <div className="rounded-2xl border border-white/5 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-white/5">
+                  <TableRow className="border-white/5 hover:bg-transparent">
+                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Roll No</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Student Name</TableHead>
+                    <TableHead className="text-center text-[10px] font-black uppercase tracking-widest py-4">Grade</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingDetails ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="h-32 text-center py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          <p className="font-bold italic uppercase text-[10px] tracking-widest text-muted-foreground">Fetching Data...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : grades.length > 0 ? (
+                    grades.map((row) => (
+                      <TableRow key={row.studentId} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell className="font-mono text-xs font-bold py-4">{row.rollNumber}</TableCell>
+                        <TableCell className="font-bold italic uppercase text-sm py-4">{row.name}</TableCell>
+                        <TableCell className="text-center py-2">
+                            <Input 
+                                value={row.grade} 
+                                onChange={(e) => handleGradeChange(row.studentId, e.target.value)}
+                                className="w-20 mx-auto text-center font-black uppercase bg-white/5 border-white/10 h-10 text-lg focus:scale-110 transition-transform"
+                                maxLength={2}
+                            />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="h-24 text-center italic text-muted-foreground font-medium">
+                        No students found.
                       </TableCell>
                     </TableRow>
                   )}
