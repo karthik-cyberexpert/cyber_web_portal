@@ -46,15 +46,11 @@ import { Users } from 'lucide-react';
 export default function VerifyMarks() {
   const { user } = useAuth();
   const [verifications, setVerifications] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    verified: 0,
-    completion: 0
-  });
   const [selectedExam, setSelectedExam] = useState('UT-1');
   const [selectedSemester, setSelectedSemester] = useState<string>('1');
-
+  const [markType, setMarkType] = useState<'internal' | 'external'>('internal');
+  
+  // Detailed Modal State
   // Detailed Modal State
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
@@ -75,22 +71,35 @@ export default function VerifyMarks() {
         if (res.ok) {
             const data = await res.json();
             setVerifications(data);
-            
-            // Stats
-            const total = data.length;
-            const pending = data.filter((v: any) => v.markStatus === 'pending_tutor').length;
-            const verified = total - pending;
-            setStats({
-                total,
-                pending,
-                verified,
-                completion: total > 0 ? Math.round((verified / total) * 100) : 0
-            });
         }
     } catch (error) {
         console.error("Fetch Verifications Error", error);
     }
   };
+
+  const internalExams = ['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT'];
+  const externalExams = ['SEMESTER'];
+
+  const stats = useMemo(() => {
+    const relevantVerifications = verifications.filter(v => {
+        if (markType === 'internal') {
+            return internalExams.includes(v.examType);
+        } else {
+            return externalExams.includes(v.examType);
+        }
+    });
+
+    const total = relevantVerifications.length;
+    const pending = relevantVerifications.filter(v => v.markStatus === 'pending_tutor').length;
+    const verified = total - pending;
+    
+    return {
+        total,
+        pending,
+        verified,
+        completion: total > 0 ? Math.round((verified / total) * 100) : 0
+    };
+  }, [verifications, markType]);
 
   const handleVerify = async (v: any) => {
     try {
@@ -139,6 +148,15 @@ export default function VerifyMarks() {
     }
   };
 
+  useEffect(() => {
+    // Reset selection when switching types
+    if (markType === 'internal') {
+        setSelectedExam('UT-1');
+    } else {
+        setSelectedExam('SEMESTER');
+    }
+  }, [markType]);
+
   const filteredVerifications = useMemo(() => {
     return verifications.filter(v => v.examType === selectedExam);
   }, [verifications, selectedExam]);
@@ -151,7 +169,9 @@ export default function VerifyMarks() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase">Internal Marks Verification 📝</h1>
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase">
+            {markType === 'internal' ? 'Internal' : 'External'} Marks Verification 📝
+          </h1>
           <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers</p>
         </div>
         <div className="flex gap-3">
@@ -165,6 +185,30 @@ export default function VerifyMarks() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Mark Type Toggle */}
+      <div className="bg-black/20 p-1.5 rounded-2xl w-fit flex gap-1 border border-white/5">
+        <button
+            onClick={() => setMarkType('internal')}
+            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                markType === 'internal' 
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105' 
+                : 'text-muted-foreground hover:bg-white/5 hover:text-white'
+            }`}
+        >
+            Internal Marks
+        </button>
+        <button
+            onClick={() => setMarkType('external')}
+            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                markType === 'external' 
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105' 
+                : 'text-muted-foreground hover:bg-white/5 hover:text-white'
+            }`}
+        >
+            External Marks
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -216,11 +260,17 @@ export default function VerifyMarks() {
                 <SelectValue placeholder="Select Exam" />
               </SelectTrigger>
               <SelectContent className="bg-background/95 backdrop-blur-xl border-white/10">
-                <SelectItem value="UT-1" className="font-bold cursor-pointer italic uppercase">Unit Test 1 (UT-1)</SelectItem>
-                <SelectItem value="UT-2" className="font-bold cursor-pointer italic uppercase">Unit Test 2 (UT-2)</SelectItem>
-                <SelectItem value="UT-3" className="font-bold cursor-pointer italic uppercase">Unit Test 3 (UT-3)</SelectItem>
-                <SelectItem value="MODEL" className="font-bold cursor-pointer italic uppercase">Model Exam</SelectItem>
-                <SelectItem value="ASSIGNMENT" className="font-bold cursor-pointer italic uppercase">Assignment</SelectItem>
+                {markType === 'internal' ? (
+                    <>
+                        <SelectItem value="UT-1" className="font-bold cursor-pointer italic uppercase">Unit Test 1 (UT-1)</SelectItem>
+                        <SelectItem value="UT-2" className="font-bold cursor-pointer italic uppercase">Unit Test 2 (UT-2)</SelectItem>
+                        <SelectItem value="UT-3" className="font-bold cursor-pointer italic uppercase">Unit Test 3 (UT-3)</SelectItem>
+                        <SelectItem value="MODEL" className="font-bold cursor-pointer italic uppercase">Model Exam</SelectItem>
+                        <SelectItem value="ASSIGNMENT" className="font-bold cursor-pointer italic uppercase">Assignment</SelectItem>
+                    </>
+                ) : (
+                    <SelectItem value="SEMESTER" className="font-bold cursor-pointer italic uppercase">Semester Exam</SelectItem>
+                )}
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon" className="rounded-xl border-white/10">
