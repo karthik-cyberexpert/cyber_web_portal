@@ -14,9 +14,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Notification, fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NotificationDropdown() {
     const navigate = useNavigate();
+    const { logout } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
@@ -25,7 +27,12 @@ export default function NotificationDropdown() {
             const data = await fetchNotifications();
             setNotifications(data);
             setUnreadCount(data.length);
-        } catch (error) {
+        } catch (error: any) {
+            if (error.status === 401) {
+                console.log('[NotificationDropdown] 401 Unauthorized - Logging out');
+                logout();
+                return;
+            }
             console.error('Failed to load notifications:', error);
         }
     };

@@ -22,7 +22,11 @@ export const fetchNotifications = async (): Promise<Notification[]> => {
     const response = await fetch(`${API_BASE_URL}/notifications`, {
         headers: getHeaders()
     });
-    if (!response.ok) throw new Error('Failed to fetch notifications');
+    if (!response.ok) {
+        const error: any = new Error('Failed to fetch notifications');
+        error.status = response.status;
+        throw error;
+    }
     return response.json();
 };
 

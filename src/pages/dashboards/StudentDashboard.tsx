@@ -37,7 +37,7 @@ import { calculateCurrentAcademicState } from '@/lib/academic-calendar';
 
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [studentStats, setStudentStats] = useState({
     attendance: 0,
@@ -56,9 +56,14 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (studentData) {
-        if (studentData.year && studentData.semester) {
+        console.log('[DASHBOARD] studentData received:', studentData);
+        // Check if year and semester exist (including 0, though unlikely for year)
+        if (studentData.year !== undefined && studentData.semester !== undefined) {
              console.log('[DASHBOARD] Using backend academic state:', { year: studentData.year, semester: studentData.semester });
-             setAcademicState({ year: studentData.year, semester: studentData.semester });
+             setAcademicState({ 
+                 year: Number(studentData.year), 
+                 semester: Number(studentData.semester) 
+             });
         } else if (studentData.batch) {
              console.log('[DASHBOARD] Calculating academic state from batch:', studentData.batch);
              const state = calculateCurrentAcademicState(studentData.batch);
@@ -83,6 +88,12 @@ export default function StudentDashboard() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (response.status === 401) {
+          console.error('[Dashboard] 401 Unauthorized - Logging out');
+          logout();
+          return;
+      }
 
       if (response.ok) {
         const data = await response.json();

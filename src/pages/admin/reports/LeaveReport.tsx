@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
 import * as XLSX from 'xlsx';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Batch {
     id: number;
@@ -58,6 +59,8 @@ export default function LeaveReport() {
     const [selectedBatch, setSelectedBatch] = useState<string>('');
     const [selectedSection, setSelectedSection] = useState<string>('');
     const [selectedSemester, setSelectedSemester] = useState<string>('1');
+    const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+    const [toDate, setToDate] = useState<Date | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
     const [reportData, setReportData] = useState<LeaveReportEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -156,8 +159,12 @@ export default function LeaveReport() {
                     const matchesSemester = !selectedSemester || r.semester?.toString() === selectedSemester;
                     const matchesBatch = !isAdmin || !selectedBatch || r.batchId?.toString() === selectedBatch;
                     const matchesSection = !isAdmin || !selectedSection || r.sectionId?.toString() === selectedSection;
+                    
+                    // Date Filter
+                    const matchesDate = (!fromDate || new Date(r.startDate) >= fromDate) &&
+                                        (!toDate || new Date(r.endDate) <= toDate);
 
-                    return matchesSearch && matchesSemester && matchesBatch && matchesSection;
+                    return matchesSearch && matchesSemester && matchesBatch && matchesSection && matchesDate;
                 });
 
                 setReportData(filtered);
@@ -171,7 +178,7 @@ export default function LeaveReport() {
 
     useEffect(() => {
         fetchReport();
-    }, [selectedBatch, selectedSection, selectedSemester]);
+    }, [selectedBatch, selectedSection, selectedSemester, searchQuery, fromDate, toDate]);
 
     const handleExport = () => {
         if (reportData.length === 0) {
@@ -259,6 +266,25 @@ export default function LeaveReport() {
                         </SelectContent>
                     </Select>
                 </div>
+                
+                {/* Date Filters */}
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">From Date (Optional)</label>
+                    <DatePicker 
+                        date={fromDate} 
+                        onChange={setFromDate} 
+                        placeholder="Pick start date"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">To Date (Optional)</label>
+                    <DatePicker 
+                        date={toDate} 
+                        onChange={setToDate} 
+                        placeholder="Pick end date"
+                    />
+                </div>
+
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search</label>
                     <div className="relative">
