@@ -292,16 +292,18 @@ export default function VerifyMarks() {
           </h1>
           <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic">
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-primary" />
-            Consolidated
-          </Button>
-          <Button variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic">
-            <CheckCheck className="w-4 h-4 mr-2" />
-            Verify All
-          </Button>
-        </div>
+        {markType === 'internal' && (
+            <div className="flex gap-3">
+            <Button variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic">
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-primary" />
+                Consolidated
+            </Button>
+            <Button variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic">
+                <CheckCheck className="w-4 h-4 mr-2" />
+                Verify All
+            </Button>
+            </div>
+        )}
       </motion.div>
 
       {/* Mark Type Toggle */}

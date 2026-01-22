@@ -388,12 +388,15 @@
     @apply bg-muted-foreground/50;
   }
 
-  /* Date Picker Customization - Minimal & Modern */
-  .rdp-dropdown_month label, 
-  .rdp-dropdown_year label { 
+  /* Hide visual labels for Month/Year dropdowns */
+  .rdp-caption_dropdowns label,
+  .rdp-caption_dropdowns .rdp-vhidden,
+  .rdp-dropdown_month .rdp-vhidden,
+  .rdp-dropdown_year .rdp-vhidden { 
     display: none !important; 
   }
 
+  /* Ensure vhidden is hidden globally */
   .rdp-vhidden {
     display: none !important;
   }

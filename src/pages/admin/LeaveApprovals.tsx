@@ -33,9 +33,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getLeaveRequests, updateLeaveStatus, LeaveRequest } from '@/lib/data-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-config';
+import { DatePicker } from '@/components/ui/date-picker';
 
 export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 'leave' | 'od' }) {
   const { user } = useAuth();
@@ -44,6 +52,15 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Filter states
+  const [batches, setBatches] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<string>('all');
+  const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
+
   // Modal states
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -52,7 +69,40 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
 
   useEffect(() => {
     loadRequests();
+    fetchBatches();
   }, [filterType]);
+
+  const fetchBatches = async () => {
+      try {
+          const res = await fetch(`${API_BASE_URL}/academic/batches`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (res.ok) {
+              const data = await res.json();
+              setBatches(data);
+          }
+      } catch (error) {
+          console.error("Failed to fetch batches", error);
+      }
+  };
+
+  const fetchSections = async (batchId: string) => {
+      if (batchId === 'all') {
+          setSections([]);
+          return;
+      }
+      try {
+          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (res.ok) {
+              const data = await res.json();
+              setSections(data);
+          }
+      } catch (error) {
+          console.error("Failed to fetch sections", error);
+      }
+  };
 
   const loadRequests = async () => {
     try {
@@ -112,9 +162,26 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
       const name = r.user_name || r.userName || '';
       const roll = r.roll_number || '';
       const type = r.type || '';
-      return name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      
+      const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
              roll.toLowerCase().includes(searchQuery.toLowerCase()) ||
              type.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesBatch = selectedBatch === 'all' || r.batch_id?.toString() === selectedBatch;
+      const matchesSection = selectedSection === 'all' || r.section_id?.toString() === selectedSection;
+      const matchesSemester = selectedSemester === 'all' || r.current_semester?.toString() === selectedSemester;
+
+      // Date Filter: Check for overlap
+      // Request overlaps if: (ReqStart <= FilterEnd) AND (ReqEnd >= FilterStart)
+      const reqStart = new Date(r.startDate);
+      const reqEnd = new Date(r.endDate);
+      
+      // If fromDate is set, requests must end ON or AFTER fromDate
+      const matchesFromDate = !fromDate || reqEnd >= fromDate;
+      // If toDate is set, requests must start ON or BEFORE toDate
+      const matchesToDate = !toDate || reqStart <= toDate;
+
+      return matchesSearch && matchesBatch && matchesSection && matchesSemester && matchesFromDate && matchesToDate;
     });
 
   const formatDate = (date: any) => {
@@ -165,13 +232,72 @@ export default function LeaveApprovals({ filterType = 'leave' }: { filterType?: 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="flex flex-col sm:flex-row gap-4"
+        className="space-y-4"
       >
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 bg-muted/30 p-4 rounded-2xl border border-white/5">
+            {/* Batch Filter */}
+            <Select value={selectedBatch} onValueChange={(val) => {
+                setSelectedBatch(val);
+                setSelectedSection('all');
+                fetchSections(val);
+            }}>
+                <SelectTrigger className="bg-background/50 border-transparent h-11 rounded-xl">
+                    <SelectValue placeholder="All Batches" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches.map(b => (
+                        <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* Section Filter */}
+            <Select value={selectedSection} onValueChange={setSelectedSection} disabled={selectedBatch === 'all'}>
+                <SelectTrigger className="bg-background/50 border-transparent h-11 rounded-xl">
+                    <SelectValue placeholder="All Sections" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Sections</SelectItem>
+                    {sections.map(s => (
+                        <SelectItem key={s.id} value={s.id.toString()}>Section {s.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* Semester Filter */}
+            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <SelectTrigger className="bg-background/50 border-transparent h-11 rounded-xl">
+                    <SelectValue placeholder="All Semesters" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Semesters</SelectItem>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                        <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* Date Filters */}
+            <DatePicker 
+                date={fromDate}
+                onChange={setFromDate}
+                placeholder="From Date"
+                className="bg-background/50 border-transparent h-11 rounded-xl w-full"
+            />
+            <DatePicker 
+                date={toDate}
+                onChange={setToDate}
+                placeholder="To Date"
+                className="bg-background/50 border-transparent h-11 rounded-xl w-full"
+            />
+        </div>
+
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Search by name, roll number or type..." 
-            className="pl-10 rounded-xl bg-muted/50 border-transparent focus:bg-card transition-all w-full"
+            className="pl-10 rounded-xl bg-muted/50 border-transparent focus:bg-card transition-all w-full h-12"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
