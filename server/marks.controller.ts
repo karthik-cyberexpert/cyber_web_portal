@@ -456,38 +456,36 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
     const userId = req.user?.id;
     const { scheduleId, subjectId, sectionId } = req.query;
 
-    if (!scheduleId || !subjectId || !sectionId) {
-        return res.status(400).json({ message: 'Missing parameters' });
+    if (!subjectId || !sectionId) {
+        return res.status(400).json({ message: 'Missing parameters: subjectId, sectionId' });
     }
 
     const connection = await pool.getConnection();
     try {
         console.log('[Detailed Verification] Query Params:', req.query);
         const user = (req as any).user;
-        console.log('[Detailed Verification] User from Token:', user);
-
+        
         const userRole = user?.role?.toLowerCase();
         let rows;
 
+        // Use valid scheduleId or null (to ensure LEFT JOIN works safely)
+        const targetScheduleId = scheduleId && scheduleId !== 'null' && scheduleId !== 'undefined' ? scheduleId : null;
+
         if (userRole === 'admin') {
             // Admins see everything for this section/subject/schedule
-            console.log('[Detailed Verification] Admin access granted');
             [rows] = await connection.query(`
                 SELECT 
                     u.id, u.name, sp.roll_number as rollNumber,
-                    u.id, u.name, sp.roll_number as rollNumber,
                     m.marks_obtained as marks,
-                    m.grade,
                     m.grade,
                     m.status as status
                 FROM users u
                 JOIN student_profiles sp ON u.id = sp.user_id
-                JOIN marks m ON m.student_id = u.id
-                WHERE m.schedule_id = ? AND m.subject_id = ? AND sp.section_id = ?
+                LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
+                WHERE sp.section_id = ?
                 ORDER BY sp.roll_number ASC
-            `, [scheduleId, subjectId, sectionId]);
+            `, [targetScheduleId, subjectId, sectionId]);
         } else {
-            console.log('[Detailed Verification] Tutor/Faculty access check for role:', userRole);
             // 1. Get tutor's assigned ranges for this section
             const [assignments]: any = await connection.query(
                 'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND section_id = ? AND is_active = TRUE',
@@ -511,13 +509,12 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
                     FROM student_profiles
                     WHERE batch_id = ? AND section_id = ?
                 ) spnum ON u.id = spnum.user_id
-                JOIN marks m ON m.student_id = u.id
-                WHERE m.schedule_id = ? AND m.subject_id = ?
-                  AND (? IS NULL OR ? IS NULL OR (spnum.row_num >= ? AND spnum.row_num <= ?))
+                LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
+                WHERE (? IS NULL OR ? IS NULL OR (spnum.row_num >= ? AND spnum.row_num <= ?))
                 ORDER BY sp.roll_number ASC
             `, [
                 assignment.batch_id, assignment.section_id,
-                scheduleId, subjectId,
+                targetScheduleId, subjectId,
                 assignment.reg_number_start, assignment.reg_number_end,
                 parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
             ]);
@@ -621,13 +618,15 @@ export const getMarksStatusReport = async (req: Request, res: Response) => {
                 s.id as subjectId,
                 s.name as subjectName,
                 s.code as subjectCode,
-                u.id as facultyId,
-                u.name as facultyName
+                COALESCE(u.name, tu.name) as facultyName,
+                u.id as facultyId
             FROM sections sec
             JOIN batches b ON sec.batch_id = b.id
             JOIN subjects s ON 1=1 -- Logic filter below
             LEFT JOIN subject_allocations sa ON sa.subject_id = s.id AND sa.section_id = sec.id AND sa.is_active = TRUE
             LEFT JOIN users u ON sa.faculty_id = u.id
+            LEFT JOIN tutor_assignments ta ON ta.section_id = sec.id AND ta.is_active = TRUE
+            LEFT JOIN users tu ON ta.faculty_id = tu.id
             WHERE 1=1
         `;
         
