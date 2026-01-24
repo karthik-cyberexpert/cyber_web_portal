@@ -29,9 +29,36 @@ export const createBatch = async (req: Request, res: Response) => {
   try {
     await connection.beginTransaction();
 
+    // 0. Ensure Default Department Exists (Fail-safe)
+    const [depts]: any = await connection.query('SELECT id FROM departments WHERE id = 1');
+    if (depts.length === 0) {
+         await connection.execute("INSERT INTO departments (id, name, code) VALUES (1, 'Computer Science and Engineering (Cyber Security)', 'CSE-CS')");
+         console.log('[AUTO-FIX] Created default Department (ID 1)');
+    }
+
+    // 1. Find or Create Academic Year
+    // Logic: A batch starting in 2024 usually belongs to AY "2024-2025" initially
+    const ayStart = parseInt(start_year);
+    const ayEnd = ayStart + 1;
+    const ayName = `${ayStart}-${ayEnd}`;
+
+    let academicYearId;
+    const [ays]: any = await connection.query('SELECT id FROM academic_years WHERE start_year = ?', [ayStart]);
+    
+    if (ays.length > 0) {
+        academicYearId = ays[0].id;
+    } else {
+        const [res]: any = await connection.execute(
+            'INSERT INTO academic_years (name, start_year, end_year, is_active) VALUES (?, ?, ?, TRUE)',
+            [ayName, ayStart, ayEnd]
+        );
+        academicYearId = res.insertId;
+        console.log(`[AUTO] Created Academic Year ${ayName} (ID: ${academicYearId})`);
+    }
+
     const [result]: any = await connection.execute(
-      'INSERT INTO batches (name, start_year, end_year, sections_count) VALUES (?, ?, ?, ?)',
-      [name, start_year, end_year, sections_count || 1]
+      'INSERT INTO batches (name, start_year, end_year, sections_count, department_id, academic_year_id) VALUES (?, ?, ?, ?, 1, ?)',
+      [name, start_year, end_year, sections_count || 1, academicYearId]
     );
     const batchId = result.insertId;
 
