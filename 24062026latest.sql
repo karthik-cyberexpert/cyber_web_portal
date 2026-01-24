@@ -523,4 +523,4 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Seed Data (Basic)
 -- -----------------------------------------------------------------------------
 INSERT INTO `users` (email, name, password_hash, role, is_active) 
-VALUES ('admin@css.com', 'Admin', '$2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/', 'admin', TRUE);
+VALUES ('admin@css.com', 'Admin', '$2b$10$FjXxOfR/t5LEyi7xBtQaJOEstHU0jF6.iSa//X1Ra83G9eimS3lTq', 'admin', TRUE);

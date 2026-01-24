@@ -1,14 +1,3 @@
-PS C:\Projects\cyber_web_portal\server> npm start
-
-> server@1.0.0 start
-> npx tsx index.ts
-
-Registering Timetable Routes
-Starting Server... Time: 2026-01-24T06:08:38.602Z - Restart 19
-Server running on port 3007
-Calendar Routes registered at /api/calendar
-[LOGIN DEBUG] Request Body: { email: 'admin@css.com', password: 'password123' }
-[LOGIN DEBUG] DB Query result length: 1
-[LOGIN DEBUG] User found: admin@css.com, Hash: $2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/
-[LOGIN DEBUG] Comparing password: 'password123' with hash...
-[LOGIN DEBUG] Password match result: false
+UPDATE users 
+SET password_hash = '$2b$10$FjXxOfR/t5LEyi7xBtQaJOEstHU0jF6.iSa//X1Ra83G9eimS3lTq' 
+WHERE email = 'admin@css.com';
