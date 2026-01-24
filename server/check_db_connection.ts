@@ -38,9 +38,39 @@ async function checkConnection() {
             console.log(`[SUCCESS] Table 'batches' found. Row count: ${rows[0].count}`);
         } catch (tableError: any) {
             console.error(`\n[ERROR] Could not query 'batches' table: ${tableError.message}`);
-            if (tableError.code === 'ER_NO_SUCH_TABLE') {
-                console.error('[HINT] The table "batches" does not exist. Did you import the SQL schema?');
+        }
+
+        // Check for 'departments' table - Critical for Foreign Keys
+        try {
+            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM departments');
+            console.log(`[SUCCESS] Table 'departments' found. Row count: ${rows[0].count}`);
+            if (rows[0].count === 0) {
+                console.warn('[WARNING] Table "departments" is EMPTY. This will cause 500 errors when creating Batches due to FK constraints (default department_id=1).');
             }
+        } catch (tableError: any) {
+            console.error(`\n[ERROR] Could not query 'departments' table: ${tableError.message}`);
+        }
+
+        // Check for 'users' table
+        try {
+            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM users');
+            console.log(`[SUCCESS] Table 'users' found. Row count: ${rows[0].count}`);
+            if (rows[0].count === 0) {
+                console.warn('[WARNING] Table "users" is EMPTY. You wont be able to login.');
+            }
+        } catch (tableError: any) {
+            console.error(`\n[ERROR] Could not query 'users' table: ${tableError.message}`);
+        }
+
+        // Check for 'academic_years' table
+        try {
+            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM academic_years');
+            console.log(`[SUCCESS] Table 'academic_years' found. Row count: ${rows[0].count}`);
+            if (rows[0].count === 0) {
+                console.warn('[WARNING] Table "academic_years" is EMPTY. This will cause 500 errors when assigning subjects.');
+            }
+        } catch (tableError: any) {
+            console.error(`\n[ERROR] Could not query 'academic_years' table: ${tableError.message}`);
         }
 
         // Check for 'sections' table
