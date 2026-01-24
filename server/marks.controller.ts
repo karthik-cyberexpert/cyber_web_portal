@@ -597,6 +597,129 @@ export const getApprovalStatus = async (req: Request, res: Response) => {
     }
 };
 
+// Get Comprehensive Marks Status Report (Pending -> Submitted -> Forwarded -> Verified)
+export const getMarksStatusReport = async (req: Request, res: Response) => {
+    const { batchId, sectionId, semester, examType } = req.query;
+    
+    // We need at least scope to avoid massive dump, but 'all' is possible.
+    // Let's build a query that starts from the structural requirements:
+    // Every Section * Every Subject (for that sem) should have an entry for the Exam.
+    
+    const connection = await pool.getConnection();
+    try {
+        // Base: Active Sections + Subjects matching their batch's current semester (or requested semester)
+        // If we want "history", we should look at all semesters.
+        // Let's assume we look at the requested semester or default to current.
+        
+        // 1. Get all relevant Batch/Section/Subject combinations
+        let query = `
+            SELECT 
+                b.id as batchId,
+                b.name as batchName,
+                sec.id as sectionId,
+                sec.name as sectionName,
+                s.id as subjectId,
+                s.name as subjectName,
+                s.code as subjectCode,
+                u.id as facultyId,
+                u.name as facultyName
+            FROM sections sec
+            JOIN batches b ON sec.batch_id = b.id
+            JOIN subjects s ON 1=1 -- Logic filter below
+            LEFT JOIN subject_allocations sa ON sa.subject_id = s.id AND sa.section_id = sec.id AND sa.is_active = TRUE
+            LEFT JOIN users u ON sa.faculty_id = u.id
+            WHERE 1=1
+        `;
+        
+        const params: any[] = [];
+
+        if (batchId && batchId !== 'all') {
+            query += ' AND b.id = ?';
+            params.push(batchId);
+        }
+        
+        if (sectionId && sectionId !== 'all') {
+            query += ' AND sec.id = ?';
+            params.push(sectionId);
+        }
+
+        if (semester && semester !== 'all') {
+            query += ' AND s.semester = ?';
+            params.push(semester);
+        } else {
+            // Default: Match batch's current semester if specific not asked? 
+            // Or just return all subjects relevant to the batch's stage.
+            // Let's restrict to s.semester <= b.current_semester to avoid future noise
+            query += ' AND s.semester <= b.current_semester';
+        }
+
+        const [structures]: any = await connection.query(query, params);
+
+        // 2. Fetch Marks Summary for these combinations + Exam
+        // If examType is 'all' or missing, we might get multiple rows per subject?
+        // User interface filters by Exam. Let's enforce single Exam context if possible, or group.
+        // If 'all', we might just show latest? Or need to expand?
+        // Let's assume the UI passes a specific Exam Type or we default to 'SEMESTER' (External) or show 'Internal' aggregate.
+        
+        const targetExam = examType && examType !== 'all' ? examType : null;
+        
+        const report = [];
+        
+        for (const item of structures) {
+            // Check status for this specific item
+            let statusQuery = `
+                SELECT 
+                    COUNT(m.id) as markCount,
+                    SUM(CASE WHEN m.status = 'approved' THEN 1 ELSE 0 END) as approvedCount,
+                    SUM(CASE WHEN m.status = 'pending_admin' THEN 1 ELSE 0 END) as pendingAdminCount,
+                    SUM(CASE WHEN m.status = 'pending_tutor' THEN 1 ELSE 0 END) as pendingTutorCount,
+                    COUNT(DISTINCT sp.user_id) as uniqueStudentCount,
+                    COUNT(sp.user_id) as totalSlots
+                FROM student_profiles sp
+                LEFT JOIN schedules sch ON sch.batch_id = sp.batch_id AND (? IS NULL OR sch.category = ?)
+                LEFT JOIN marks m ON m.student_id = sp.user_id 
+                                  AND m.subject_id = ? 
+                                  AND m.schedule_id = sch.id
+                WHERE sp.section_id = ?
+            `;
+            
+            const [stats]: any = await connection.query(statusQuery, [targetExam, targetExam, item.subjectId, item.sectionId]);
+            const stat = stats[0];
+            
+            // Determine Status Label
+            let statusLabel = 'Pending'; // Default (No marks / Not started)
+            
+            if (stat.markCount > 0) {
+                if (stat.approvedCount === stat.markCount && stat.markCount > 0) {
+                    statusLabel = 'Verified';
+                } else if (stat.pendingAdminCount > 0) {
+                    statusLabel = 'Forwarded';
+                } else if (stat.pendingTutorCount > 0 || stat.markCount < stat.totalSlots) {
+                    // Partially submitted or waiting for tutor
+                    statusLabel = 'Submitted';
+                }
+            }
+            
+            report.push({
+                ...item,
+                examType: targetExam || 'Mixed',
+                studentCount: stat.uniqueStudentCount,
+                markedCount: stat.markCount,
+                markStatus: statusLabel
+            });
+        }
+
+        res.json(report);
+
+    } catch (e: any) {
+        console.error("Get Marks Status Report Error:", e);
+        res.status(500).json({ message: 'Error fetching marks status' });
+    } finally {
+        connection.release();
+    }
+};
+
+// Stage 3: Admin approves marks
 export const approveMarks = async (req: Request | any, res: Response) => {
     const { scheduleId, sectionId, subjectCode } = req.body;
     const userId = req.user?.id;
@@ -640,7 +763,8 @@ export const getTutorSubjects = async (req: Request | any, res: Response) => {
 
         for (const assignment of assignments) {
             // 2. Get Subjects for this Batch/Section
-            // We want to show ALL subjects so they can enter marks
+            // Modified to allow fetching ANY semester subjects defined for the course, 
+            // filtered by the requested semester (or defaulting to current).
             let query = `
                 SELECT 
                     s.name as subjectName,
@@ -663,17 +787,20 @@ export const getTutorSubjects = async (req: Request | any, res: Response) => {
                         )
                     ) as markedCount
                 FROM subjects s
-                JOIN batches b ON b.current_semester = s.semester -- Filter by current semester subjects
-                JOIN sections sec ON sec.batch_id = b.id
-                JOIN users u ON u.id = ? -- Current Tutor as 'faculty' context
-                WHERE sec.id = ? 
+                JOIN sections sec ON sec.id = ? 
+                JOIN batches b ON sec.batch_id = b.id
+                JOIN users u ON u.id = ? -- Current Tutor Context
+                WHERE 1=1
             `;
 
-            const params: any[] = [userId, assignment.section_id];
+            const params: any[] = [assignment.section_id, userId];
 
             if (semester) {
                 query += ` AND s.semester = ?`;
                 params.push(semester);
+            } else {
+                // Default to current semester if no filter applied
+                query += ` AND s.semester = b.current_semester`;
             }
 
             const [subjects]: any = await connection.query(query, params);

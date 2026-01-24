@@ -99,6 +99,7 @@ const tutorLinks: SidebarLink[] = [
       { label: 'My Class', icon: Users, path: '/tutor/class' },
       { label: 'Class Time Table', icon: Calendar, path: '/tutor/timetable' },
       { label: 'Verify Marks', icon: ClipboardList, path: '/tutor/marks' },
+      { label: 'View Marks', icon: BookOpen, path: '/tutor/view-marks' },
       { label: 'Notes Status', icon: BookOpen, path: '/tutor/notes' },
       { label: 'Assignment Status', icon: FileText, path: '/tutor/assignments' },
       { label: 'LMS Analytics', icon: BarChart3, path: '/tutor/lms' },

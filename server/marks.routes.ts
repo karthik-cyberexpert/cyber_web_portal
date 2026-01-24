@@ -16,6 +16,7 @@ router.get('/tutor/subjects', authenticateToken, marksController.getTutorSubject
 router.post('/verify', authenticateToken, marksController.verifyMarks);
 
 // Admin Routes
+router.get('/status-report', authenticateToken, marksController.getMarksStatusReport);
 router.get('/approval-status', authenticateToken, marksController.getApprovalStatus);
 router.post('/approve', authenticateToken, marksController.approveMarks);
 

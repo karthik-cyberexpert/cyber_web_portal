@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -33,33 +34,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api-config';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const getStatusBadge = (status: string) => {
   switch (status?.toLowerCase()) {
-    case 'verified': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; // Admin Approved
-    case 'forwarded': return 'bg-blue-500/20 text-blue-400 border-blue-500/30'; // Sent to Admin
-    case 'submitted': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'; // Faculty entered
-    case 'pending': return 'bg-muted text-muted-foreground border-white/10'; // Not started
+    case 'verified': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    case 'forwarded': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+    case 'submitted': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    case 'pending': return 'bg-muted text-muted-foreground border-white/10';
     case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
     default: return 'bg-muted text-muted-foreground';
   }
 };
 
 export default function ViewMarks() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'internal' | 'external'>('internal');
-  const [batches, setBatches] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
   
   // Filters
-  const [selectedBatch, setSelectedBatch] = useState<string>('all');
-  const [selectedSection, setSelectedSection] = useState<string>('all');
-  const [selectedSemester, setSelectedSemester] = useState<string>('1');
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [selectedExam, setSelectedExam] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Data
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [subjectsMap, setSubjectsMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
 
   // Details Modal
@@ -69,79 +67,21 @@ export default function ViewMarks() {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    fetchBatches();
-    fetchSubjects();
     fetchData();
-  }, [activeTab, selectedSemester, selectedBatch, selectedSection, selectedExam]); 
-
-  const fetchBatches = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/academic/batches`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-            setBatches(await res.json());
-        }
-    } catch (error) {
-        console.error("Failed to fetch batches", error);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/academic/subjects`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            const map: Record<string, number> = {};
-            data.forEach((s: any) => {
-                map[s.code] = s.semester;
-                map[s.id] = s.semester;
-            });
-            setSubjectsMap(map);
-        }
-    } catch (error) {
-        console.error("Failed to fetch subjects", error);
-    }
-  };
-
-  const fetchSections = async (batchId: string) => {
-      setSelectedSection('all');
-      if (batchId === 'all') {
-          setSections([]);
-          return;
-      }
-      try {
-          const token = localStorage.getItem('token');
-          const res = await fetch(`${API_BASE_URL}/academic/batches/${batchId}/sections`, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.ok) {
-              setSections(await res.json());
-          }
-      } catch (error) {
-          console.error("Failed to fetch sections", error);
-      }
-  };
+  }, [activeTab, selectedSemester, selectedExam]); 
 
   const fetchData = async () => {
     setLoading(true);
     try {
         const token = localStorage.getItem('token');
         const params = new URLSearchParams();
-        if (selectedBatch !== 'all') params.append('batchId', selectedBatch);
-        if (selectedSection !== 'all') params.append('sectionId', selectedSection);
         if (selectedSemester !== 'all') params.append('semester', selectedSemester);
         if (selectedExam !== 'all') params.append('examType', selectedExam);
         else if (activeTab === 'external') params.append('examType', 'SEMESTER');
         
-        const res = await fetch(`${API_BASE_URL}/marks/status-report?${params.toString()}`, { 
-            headers: { Authorization: `Bearer ${token}` } 
-        });
+        let url = `${API_BASE_URL}/marks/status-report?${params.toString()}`;
         
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
             const data = await res.json();
             setSubmissions(data);
@@ -156,7 +96,6 @@ export default function ViewMarks() {
   // Filter Submissions
   const filteredSubmissions = submissions.filter(sub => {
     // 1. Tab Filter (Internal vs External)
-    // Assuming backend data `examType` tells us.
     const isExternal = sub.examType === 'SEMESTER' || sub.examType === 'External';
     if (activeTab === 'internal' && isExternal) return false;
     if (activeTab === 'external' && !isExternal) return false;
@@ -164,32 +103,12 @@ export default function ViewMarks() {
     // 2. Search
     const matchesSearch =
       (sub.subjectName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (sub.subjectCode?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (sub.facultyName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      (sub.subjectCode?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     
-    // 3. Dropdowns
-    const matchesBatch = selectedBatch === 'all' || sub.batchName === batches.find((b: any) => b.id.toString() === selectedBatch)?.name;
-    // Note: sub.batchName is name, selectedBatch is ID. We need to match properly. 
-    // Ideally backend returns batchId. If not, we might need a workaround or lookup name.
-    // Let's assume for now we might mismatch if using Name vs ID. 
-    // Wait, ApproveMarks uses `sub.batchName === batchFilter` where batchFilter comes from `uniqueBatches` (names).
-    // Here `selectedBatch` is ID. Let's fix logic.
-    const batchName = selectedBatch === 'all' ? null : batches.find((b: any) => b.id.toString() === selectedBatch)?.name;
-    const matchesBatchName = !batchName || sub.batchName === batchName;
-
-    // Section Logic: `sub.sectionName` vs `selectedSection` (ID).
-    const sectionName = selectedSection === 'all' ? null : sections.find((s: any) => s.id.toString() === selectedSection)?.name;
-    const matchesSectionName = !sectionName || sub.sectionName === sectionName;
-    
-    // Semester
-    // Lookup semester from map if missing
-    const semester = sub.semester || subjectsMap[sub.subjectCode] || subjectsMap[sub.subjectId];
-    const matchesSemester = selectedSemester === 'all' || (semester && semester.toString() === selectedSemester);
-
-    // Exam
+    // 3. Exam
     const matchesExam = selectedExam === 'all' || sub.examType === selectedExam;
 
-    return matchesSearch && matchesBatchName && matchesSectionName && matchesSemester && matchesExam;
+    return matchesSearch && matchesExam;
   });
 
   const fetchDetails = async (sub: any) => {
@@ -218,7 +137,7 @@ export default function ViewMarks() {
            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
              View Marks
            </h1>
-           <p className="text-muted-foreground mt-1">View detailed internal and external marks across batches</p>
+           <p className="text-muted-foreground mt-1">View detailed internal and external marks for your assigned classes</p>
         </div>
         
         {/* Tab Switcher */}
@@ -248,39 +167,12 @@ export default function ViewMarks() {
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                    placeholder="Search Subject, Faculty..."
+                    placeholder="Search Subject..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                 />
               </div>
-
-               <Select value={selectedBatch} onValueChange={(val) => {
-                    setSelectedBatch(val);
-                    fetchSections(val);
-                }}>
-                    <SelectTrigger className="w-full md:w-40">
-                        <SelectValue placeholder="Batch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Batches</SelectItem>
-                        {batches.map(b => (
-                            <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                <Select value={selectedSection} onValueChange={setSelectedSection} disabled={selectedBatch === 'all'}>
-                    <SelectTrigger className="w-full md:w-40">
-                        <SelectValue placeholder="Section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Sections</SelectItem>
-                        {sections.map(s => (
-                            <SelectItem key={s.id} value={s.id.toString()}>Section {s.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
 
                 <Select value={selectedSemester} onValueChange={setSelectedSemester}>
                     <SelectTrigger className="w-full md:w-40">
@@ -318,7 +210,7 @@ export default function ViewMarks() {
              <Table>
                  <TableHeader>
                     <TableRow>
-                        <TableHead>Batch & Section</TableHead>
+                        <TableHead>Section</TableHead>
                         <TableHead>Subject</TableHead>
                         <TableHead>Exam</TableHead>
                         <TableHead>Faculty</TableHead>
@@ -343,8 +235,7 @@ export default function ViewMarks() {
                          filteredSubmissions.map((sub, idx) => (
                              <TableRow key={`${sub.scheduleId}-${idx}`}>
                                  <TableCell>
-                                     <div className="font-medium">{sub.batchName}</div>
-                                     <div className="text-xs text-muted-foreground">Section {sub.sectionName}</div>
+                                     <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Section {sub.sectionName}</div>
                                  </TableCell>
                                  <TableCell>
                                      <div className="font-semibold">{sub.subjectName}</div>
@@ -381,7 +272,7 @@ export default function ViewMarks() {
                <div className="flex flex-col gap-1">
                  <span className="text-2xl font-black italic tracking-tighter uppercase">{selectedSubject?.subjectName}</span>
                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    Section {selectedSubject?.sectionName} • {selectedSubject?.batchName} • {selectedSubject?.examType}
+                    Section {selectedSubject?.sectionName} • {selectedSubject?.examType}
                  </p>
                </div>
                <Badge className={getStatusBadge(selectedSubject?.markStatus || '')}>

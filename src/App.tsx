@@ -56,6 +56,7 @@ import ClassManagement from "@/pages/tutor/ClassManagement";
 import StudentProfileView from "@/pages/tutor/StudentProfileView";
 import TimetableTutor from "@/pages/tutor/Timetable";
 import VerifyMarks from "@/pages/tutor/VerifyMarks";
+import ViewMarksTutor from "@/pages/tutor/ViewMarks";
 import NotesStatus from "@/pages/tutor/NotesStatus";
 import AssignmentStatus from "@/pages/tutor/AssignmentStatus";
 import LeaveApprovals from "@/pages/tutor/LeaveApprovals";
@@ -180,6 +181,7 @@ const App = () => {
                     <Route path="student/:id" element={<StudentProfileView />} />
                     <Route path="timetable" element={<TimetableTutor />} />
                     <Route path="marks" element={<VerifyMarks />} />
+                    <Route path="view-marks" element={<ViewMarksTutor />} />
                   <Route path="notes" element={<NotesStatus />} />
                   <Route path="assignments" element={<AssignmentStatus />} />
                   <Route path="leave" element={<LeaveApprovals />} />
