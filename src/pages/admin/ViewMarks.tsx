@@ -402,13 +402,32 @@ export default function ViewMarks() {
                     <TableRow className="border-white/5 hover:bg-transparent">
                         <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
-                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Marks</TableHead>
+                        {/* Dynamic Exam Headers */}
+                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                            // Only show if at least one student has marks for this exam OR if we are in 'All' mode (maybe show all empty?)
+                            // Better: Show only exams that exist in data to avoid clutter, or fixed set if preferred.
+                            // Let's show columns that have ANY data or matches current filter?
+                            // Simple: Show all generic exams found in the data keys.
+                            const hasData = details.some(d => d.marks && d.marks[exam] !== undefined);
+                            const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                            
+                            // Case insensitive matching
+                            const actualKey = details.flatMap(d => Object.keys(d.marks || {})).find(k => k.toUpperCase() === exam) || exam;
+                            
+                            if (!hasDataMixed) return null;
+                            
+                            return (
+                                <TableHead key={exam} className="text-center font-black uppercase text-[10px] tracking-widest text-primary/80">
+                                    {exam}
+                                </TableHead>
+                            );
+                        })}
                         <TableHead className="text-center font-black uppercase text-[10px] tracking-widest pr-6">Status</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {details.map((student) => (
-                        <TableRow key={student.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableRow key={student.id || student.rollNumber} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell className="font-mono font-bold text-xs pl-6">{student.rollNumber}</TableCell>
                         <TableCell>
                             <div className="flex items-center gap-3">
@@ -418,23 +437,50 @@ export default function ViewMarks() {
                             <span className="font-bold text-sm tracking-tight">{student.name}</span>
                             </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                            <span className="font-black text-lg italic text-primary">{student.marks ?? '-'}</span>
-                        </TableCell>
+                        
+                        {/* Dynamic Exam Cells */}
+                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                             const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                             if (!hasDataMixed) return null;
+
+                             // Find key that matches this exam (unsafe casing handling)
+                             // Assuming backend returns consistent casing "UT-1" etc from `sch.category`.
+                             // `sch.category` usually matches the array above.
+                             // Let's try direct access or find key.
+                             const markVal = student.marks ? (student.marks[exam] ?? student.marks[exam.replace('-', ' ')] ?? student.marks[exam.toUpperCase()]) : undefined;
+                             // Try varied keys: "UT-1", "UT 1", "Model", "MODEL"
+                             // Best approach: Normalize keys in backend or here?
+                             // Let's iterate keys once.
+                             
+                             let displayMark = '-';
+                             if (student.marks) {
+                                 const key = Object.keys(student.marks).find(k => k.toUpperCase() === exam.replace('-', ' ') || k.toUpperCase() === exam);
+                                 if (key) displayMark = student.marks[key];
+                             }
+
+                             return (
+                                <TableCell key={exam} className="text-center">
+                                    <span className={`font-medium ${displayMark !== '-' ? 'text-foreground' : 'text-muted-foreground/30'}`}>
+                                        {displayMark}
+                                    </span>
+                                </TableCell>
+                             );
+                        })}
+
                         <TableCell className="text-center pr-6">
                             <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest border-none ${
                                 student.status === 'approved' ? 'text-success bg-success/10' : 
                                 student.status === 'pending_admin' ? 'text-warning bg-warning/10' : 
                                 'text-muted-foreground bg-white/5'
                             }`}>
-                                {student.status?.replace('_', ' ') || 'Missing'}
+                                {student.status?.replace('_', ' ') || 'Pending'}
                             </Badge>
                         </TableCell>
                         </TableRow>
                     ))}
                     {details.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8">No students found</TableCell>
+                            <TableCell colSpan={8} className="text-center py-8">No students found for this section.</TableCell>
                         </TableRow>
                     )}
                     </TableBody>

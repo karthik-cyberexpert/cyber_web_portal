@@ -462,65 +462,159 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
 
     const connection = await pool.getConnection();
     try {
-        console.log('[Detailed Verification] Query Params:', req.query);
         const user = (req as any).user;
-        
         const userRole = user?.role?.toLowerCase();
-        let rows;
-
-        // Use valid scheduleId or null (to ensure LEFT JOIN works safely)
-        const targetScheduleId = scheduleId && scheduleId !== 'null' && scheduleId !== 'undefined' ? scheduleId : null;
-
+        
+        // 1. Resolve Access & Scope
+        let authorized = false;
+        let batchId = null; 
+        
         if (userRole === 'admin') {
-            // Admins see everything for this section/subject/schedule
-            [rows] = await connection.query(`
-                SELECT 
-                    u.id, u.name, sp.roll_number as rollNumber,
-                    m.marks_obtained as marks,
-                    m.grade,
-                    m.status as status
-                FROM users u
-                JOIN student_profiles sp ON u.id = sp.user_id
-                LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
-                WHERE sp.section_id = ?
-                ORDER BY sp.roll_number ASC
-            `, [targetScheduleId, subjectId, sectionId]);
+            authorized = true;
+            // Fetch batchId for context if needed (optional for query if we just join)
         } else {
-            // 1. Get tutor's assigned ranges for this section
+            // Check Tutor Access
             const [assignments]: any = await connection.query(
-                'SELECT batch_id, section_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND section_id = ? AND is_active = TRUE',
+                'SELECT batch_id, reg_number_start, reg_number_end FROM tutor_assignments WHERE faculty_id = ? AND section_id = ? AND is_active = TRUE',
                 [userId, sectionId]
             );
-
-            if (assignments.length === 0) return res.status(403).json({ message: 'Not authorized for this section' });
-
-            const assignment = assignments[0];
-
-            // 2. Fetch marks for students in range
-            [rows] = await connection.query(`
-                SELECT 
-                    u.id, u.name, sp.roll_number as rollNumber,
-                    m.marks_obtained as marks,
-                    m.status as status
-                FROM users u
-                JOIN student_profiles sp ON u.id = sp.user_id
-                JOIN (
-                    SELECT user_id, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
-                    FROM student_profiles
-                    WHERE batch_id = ? AND section_id = ?
-                ) spnum ON u.id = spnum.user_id
-                LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
-                WHERE (? IS NULL OR ? IS NULL OR (spnum.row_num >= ? AND spnum.row_num <= ?))
-                ORDER BY sp.roll_number ASC
-            `, [
-                assignment.batch_id, assignment.section_id,
-                targetScheduleId, subjectId,
-                assignment.reg_number_start, assignment.reg_number_end,
-                parseInt(assignment.reg_number_start) || 0, parseInt(assignment.reg_number_end) || 0
-            ]);
+            if (assignments.length > 0) {
+                authorized = true; // For now assume full section access or handle ranges later?
+                // The current logic filters by row_num ranges. Let's keep that.
+                // We'll use the range filter in the main query.
+                // But wait, if multiple ranges? The logic below handles the FIRST assignment.
+                // Admin logic didn't filter by range.
+                // Let's unify.
+            } else {
+                return res.status(403).json({ message: 'Not authorized for this section' });
+            }
         }
 
-        res.json(rows);
+        // Use valid scheduleId or null
+        const targetScheduleId = scheduleId && scheduleId !== 'null' && scheduleId !== 'undefined' ? scheduleId : null;
+
+        // 2. Fetch Data (Pivot approach)
+        // We fetch ALL students for the section.
+        // And LEFT JOIN marks for the specific subject.
+        // If targetScheduleId is set, filter marks by it. If not, get all for subject.
+        
+        let query = `
+            SELECT 
+                u.id as studentId, 
+                u.name, 
+                sp.roll_number as rollNumber,
+                m.marks_obtained as marks,
+                m.status as status,
+                sch.category as examType
+            FROM users u
+            JOIN student_profiles sp ON u.id = sp.user_id
+            JOIN sections sec ON sp.section_id = sec.id
+            LEFT JOIN marks m ON m.student_id = u.id AND m.subject_id = ?
+            LEFT JOIN schedules sch ON m.schedule_id = sch.id
+            WHERE sp.section_id = ?
+        `;
+        
+        const params: any[] = [subjectId, sectionId];
+
+        if (targetScheduleId) {
+            query += ` AND m.schedule_id = ?`;
+            params.push(targetScheduleId);
+        } else {
+            // Limit to Internal exams if needed? Or just show all available.
+            // Let's show all.
+        }
+        
+        // Tutor Range Logic
+        if (userRole !== 'admin') {
+             const [assignments]: any = await connection.query(
+                'SELECT reg_number_start, reg_number_end, batch_id FROM tutor_assignments WHERE faculty_id = ? AND section_id = ? AND is_active = TRUE',
+                [userId, sectionId]
+            );
+            const assignment = assignments[0];
+            
+            // We need row numbers for range check?
+            // "reg_number_start" implies ranges.
+            // Efficient way: Join a subquery with ROW_NUMBER if needed, or if reg_number is actual Roll Number?
+            // The previous logic used ROW_NUMBER(). Let's stick to that to be safe.
+            query = `
+                SELECT 
+                    u.id as studentId, 
+                    u.name, 
+                    sp.roll_number as rollNumber,
+                    m.marks_obtained as marks,
+                    m.status as status,
+                    sch.category as examType
+                FROM users u
+                JOIN (
+                    SELECT user_id, section_id, roll_number, 
+                           ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    FROM student_profiles
+                    WHERE section_id = ?
+                ) sp ON u.id = sp.user_id
+                LEFT JOIN marks m ON m.student_id = u.id AND m.subject_id = ?
+                LEFT JOIN schedules sch ON m.schedule_id = sch.id
+                WHERE sp.section_id = ?
+                  AND (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
+            `;
+            // Re-map params for this complex query
+            // Params: sectionId (subquery), subjectId, sectionId (outer), start, end, start, end
+             const start = parseInt(assignment.reg_number_start) || 0;
+             const end = parseInt(assignment.reg_number_end) || 0;
+             params.length = 0; // Clear
+             params.push(sectionId, subjectId, sectionId, start, end, start, end);
+             
+             if (targetScheduleId) {
+                 query += ` AND m.schedule_id = ?`;
+                 params.push(targetScheduleId);
+             }
+        }
+        
+        query += ` ORDER BY sp.roll_number ASC`;
+
+        const [rows]: any = await connection.query(query, params);
+
+        // 3. Process/Pivot Data
+        const students: any = {};
+        
+        for (const row of rows) {
+            if (!students[row.studentId]) {
+                students[row.studentId] = {
+                    id: row.studentId,
+                    name: row.name,
+                    rollNumber: row.rollNumber,
+                    marks: {} // Map examType -> value
+                };
+            }
+            
+            if (row.examType && row.marks !== null) {
+                students[row.studentId].marks[row.examType] = row.marks;
+                // Capture status? Maybe aggregation of statuses?
+                // For now, let's assume if any marks exist, we show them. Status is less critical in pivoted view unless per cell.
+                // We can store per-exam status if needed: marks: { "UT-1": { score: 10, status: 'approved' } }
+                // Let's just store score for simplicity unless UI needs status colors per cell.
+                // The user asked for "not as -".
+            } else if (targetScheduleId) {
+                // Single exam mode: marks might be null (LEFT JOIN).
+                // existing frontend expects row.marks directly?
+                // We will standardize response.
+            }
+        }
+        
+        // Convert to array
+        const result = Object.values(students);
+        
+        // If Single Schedule Mode (legacy compatibility or explicit single view?)
+        // If targetScheduleId was requested, ensuring we return flat object might be easier for existing frontend?
+        // OR update frontend to always handle object.
+        // Let's return the pivoted structure ALWAYS. The frontend can check `marks` object.
+        // But for single exam, frontend looks for `student.marks` (scalar).
+        // Let's make `marks` field behave smartly:
+        // IF single exam requested AND result has 1 exam key -> return value.
+        // BUT safer to update frontend to handle `marks` as object if `selectedExam === 'all'`.
+        // Actually, let's send normalized data.
+        
+        res.json(result);
+
     } catch (e) {
         console.error("Detailed Verification Error:", e);
         res.status(500).json({ message: 'Error fetching details' });

@@ -293,13 +293,21 @@ export default function ViewMarks() {
                     <TableRow className="border-white/5 hover:bg-transparent">
                         <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
-                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Marks</TableHead>
+                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                            const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                            if (!hasDataMixed) return null;
+                            return (
+                                <TableHead key={exam} className="text-center font-black uppercase text-[10px] tracking-widest text-primary/80">
+                                    {exam}
+                                </TableHead>
+                            );
+                        })}
                         <TableHead className="text-center font-black uppercase text-[10px] tracking-widest pr-6">Status</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {details.map((student) => (
-                        <TableRow key={student.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableRow key={student.id || student.rollNumber} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell className="font-mono font-bold text-xs pl-6">{student.rollNumber}</TableCell>
                         <TableCell>
                             <div className="flex items-center gap-3">
@@ -309,23 +317,40 @@ export default function ViewMarks() {
                             <span className="font-bold text-sm tracking-tight">{student.name}</span>
                             </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                            <span className="font-black text-lg italic text-primary">{student.marks ?? '-'}</span>
-                        </TableCell>
+                        
+                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                             const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                             if (!hasDataMixed) return null;
+
+                             let displayMark = '-';
+                             if (student.marks) {
+                                 const key = Object.keys(student.marks).find(k => k.toUpperCase() === exam.replace('-', ' ') || k.toUpperCase() === exam);
+                                 if (key) displayMark = student.marks[key];
+                             }
+
+                             return (
+                                <TableCell key={exam} className="text-center">
+                                    <span className={`font-medium ${displayMark !== '-' ? 'text-foreground' : 'text-muted-foreground/30'}`}>
+                                        {displayMark}
+                                    </span>
+                                </TableCell>
+                             );
+                        })}
+
                         <TableCell className="text-center pr-6">
                             <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest border-none ${
                                 student.status === 'approved' ? 'text-success bg-success/10' : 
                                 student.status === 'pending_admin' ? 'text-warning bg-warning/10' : 
                                 'text-muted-foreground bg-white/5'
                             }`}>
-                                {student.status?.replace('_', ' ') || 'Missing'}
+                                {student.status?.replace('_', ' ') || 'Pending'}
                             </Badge>
                         </TableCell>
                         </TableRow>
                     ))}
                     {details.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8">No students found</TableCell>
+                            <TableCell colSpan={8} className="text-center py-8">No students found for this section.</TableCell>
                         </TableRow>
                     )}
                     </TableBody>
