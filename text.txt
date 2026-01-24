@@ -1,23 +1,15 @@
-route-messenger-vite.js:27 [RouteMessenger-Vite] Not in iframe, skipping initialization
-index-GURJnx1b.js:163 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
-(anonymous) @ index-GURJnx1b.js:163
-Rg @ index-GURJnx1b.js:8
-uf @ index-GURJnx1b.js:8
-$te @ index-GURJnx1b.js:8
-Eu @ index-GURJnx1b.js:8
-o3 @ index-GURJnx1b.js:8
-hc @ index-GURJnx1b.js:6
-(anonymous) @ index-GURJnx1b.js:8
-index-GURJnx1b.js:266  POST http://192.168.46.90:3007/api/academic/batches 500 (Internal Server Error)
-se @ index-GURJnx1b.js:266
-vi @ index-GURJnx1b.js:5
-ce @ index-GURJnx1b.js:5
-de @ index-GURJnx1b.js:5
-I5 @ index-GURJnx1b.js:5
-F5 @ index-GURJnx1b.js:5
-(anonymous) @ index-GURJnx1b.js:5
-sN @ index-GURJnx1b.js:8
-za @ index-GURJnx1b.js:5
-sj @ index-GURJnx1b.js:5
-Uw @ index-GURJnx1b.js:5
-See @ index-GURJnx1b.js:5
+PS C:\Projects\cyber_web_portal> cd server
+PS C:\Projects\cyber_web_portal\server> npx tsx check_db_connection.ts
+--- DATABASE CONNECTION CHECK ---
+Host: localhost
+User: root
+Database: Cyber_Dept_Portal
+Port: 3306
+
+[SUCCESS] Connected to server successfully!
+[INFO] Current Database: cyber_dept_portal
+[SUCCESS] Table 'batches' found. Row count: 0
+[SUCCESS] Table 'sections' found. Row count: 0
+
+---------------------------------
+PS C:\Projects\cyber_web_portal\server>
