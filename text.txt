@@ -1,15 +1,53 @@
-PS C:\Projects\cyber_web_portal> cd server
-PS C:\Projects\cyber_web_portal\server> npx tsx check_db_connection.ts
---- DATABASE CONNECTION CHECK ---
-Host: localhost
-User: root
-Database: Cyber_Dept_Portal
-Port: 3306
+tal`.`subject_allocations`, CONSTRAINT `subject_allocations_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE)
+    at PromisePoolConnection.execute (C:\Projects\cyber_web_portal\server\node_modules\mysql2\lib\promise\connection.js:47:22)
+    at updateSubjectFaculties (C:\Projects\cyber_web_portal\server\academic.controller.ts:383:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_REFERENCED_ROW_2',
+  errno: 1452,
+  sql: 'INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES (?, ?, ?, ?)',
+  sqlState: '23000',
+  sqlMessage: 'Cannot add or update a child row: a foreign key constraint fails (`cyber_dept_portal`.`subject_allocations`, CONSTRAINT `subject_allocations_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE)'
+}
+[GET NOTIFICATIONS] User ID: 2 Role: admin
+[GET NOTIFICATIONS] Found 0 notifications
+[GET NOTIFICATIONS] Rows: []
+Update Subject Faculties Error: Error: Cannot add or update a child row: a foreign key constraint fails (`cyber_dept_portal`.`subject_allocations`, CONSTRAINT `subject_allocations_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE)
+    at PromisePoolConnection.execute (C:\Projects\cyber_web_portal\server\node_modules\mysql2\lib\promise\connection.js:47:22)
+    at updateSubjectFaculties (C:\Projects\cyber_web_portal\server\academic.controller.ts:383:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ER_NO_REFERENCED_ROW_2',
+  errno: 1452,
+  sql: 'INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
+  sqlState: '23000',
+  sqlMessage: 'Cannot add or update a child row: a foreign key constraint fails (`cyber_dept_portal`.`subject_allocations`, CONSTRAINT `subject_allocations_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE)'
+}
+[GET NOTIFICATIONS] User ID: 2 Role: admin
+[GET NOTIFICATIONS] Found 0 notifications
+[GET NOTIFICATIONS] Rows: []
 
-[SUCCESS] Connected to server successfully!
-[INFO] Current Database: cyber_dept_portal
-[SUCCESS] Table 'batches' found. Row count: 0
-[SUCCESS] Table 'sections' found. Row count: 0
 
----------------------------------
-PS C:\Projects\cyber_web_portal\server>
+
+route-messenger-vite.js:27 [RouteMessenger-Vite] Not in iframe, skipping initialization
+index-GURJnx1b.js:163 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ index-GURJnx1b.js:163
+Rg @ index-GURJnx1b.js:8
+uf @ index-GURJnx1b.js:8
+$te @ index-GURJnx1b.js:8
+Eu @ index-GURJnx1b.js:8
+o3 @ index-GURJnx1b.js:8
+hc @ index-GURJnx1b.js:6
+(anonymous) @ index-GURJnx1b.js:8
+:3007/api/academic/subjects/1/faculties:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+index-GURJnx1b.js:266  POST http://192.168.46.90:3007/api/academic/subjects/1/faculties 500 (Internal Server Error)
+H @ index-GURJnx1b.js:266
+vi @ index-GURJnx1b.js:5
+ce @ index-GURJnx1b.js:5
+de @ index-GURJnx1b.js:5
+I5 @ index-GURJnx1b.js:5
+F5 @ index-GURJnx1b.js:5
+(anonymous) @ index-GURJnx1b.js:5
+sN @ index-GURJnx1b.js:8
+za @ index-GURJnx1b.js:5
+sj @ index-GURJnx1b.js:5
+Uw @ index-GURJnx1b.js:5
+See @ index-GURJnx1b.js:5
