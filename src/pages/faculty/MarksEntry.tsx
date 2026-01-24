@@ -80,8 +80,12 @@ export default function MarksEntrySelection() {
           toast.error("Please select all fields");
           return;
       }
+      
+      const secDetails = availableSections.find(s => s.id.toString() === selectedSection);
+      const secName = secDetails ? secDetails.name : '';
+
       // Navigate to the sheet
-      navigate(`/faculty/marks/sheet?section=${selectedSection}&subject=${selectedSubject}&exam=${selectedExam}`);
+      navigate(`/faculty/marks/sheet?section=${selectedSection}&subject=${selectedSubject}&exam=${selectedExam}&sectionName=${secName}`);
   };
 
   return (

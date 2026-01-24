@@ -92,6 +92,7 @@ import Profile from "@/pages/admin/Profile";
 import LeaveReport from "@/pages/admin/reports/LeaveReport";
 import ODReport from "@/pages/admin/reports/ODReport";
 import MarksReport from "@/pages/admin/reports/MarksReport";
+import ViewMarks from "@/pages/admin/ViewMarks";
 
 const queryClient = new QueryClient();
 
@@ -226,6 +227,7 @@ const App = () => {
                   <Route path="schedule/holidays" element={<HolidaysSchedule />} />
 
                   <Route path="marks" element={<ApproveMarks />} />
+                  <Route path="view-marks" element={<ViewMarks />} />
                   <Route path="notes" element={<NotesAnalytics />} />
                   <Route path="assignments" element={<Assignments />} />
                   <Route path="circulars" element={<CircularsAdmin />} />

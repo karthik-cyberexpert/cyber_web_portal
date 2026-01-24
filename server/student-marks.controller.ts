@@ -10,6 +10,20 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
     }
 
     try {
+        // Fetch student's current semester
+        const [studentProfile]: any = await pool.query(
+            `SELECT b.current_semester 
+             FROM student_profiles sp 
+             JOIN batches b ON sp.batch_id = b.id 
+             WHERE sp.user_id = ?`,
+            [studentId]
+        );
+        console.log('[Get Student Marks] Student ID:', studentId);
+        console.log('[Get Student Marks] Profile Query Result:', studentProfile);
+        
+        const currentSemester = studentProfile[0]?.current_semester || 8;
+        console.log('[Get Student Marks] Determined Semester:', currentSemester);
+
         // Fetch marks grouped by subject from schedules table
         const [marksData]: any = await pool.query(
             `SELECT 
@@ -17,6 +31,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                 s.name as subject_name,
                 s.code as subject_code,
                 s.credits,
+                s.semester,
                 sch.title as exam_name,
                 sch.category as exam_type,
                 m.marks_obtained,
@@ -41,6 +56,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                     subject: mark.subject_name,
                     code: mark.subject_code,
                     credits: mark.credits,
+                    semester: mark.semester,
                     ia1: null,
                     ia2: null,
                     cia3: null,
@@ -110,7 +126,8 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                 totalSubjects,
                 averageMarks: Number(averageMarks.toFixed(2)),
                 cgpa: Number(cgpa.toFixed(2)),
-                totalMarks: Number(totalMarks.toFixed(2))
+                totalMarks: Number(totalMarks.toFixed(2)),
+                currentSemester
             }
         });
     } catch (error) {

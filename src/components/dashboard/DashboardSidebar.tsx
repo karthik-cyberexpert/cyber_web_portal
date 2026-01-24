@@ -179,6 +179,7 @@ const adminLinks: SidebarLink[] = [
     ]
   },
   { label: 'Approve Marks', icon: ClipboardList, path: '/admin/marks' },
+  { label: 'View Marks', icon: BookOpen, path: '/admin/view-marks' },
   {
     label: 'Portals',
     icon: ExternalLink,

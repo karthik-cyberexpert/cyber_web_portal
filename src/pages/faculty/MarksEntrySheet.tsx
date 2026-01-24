@@ -39,6 +39,7 @@ export default function MarksEntrySheet() {
   
   // Get query params
   const section = searchParams.get('section') || '';
+  const sectionName = searchParams.get('sectionName') || section; // Fallback to ID if name missing
   const subject = searchParams.get('subject') || '';
   const exam = searchParams.get('exam') as 'UT-1' | 'UT-2' | 'UT-3' | 'MODEL' | 'ASSIGNMENT' || 'UT-1';
 
@@ -239,7 +240,7 @@ export default function MarksEntrySheet() {
                 </Button>
                 <div>
                     <h1 className="text-2xl font-black tracking-tight">{subject} - {exam.toUpperCase()}</h1>
-                    <p className="text-muted-foreground text-sm font-medium">Entering marks for Section {section}</p>
+                    <p className="text-muted-foreground text-sm font-medium">Entering marks for Section {sectionName}</p>
                 </div>
             </div>
             <div className="flex items-center gap-3">

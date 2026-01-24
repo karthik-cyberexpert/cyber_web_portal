@@ -38,10 +38,12 @@ export default function MarksGrades() {
   const [stats, setStats] = useState({
     cgpa: 0,
     averageMarks: 0,
-    totalSubjects: 0
+    totalSubjects: 0,
+    currentSemester: 1
   });
   const [viewType, setViewType] = useState<"internal" | "external">("internal");
   const [loading, setLoading] = useState(true);
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
 
   useEffect(() => {
     if (user && user.role === 'student') {
@@ -67,11 +69,18 @@ export default function MarksGrades() {
         console.log('Marks data loaded:', data);
         
         setMarksData(data.subjectMarks || []);
+        
+        const currentSem = data.stats?.currentSemester || 1;
         setStats({
           cgpa: data.stats?.cgpa || 0,
           averageMarks: data.stats?.averageMarks || 0,
-          totalSubjects: data.stats?.totalSubjects || 0
+          totalSubjects: data.stats?.totalSubjects || 0,
+          currentSemester: currentSem
         });
+        
+        // Default to current semester
+        setSelectedSemester(currentSem.toString());
+
     } catch (error) {
         console.error('Error loading marks:', error);
     } finally {
@@ -91,6 +100,29 @@ export default function MarksGrades() {
       default: return 'bg-muted text-muted-foreground';
     }
   };
+  
+  // Filter logic
+  const filteredMarks = marksData.filter(item => {
+      // If we ever want 'all' back, we can uncomment this
+      // if (selectedSemester === 'all') return true;
+      return item.semester?.toString() === selectedSemester;
+  });
+
+  // Calculate stats based on filtered view
+  const filteredStats = React.useMemo(() => {
+      if (filteredMarks.length === 0) {
+          return { cgpa: 0, averageMarks: 0, totalSubjects: 0 };
+      }
+      
+      const totalMarks = filteredMarks.reduce((sum, s) => sum + (s.total || 0), 0);
+      const avg = totalMarks / filteredMarks.length;
+      
+      return {
+          cgpa: avg / 10,
+          averageMarks: avg,
+          totalSubjects: filteredMarks.length
+      };
+  }, [filteredMarks]);
 
   if (!user || user.role !== 'student') {
      return (
@@ -125,16 +157,14 @@ export default function MarksGrades() {
                 </SelectContent>
               </Select>
   
-              <Select defaultValue="sem5">
+              <Select value={selectedSemester} onValueChange={setSelectedSemester}>
                 <SelectTrigger className="flex-1 xs:w-[150px] bg-background/50 border-white/10 rounded-xl">
                   <SelectValue placeholder="Select Semester" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sem1">Semester 1</SelectItem>
-                  <SelectItem value="sem2">Semester 2</SelectItem>
-                  <SelectItem value="sem3">Semester 3</SelectItem>
-                  <SelectItem value="sem4">Semester 4</SelectItem>
-                  <SelectItem value="sem5">Semester 5</SelectItem>
+                  {Array.from({ length: stats.currentSemester }, (_, i) => i + 1).map(sem => (
+                      <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -146,22 +176,22 @@ export default function MarksGrades() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <GlassStatCard
-          title="Current CGPA"
-          value={stats.cgpa === 0 ? "0.00" : stats.cgpa.toFixed(2)}
+          title={selectedSemester === 'all' ? "Overall CGPA" : "Semester GPA"}
+          value={filteredStats.cgpa === 0 ? "0.00" : filteredStats.cgpa.toFixed(2)}
           icon={TrendingUp}
           iconColor="text-primary"
           delay={0.1}
         />
         <GlassStatCard
           title="Total Subjects"
-          value={stats.totalSubjects.toString()}
+          value={filteredStats.totalSubjects.toString()}
           icon={BookOpen}
           iconColor="text-accent"
           delay={0.2}
         />
         <GlassStatCard
           title="Average Marks"
-          value={stats.averageMarks === 0 ? "0.00" : stats.averageMarks.toFixed(2)}
+          value={filteredStats.averageMarks === 0 ? "0.00" : filteredStats.averageMarks.toFixed(2)}
           subtitle="Out of 100"
           icon={BarChart3}
           iconColor="text-success"
@@ -204,7 +234,7 @@ export default function MarksGrades() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {marksData.length > 0 ? marksData.map((item, idx) => (
+                    {filteredMarks.length > 0 ? filteredMarks.map((item, idx) => (
                         <TableRow key={idx} className="group border-white/5 hover:bg-white/5 transition-colors">
                         <TableCell className="pl-6 font-medium text-muted-foreground">{idx + 1}</TableCell>
                         <TableCell className="whitespace-nowrap">
@@ -244,7 +274,7 @@ export default function MarksGrades() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {marksData.length > 0 ? marksData.map((item, idx) => (
+                        {filteredMarks.length > 0 ? filteredMarks.map((item, idx) => (
                             <TableRow key={idx} className="group border-white/5 hover:bg-white/5 transition-colors">
                                 <TableCell className="pl-6 font-medium text-muted-foreground">{idx + 1}</TableCell>
                                 <TableCell className="font-bold text-sm tracking-tight whitespace-nowrap">{item.subject}</TableCell>
@@ -256,12 +286,12 @@ export default function MarksGrades() {
                                 </TableCell>
                                 {idx === 0 && (
                                     <TableCell 
-                                        rowSpan={marksData.length} 
+                                        rowSpan={filteredMarks.length} 
                                         className="text-center border-l border-white/5 bg-white/[0.02] p-4 min-w-[120px]"
                                     >
                                         <div className="flex flex-col items-center justify-center gap-1 h-full">
                                             <span className="text-2xl sm:text-3xl font-black text-success tracking-tighter">
-                                                {stats.cgpa > 0 ? stats.cgpa.toFixed(2) : '-'}
+                                                {filteredStats.cgpa > 0 ? filteredStats.cgpa.toFixed(2) : '-'}
                                             </span>
                                             <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center">Semester GPA</span>
                                         </div>
