@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStudents, createStudent, updateStudent, deleteStudent } from './student.controller.js';
+import { getStudents, createStudent, updateStudent, deleteStudent, promoteStudents } from './student.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 
 const router = express.Router();
@@ -14,6 +14,7 @@ router.put('/profile', authenticateToken, updateStudentProfile);
 
 // Public/Admin Routes
 router.get('/', authenticateToken, getStudents); // Admin uses this
+router.post('/promote', authenticateToken, promoteStudents);
 router.post('/', authenticateToken, createStudent);
 router.put('/:id', authenticateToken, updateStudent);
 router.delete('/:id', authenticateToken, deleteStudent);

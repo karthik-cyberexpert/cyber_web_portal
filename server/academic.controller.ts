@@ -429,12 +429,12 @@ export const updateSubjectFaculties = async (req: Request, res: Response) => {
 
 // Get Timetable
 export const getTimetable = async (req: Request, res: Response) => {
-  const { batchId, sectionId, facultyId } = req.query;
+  const { batchId, sectionId, facultyId, semester } = req.query;
 
   try {
     let query = `
       SELECT ts.*, 
-             s.name as subject, s.code as subject_code,
+             s.name as subject, s.code as subject_code, s.semester,
              u.id as faculty_id, u.name as faculty_name,
              sec.name as section_name, b.name as batch_name,
              sec.id as section_id, b.id as batch_id,
@@ -457,6 +457,11 @@ export const getTimetable = async (req: Request, res: Response) => {
       // For faculty, we want to see their active slots for current semesters
       query += ' AND sa.faculty_id = ?';
       params.push(facultyId);
+    }
+
+    if (semester) {
+        query += ' AND s.semester = ?';
+        params.push(semester);
     }
 
     console.log('=== GET TIMETABLE DEBUG ===');
@@ -502,7 +507,8 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
       subject_code, 
       faculty_id,
       room,
-      type 
+      type,
+      semester // New field
   } = req.body;
 
   const connection = await pool.getConnection();
@@ -511,6 +517,7 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
 
     // 1. Conflict Check: Faculty Availability
     // Is this faculty assigned to ANY OTHER class at this specific time?
+    // CRITICAL: Only check ACTIVE allocations to avoid historical conflicts
     if (faculty_id) {
         const [conflicts]: any = await connection.query(`
             SELECT sec.name as section, b.name as batch
@@ -521,7 +528,8 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
             WHERE sa.faculty_id = ? 
               AND ts.day_of_week = ? 
               AND ts.period_number = ?
-              AND ts.section_id != ? -- Exclude current slot if updating same
+              AND ts.section_id != ? 
+              AND sa.is_active = TRUE
         `, [faculty_id, day, period, section_id]);
 
         if (conflicts.length > 0) {
@@ -533,10 +541,6 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
     }
 
     // 2. Resolve Subject Allocation Logic
-    // Does an allocation exist for this Subject + Faculty + Section?
-    // If not, we might need to create one implicitly or assume it exists.
-    // For simplicity, we'll look up the Subject ID from Code, then look for allocation.
-    
     let allocationId = null;
 
     if (subject_code && faculty_id) {
@@ -557,9 +561,7 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
         if (allocs.length > 0) {
             allocationId = allocs[0].id;
         } else {
-            // Implicitly create allocation (or fail? User prefers ease, so create)
-            // Need academic year... assume active or default.
-            // For now, we just insert.
+            // Implicitly create allocation
             const [ins]: any = await connection.execute(
                 'INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES (?, ?, ?, 1)',
                 [subjectId, faculty_id, section_id]
@@ -572,18 +574,25 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
     }
 
     // 3. Upsert Timetable Slot
-    // Remove existing slot for this time in this section (to handle replacement or deletion if empty)
+    // Remove existing slot for this time in this section AND SEMESTER
+    // This allows distinct timetables for different semesters
     await connection.execute(
-        'DELETE FROM timetable_slots WHERE section_id = ? AND day_of_week = ? AND period_number = ?',
-        [section_id, day, period]
+        'DELETE FROM timetable_slots WHERE section_id = ? AND day_of_week = ? AND period_number = ? AND semester = ?',
+        [section_id, day, period, semester]
     );
 
-    if (allocationId) {
-        await connection.execute(
-            `INSERT INTO timetable_slots (section_id, day_of_week, period_number, subject_allocation_id, room_number, type) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [section_id, day, period, allocationId, room, type || 'theory']
-        );
+    if (allocationId || type === 'free') {
+        // Only insert if it's a real slot (not just a delete/clear)
+        // Wait, 'free' usually doesn't need a record unless we strictly track 'Free' periods?
+        // Use implicit deletion for clear. If type='free' and no allocation, we effectively just deleted above.
+        // But if type != 'free' (e.g. valid allocation), insert.
+        if (allocationId) {
+             await connection.execute(
+                `INSERT INTO timetable_slots (section_id, day_of_week, period_number, subject_allocation_id, room_number, type, semester) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [section_id, day, period, allocationId, room, type || 'theory', semester]
+            );
+        }
     }
 
     await connection.commit();

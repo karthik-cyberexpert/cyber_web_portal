@@ -21,8 +21,8 @@ export const getStudentStats = async (req: Request | any, res: Response) => {
                 u.email, 
                 s.name as section_name, 
                 b.name as batch_name,
-                IFNULL(b.current_semester, 1) as current_semester,
-                CEIL(IFNULL(b.current_semester, 1) / 2) as current_year
+                COALESCE(sp.current_semester, b.current_semester, 1) as current_semester,
+                CEIL(COALESCE(sp.current_semester, b.current_semester, 1) / 2) as current_year
              FROM student_profiles sp
              JOIN users u ON sp.user_id = u.id
              LEFT JOIN sections s ON sp.section_id = s.id

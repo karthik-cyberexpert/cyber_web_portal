@@ -55,7 +55,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
   const [facultyList, setFacultyList] = useState<any[]>([]);
 
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedYearSem, setSelectedYearSem] = useState('1-1');
+  const [selectedYearSem, setSelectedYearSem] = useState('1'); // Default to 1, will update based on batch
   const [selectedFacultyId, setSelectedFacultyId] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   
@@ -70,6 +70,16 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Update selected semester when batch changes
+  useEffect(() => {
+      if (selectedBatch && batches.length > 0) {
+          const batch = batches.find(b => b.id.toString() === selectedBatch);
+          if (batch && batch.current_semester) {
+              setSelectedYearSem(batch.current_semester.toString());
+          }
+      }
+  }, [selectedBatch, batches]);
 
   // Update modal faculty when editing slot changes (specifically subject)
   useEffect(() => {
@@ -164,6 +174,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         let url = `${API_BASE_URL}/academic/timetable?`;
         if (view === 'students' && selectedBatch && selectedSection) {
             url += `batchId=${selectedBatch}&sectionId=${selectedSection}`;
+            if (selectedYearSem) url += `&semester=${selectedYearSem}`;
         } else if (view === 'faculty' && selectedFacultyId) {
             url += `facultyId=${selectedFacultyId}`;
         } else {
@@ -292,7 +303,8 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
             subject_code: editingSlot.subjectCode,
             faculty_id: editingSlot.facultyId,
             room: editingSlot.room,
-            type: editingSlot.type
+            type: editingSlot.type,
+            semester: parseInt(selectedYearSem)
         };
 
         const res = await fetch(`${API_BASE_URL}/academic/timetable`, {
@@ -372,10 +384,19 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
                   <SelectTrigger className="w-40"><SelectValue placeholder="Select Batch" /></SelectTrigger>
                   <SelectContent>{batches.map((b:any)=><SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}</SelectContent>
                 </Select>
-                {/* Year-Sem & Section Selects... */}
+                
                 <Select value={selectedSection} onValueChange={setSelectedSection}>
                    <SelectTrigger className="w-32"><SelectValue placeholder="Section" /></SelectTrigger>
                    <SelectContent>{sections.map((s:any)=><SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}</SelectContent>
+                </Select>
+
+                <Select value={selectedYearSem} onValueChange={setSelectedYearSem}>
+                   <SelectTrigger className="w-32"><SelectValue placeholder="Semester" /></SelectTrigger>
+                   <SelectContent>
+                       {[...Array(8)].map((_, i) => (
+                           <SelectItem key={i+1} value={(i+1).toString()}>Semester {i+1}</SelectItem>
+                       ))}
+                   </SelectContent>
                 </Select>
               </>
             ) : (

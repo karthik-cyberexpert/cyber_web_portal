@@ -55,9 +55,12 @@ export const getStudentSyllabus = async (req: Request | any, res: Response) => {
     }
 
     try {
-        // Get student's section
+        // Get student's section and semester
         const [studentProfile]: any = await pool.query(
-            'SELECT section_id FROM student_profiles WHERE user_id = ?',
+            `SELECT sp.section_id, COALESCE(sp.current_semester, b.current_semester, 1) as current_semester 
+             FROM student_profiles sp
+             LEFT JOIN batches b ON sp.batch_id = b.id
+             WHERE sp.user_id = ?`,
             [studentId]
         );
 
@@ -65,7 +68,7 @@ export const getStudentSyllabus = async (req: Request | any, res: Response) => {
             return res.json([]); // No section assigned or profile not found
         }
 
-        const sectionId = studentProfile[0].section_id;
+        const { section_id, current_semester } = studentProfile[0];
 
         const query = `
             SELECT DISTINCT
@@ -74,6 +77,7 @@ export const getStudentSyllabus = async (req: Request | any, res: Response) => {
                 s.code as subject_code,
                 u.name as faculty_name,
                 ss.file_url,
+                ss.original_filename,
                 CASE 
                     WHEN ss.file_url IS NOT NULL THEN 'Uploaded' 
                     ELSE 'Pending' 
@@ -82,11 +86,13 @@ export const getStudentSyllabus = async (req: Request | any, res: Response) => {
             JOIN subjects s ON sa.subject_id = s.id
             JOIN users u ON sa.faculty_id = u.id
             LEFT JOIN subject_syllabus ss ON sa.subject_id = ss.subject_id AND sa.faculty_id = ss.faculty_id
-            WHERE sa.section_id = ? AND sa.is_active = TRUE
+            WHERE sa.section_id = ? 
+              AND sa.is_active = TRUE
+              AND s.semester = ?
             ORDER BY s.name
         `;
 
-        const [results]: any = await pool.query(query, [sectionId]);
+        const [results]: any = await pool.query(query, [section_id, current_semester]);
         res.json(results);
     } catch (error) {
         console.error('Get Student Syllabus Error:', error);

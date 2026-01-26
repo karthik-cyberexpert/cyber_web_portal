@@ -157,6 +157,7 @@ const adminLinks: SidebarLink[] = [
       { label: 'Students', icon: GraduationCap, path: '/admin/students' },
       { label: 'Faculty', icon: Users, path: '/admin/faculty' },
       { label: 'Tutors', icon: Users, path: '/admin/tutors' },
+      { label: 'Promote', icon: GraduationCap, path: '/admin/promote', badge: 'New' },
       { label: 'Subjects', icon: BookOpen, path: '/admin/subjects' }
     ]
   },

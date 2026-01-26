@@ -196,13 +196,14 @@ CREATE TABLE `timetable_slots` (
     `period_number` INT NOT NULL,
     `subject_allocation_id` INT,
     `room_number` VARCHAR(20),
+    `semester` INT,
     `start_time` TIME,
     `end_time` TIME,
     `type` ENUM('theory', 'lab') DEFAULT 'theory',
     `is_active` BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (`section_id`) REFERENCES `sections`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`subject_allocation_id`) REFERENCES `subject_allocations`(`id`) ON DELETE SET NULL,
-    UNIQUE KEY `unique_section_slot` (section_id, day_of_week, period_number)
+    UNIQUE KEY `unique_section_slot_sem` (section_id, day_of_week, period_number, semester)
 );
 
 -- -----------------------------------------------------------------------------

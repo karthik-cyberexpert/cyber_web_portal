@@ -40,15 +40,15 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              LEFT JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
              LEFT JOIN subjects s ON sa.subject_id = s.id
              LEFT JOIN users u ON sa.faculty_id = u.id
-             JOIN sections sec ON ts.section_id = sec.id
-             JOIN batches b ON sec.batch_id = b.id
-             WHERE ts.section_id = ?
+             JOIN student_profiles sp ON sp.section_id = ts.section_id -- Join profile via section to ensure safety, or pass studentID
+             JOIN batches b ON sp.batch_id = b.id
+             WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = COALESCE(sp.current_semester, b.current_semester, 1)
              ORDER BY 
                 FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
                 ts.period_number`,
-            [sectionId]
+            [studentId]
         );
 
         // Format time table data by day and period
@@ -89,13 +89,13 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              FROM subject_allocations sa
              JOIN subjects s ON sa.subject_id = s.id
              JOIN users u ON sa.faculty_id = u.id
-             JOIN sections sec ON sa.section_id = sec.id
-             JOIN batches b ON sec.batch_id = b.id
-             WHERE sa.section_id = ?
+             JOIN student_profiles sp ON sp.section_id = sa.section_id
+             JOIN batches b ON sp.batch_id = b.id
+             WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = COALESCE(sp.current_semester, b.current_semester, 1)
              ORDER BY s.name`,
-            [sectionId]
+            [studentId]
         );
 
         console.log('=== STUDENT TIMETABLE DEBUG ===');

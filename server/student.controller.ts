@@ -3,14 +3,71 @@ import { pool } from './db.js';
 import bcrypt from 'bcrypt';
 import { getStudentAttendancePercentage } from './attendance.utils.js';
 
+// Promote Students
+export const promoteStudents = async (req: Request, res: Response) => {
+    const { studentIds, targetSemester } = req.body;
+
+    if (!Array.isArray(studentIds) || studentIds.length === 0 || !targetSemester) {
+        return res.status(400).json({ message: 'Invalid request parameters' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. Update Students
+        const placeholders = studentIds.map(() => '?').join(',');
+        await connection.query(
+            `UPDATE student_profiles SET current_semester = ? WHERE user_id IN (${placeholders})`,
+            [targetSemester, ...studentIds]
+        );
+
+        // 2. Update Batches (if applicable)
+        // Find batches where students were promoted to a higher semester than the batch's current
+        const [batchesToUpdate]: any = await connection.query(
+            `SELECT DISTINCT sp.batch_id 
+             FROM student_profiles sp 
+             JOIN batches b ON sp.batch_id = b.id
+             WHERE sp.user_id IN (${placeholders}) 
+             AND ? > b.current_semester`,
+            [...studentIds, targetSemester]
+        );
+
+        if (batchesToUpdate.length > 0) {
+            const batchIds = batchesToUpdate.map((b: any) => b.batch_id);
+            const batchPlaceholders = batchIds.map(() => '?').join(',');
+            
+            console.log(`[Promote] Updating batches ${batchIds} to semester ${targetSemester}`);
+            
+            await connection.query(
+                `UPDATE batches SET current_semester = ? WHERE id IN (${batchPlaceholders})`,
+                [targetSemester, ...batchIds]
+            );
+        }
+
+        await connection.commit();
+        res.json({ message: `Students ${batchesToUpdate.length > 0 ? 'and their Batches ' : ''}promoted successfully` });
+
+    } catch (error: any) {
+        await connection.rollback();
+        console.error('Promote Students Error:', error);
+        res.status(500).json({ message: 'Error promoting students' });
+    } finally {
+        connection.release();
+    }
+};
+
 // Get All Students
 export const getStudents = async (req: Request, res: Response) => {
+  const { batchId } = req.query; // Added batchId filter support
+
   try {
-    const [rows]: any = await pool.query(`
+    let query = `
       SELECT 
         u.id, u.email, u.name, u.role, u.phone, u.avatar_url, u.address,
         sp.roll_number, sp.register_number, sp.dob, sp.gender, sp.blood_group,
-        sp.guardian_name, sp.guardian_phone,
+        sp.guardian_name, sp.guardian_phone, sp.current_semester,
         b.name as batch_name, sp.batch_id,
         s.name as section_name, sp.section_id
       FROM users u
@@ -18,8 +75,17 @@ export const getStudents = async (req: Request, res: Response) => {
       LEFT JOIN batches b ON sp.batch_id = b.id
       LEFT JOIN sections s ON sp.section_id = s.id
       WHERE u.role = 'student'
-      ORDER BY u.name ASC
-    `);
+    `;
+    
+    const params: any[] = [];
+    if (batchId) {
+        query += ' AND sp.batch_id = ?';
+        params.push(batchId);
+    }
+
+    query += ' ORDER BY u.name ASC';
+
+    const [rows]: any = await pool.query(query, params);
 
     // Calculate attendance for each student
     const studentsWithAttendance = await Promise.all(
@@ -222,10 +288,11 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
                 'Active' as status,     
                 'Regular' as admissionType,
                 'Full Time' as enrollmentType,
+                'Full Time' as enrollmentType,
                 IFNULL(b.start_year, 2023) as batchStartYear,
                 IFNULL(b.end_year, 2027) as batchEndYear,
-                IFNULL(b.current_semester, 1) as semester,
-                (year(curdate()) - b.start_year + 1) as year, 
+                COALESCE(sp.current_semester, b.current_semester, 1) as semester,
+                CEIL(COALESCE(sp.current_semester, b.current_semester, 1) / 2.0) as year, 
                 sp.cgpa,             
                 sp.attendance_percentage as attendance,
                 sp.linkedin_url as linkedinUrl,
@@ -379,7 +446,7 @@ export const getStudentSubjects = async (req: Request | any, res: Response) => {
     try {
         // Get student's section and batch info
         const [students]: any = await pool.query(
-            `SELECT sp.section_id, s.batch_id, b.current_semester 
+            `SELECT sp.section_id, s.batch_id, COALESCE(sp.current_semester, b.current_semester) as current_semester 
              FROM student_profiles sp
              JOIN sections s ON sp.section_id = s.id
              JOIN batches b ON s.batch_id = b.id

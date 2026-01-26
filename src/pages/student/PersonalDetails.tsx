@@ -248,7 +248,7 @@ export default function PersonalDetails() {
           <div>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight italic break-words">{student.name}</h2>
             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 slashed-zero">
-                {student.class} • Year {academicState.year} • Sem {academicState.semester}
+                {student.class} • Year {student.year || academicState.year} • Sem {student.semester || academicState.semester}
             </p>
           </div>
 
