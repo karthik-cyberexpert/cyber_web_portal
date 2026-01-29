@@ -16,7 +16,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
   jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
     if (err) {
-        console.error('Auth Middleware: JWT Verify Error:', err.message);
+        console.error(`Auth Middleware: JWT Verify Error: [${err.name}] ${err.message}`);
         console.log('Received Token:', token.substring(0, 20) + '...');
         return res.sendStatus(403);
     }
