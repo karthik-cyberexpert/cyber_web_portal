@@ -148,7 +148,13 @@ app.get('*', (req, res) => {
     return res.status(404).json({ error: 'API route not found' });
   }
   // Serve index.html for client-side routing
-  res.sendFile(path.join(distPath, 'index.html'));
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      if (!res.headersSent) {
+        res.status(404).send('Frontend build not found. Please run "npm run build" to generate the dist folder, or use the dev server (Vite) at port 3000.');
+      }
+    }
+  });
 });
 
 // Error handling middleware (optional but good practice)
