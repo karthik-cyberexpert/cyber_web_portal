@@ -78,14 +78,17 @@ router.post('/events', async (req: Request, res: Response) => {
 
         // Check for existing schedule for same subject, category, and batch
         const [existing]: any = await db.query(
-            `SELECT id FROM schedules 
+            `SELECT id, start_date FROM schedules 
              WHERE subject_id = ? AND category = ? AND batch_id = ?`,
             [subject_id, mappedCategory, batch_id]
         );
 
         if (existing.length > 0) {
+            const dateStr = new Date(existing[0].start_date).toLocaleDateString('en-US', { 
+                day: 'numeric', month: 'short', year: 'numeric' 
+            });
             return res.status(409).json({ 
-                message: `This subject is already scheduled for ${mappedCategory} in this batch.` 
+                message: `Subject already scheduled for ${mappedCategory} on ${dateStr}` 
             });
         }
 
