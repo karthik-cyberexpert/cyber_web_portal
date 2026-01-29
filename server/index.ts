@@ -160,7 +160,11 @@ app.get('*', (req, res) => {
 // Error handling middleware (optional but good practice)
 app.use((err: any, req: any, res: any, next: any) => {
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).json({ 
+    message: 'Something broke!', 
+    error: err.message, 
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+  });
 });
 
 app.listen(PORT,  () => {

@@ -101,7 +101,7 @@ export const getStudents = async (req: Request, res: Response) => {
     res.json(studentsWithAttendance);
   } catch (error: any) {
     console.error('Get Students Error:', error);
-    res.status(500).json({ message: 'Error fetching students' });
+    res.status(500).json({ message: 'Error fetching students', error: error.message });
   }
 };
 
@@ -151,7 +151,7 @@ export const createStudent = async (req: Request, res: Response) => {
     if (error.code === 'ER_DUP_ENTRY') {
       res.status(409).json({ message: 'Email or Roll Number already exists' });
     } else {
-      res.status(500).json({ message: 'Error creating student' });
+      res.status(500).json({ message: 'Error creating student', error: error.message });
     }
   } finally {
     connection.release();
@@ -243,7 +243,7 @@ export const updateStudent = async (req: Request, res: Response) => {
      if (error.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ message: error.sqlMessage || 'Duplicate entry for Email or Roll/Register Number' });
      }
-     res.status(500).json({ message: error.message || 'Error updating student' });
+     res.status(500).json({ message: error.message || 'Error updating student', error: error.message });
   } finally {
     connection.release();
   }
@@ -257,7 +257,7 @@ export const deleteStudent = async (req: Request, res: Response) => {
         res.json({ message: 'Student deleted successfully' });
     } catch (error: any) {
         console.error('Delete Student Error:', error);
-        res.status(500).json({ message: 'Error deleting student' });
+        res.status(500).json({ message: 'Error deleting student', error: error.message });
     }
 };
 
@@ -324,7 +324,7 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
             sql: error.sql,
             userId
         });
-        res.status(500).json({ message: 'Error fetching profile' });
+        res.status(500).json({ message: 'Error fetching profile', error: error.message });
     }
 };
 
@@ -376,7 +376,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
         res.json(mapped);
     } catch (error: any) {
         console.error('Get Student Marks Error:', error);
-        res.status(500).json({ message: 'Error fetching marks' });
+        res.status(500).json({ message: 'Error fetching marks', error: error.message });
     }
 };
 
@@ -429,7 +429,7 @@ export const updateStudentProfile = async (req: Request | any, res: Response) =>
             userId,
             body: req.body
         });
-        res.status(500).json({ message: 'Error updating profile' });
+        res.status(500).json({ message: 'Error updating profile', error: error.message });
     } finally {
         connection.release();
     }
@@ -481,7 +481,7 @@ export const getStudentSubjects = async (req: Request | any, res: Response) => {
 
     } catch (error: any) {
         console.error('Get Student Subjects Error:', error);
-        res.status(500).json({ message: 'Error fetching subjects' });
+        res.status(500).json({ message: 'Error fetching subjects', error: error.message });
     }
 };
 
@@ -508,6 +508,6 @@ export const getStudentAttendance = async (req: Request, res: Response) => {
         });
     } catch (error: any) {
         console.error('Get Student Attendance Error:', error);
-        res.status(500).json({ message: 'Error fetching attendance' });
+        res.status(500).json({ message: 'Error fetching attendance', error: error.message });
     }
 };
