@@ -245,6 +245,13 @@ export default function Circulars() {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  const getFileUrl = (url: string | null) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (!url.startsWith('/uploads')) return `${API_BASE_URL}/uploads/circulars/${url}`;
+    return `${API_BASE_URL}${url}`;
+  };
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -418,7 +425,7 @@ export default function Circulars() {
                   </DropdownMenuItem>
                   {notice.attachment_url && (
                     <DropdownMenuItem asChild>
-                      <a href={`${API_BASE_URL}${notice.attachment_url}`} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                      <a href={getFileUrl(notice.attachment_url)} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
                         <Download className="w-4 h-4 mr-2" />
                         Download File
                       </a>
@@ -532,7 +539,7 @@ export default function Circulars() {
               <div>
                 <h4 className="text-sm font-bold mb-2">Attachment:</h4>
                 <Button asChild variant="outline" size="sm">
-                  <a href={`${API_BASE_URL}${selectedCircular.attachment_url}`} target="_blank" rel="noopener noreferrer">
+                  <a href={getFileUrl(selectedCircular.attachment_url)} target="_blank" rel="noopener noreferrer">
                     <Download className="w-4 h-4 mr-2" />
                     Download File
                   </a>

@@ -208,8 +208,15 @@ export default function NotesUpload() {
       });
 
       // Download the file using fetch + blob to force download
-      const fileUrl = `${API_BASE_URL}${note.file_url}`;
-      const response = await fetch(fileUrl);
+      let url = note.file_url;
+      if (!url.startsWith('http')) {
+          if (!url.startsWith('/uploads')) {
+               url = `/uploads/notes/${url}`;
+          }
+          url = `${API_BASE_URL}${url}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('File not found');

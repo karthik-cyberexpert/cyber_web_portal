@@ -775,9 +775,15 @@ export default function Assignments() {
                                               variant="outline" 
                                               size="sm"
                                               onClick={() => {
-                                                const url = sub.file_url.startsWith('http') 
-                                                  ? sub.file_url 
-                                                  : `${API_BASE_URL}${sub.file_url}`;
+                                                let url = sub.file_url;
+                                                if (!url.startsWith('http')) {
+                                                    // Handle relative paths
+                                                    if (!url.startsWith('/uploads')) {
+                                                        // Fallback for legacy data (just filename)
+                                                        url = `/uploads/assignments/${url}`;
+                                                    }
+                                                    url = `${API_BASE_URL}${url}`;
+                                                }
                                                 window.open(url, '_blank', 'noopener,noreferrer');
                                               }}
                                             >

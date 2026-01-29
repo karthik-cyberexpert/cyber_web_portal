@@ -461,7 +461,16 @@ export default function ODApprovals() {
 
                   {selectedRequest?.proofUrl && (
                       <div className="pt-2">
-                          <Button variant="outline" className="w-full rounded-2xl border-primary/10 hover:bg-primary/5 h-12 gap-2 text-xs font-bold" onClick={() => window.open(selectedRequest.proofUrl, '_blank')}>
+                          <Button variant="outline" className="w-full rounded-2xl border-primary/10 hover:bg-primary/5 h-12 gap-2 text-xs font-bold" onClick={() => {
+                              let url = selectedRequest.proofUrl;
+                              if (url && !url.startsWith('http')) {
+                                  if (!url.startsWith('/uploads')) {
+                                      url = `/uploads/od_requests/${url}`;
+                                  }
+                                  url = `${API_BASE_URL}${url}`;
+                              }
+                              window.open(url, '_blank');
+                          }}>
                               <FileDown className="w-4 h-4 text-primary" />
                               View Attachment / Proof Document
                           </Button>
