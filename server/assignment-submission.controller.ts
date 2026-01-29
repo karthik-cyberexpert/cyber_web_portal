@@ -29,7 +29,7 @@ const upload = multer({
         fileSize: 10 * 1024 * 1024 // 10MB limit
     },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['.pdf', '.doc', '.docx', '.zip', '.rar'];
+        const allowedTypes = ['.pdf', '.doc', '.docx', '.zip', '.rar','.png','.jpg','.jpeg','.txt','.py','.js','.html','.css','.c','.cpp','.java','.cs','.php','.rb','.go','.swift','.kt','.dart','.ts','.tsx','.jsx','.json','.xml','.yaml','.yml','.md','.sh','.bat','.ps1'];
         const ext = path.extname(file.originalname).toLowerCase();
         
         if (allowedTypes.includes(ext)) {
