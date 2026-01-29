@@ -76,6 +76,42 @@ router.post('/events', async (req: Request, res: Response) => {
             mappedCategory = 'Holiday';
         }
 
+        // Validate Date within Semester Range (if applicable)
+        if (batch_id && mappedCategory !== 'Holiday') {
+             const [batchInfo]: any = await db.query(
+                `SELECT semester_start_date, semester_end_date FROM batches WHERE id = ?`,
+                [batch_id]
+             );
+             
+             if (batchInfo.length > 0) {
+                 const { semester_start_date, semester_end_date } = batchInfo[0];
+                 const eventDate = new Date(date);
+                 
+                 // Normalize dates to remove time components for accurate comparison
+                 eventDate.setHours(0, 0, 0, 0);
+
+                 if (semester_start_date) {
+                     const start = new Date(semester_start_date);
+                     start.setHours(0, 0, 0, 0);
+                     if (eventDate < start) {
+                         return res.status(400).json({ 
+                             message: `Cannot schedule exam before semester start date (${start.toLocaleDateString('en-GB')})` 
+                         });
+                     }
+                 }
+
+                 if (semester_end_date) {
+                     const end = new Date(semester_end_date);
+                     end.setHours(0, 0, 0, 0);
+                     if (eventDate > end) {
+                         return res.status(400).json({ 
+                             message: `Cannot schedule exam after semester end date (${end.toLocaleDateString('en-GB')})` 
+                         });
+                     }
+                 }
+             }
+        }
+
         // Check for existing schedule for same subject, category, and batch
         const [existing]: any = await db.query(
             `SELECT id, start_date FROM schedules 
@@ -84,9 +120,7 @@ router.post('/events', async (req: Request, res: Response) => {
         );
 
         if (existing.length > 0) {
-            const dateStr = new Date(existing[0].start_date).toLocaleDateString('en-US', { 
-                day: 'numeric', month: 'short', year: 'numeric' 
-            });
+            const dateStr = new Date(existing[0].start_date).toLocaleDateString('en-GB');
             return res.status(409).json({ 
                 message: `Subject already scheduled for ${mappedCategory} on ${dateStr}` 
             });
