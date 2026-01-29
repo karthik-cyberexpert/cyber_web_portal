@@ -12,12 +12,28 @@ import {
 } from './od.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 import { uploadOD } from './upload.config.js';
+import multer from 'multer';
+
+// Wrapper to handle upload errors
+const handleUpload = (req: any, res: any, next: any) => {
+    uploadOD.single('file')(req, res, (err: any) => {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading (e.g. file too large)
+            return res.status(400).json({ error: `File upload error: ${err.message}` });
+        } else if (err) {
+            // An unknown error occurred when uploading (e.g. invalid file type)
+            return res.status(400).json({ error: err.message });
+        }
+        // Everything went fine
+        next();
+    });
+};
 
 const router = Router();
 
 // Student routes
 router.get('/my-requests', authenticateToken, getMyODRequests);
-router.post('/request', authenticateToken, uploadOD.single('file'), createODRequest);
+router.post('/request', authenticateToken, handleUpload, createODRequest);
 router.post('/:id/cancel-request', authenticateToken, requestCancelOD);
 
 // Tutor routes (can only forward/reject, never approve)

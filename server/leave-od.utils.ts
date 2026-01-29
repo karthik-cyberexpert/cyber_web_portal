@@ -146,9 +146,13 @@ export async function calculateWorkingDaysWithHolidays(startDate: string, endDat
  */
 export function validateNotPastDate(startDate: string): boolean {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day
-    
-    const start = new Date(startDate);
+    today.setHours(0, 0, 0, 0); // Reset today's time to 00:00:00 local
+
+    // Parse YYYY-MM-DD explicitly to local midnight
+    const [y, m, d] = startDate.split('-').map(Number);
+    const start = new Date(y, m - 1, d); // Months are 0-indexed in JS Date
+    start.setHours(0, 0, 0, 0);
+
     return start >= today;
 }
 
