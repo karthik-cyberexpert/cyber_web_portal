@@ -1,1 +1,1 @@
-Error Code: 1060. Duplicate column name 'semester'
+Error Code: 1553. Cannot drop index 'unique_section_slot': needed in a foreign key constraint
