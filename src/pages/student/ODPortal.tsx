@@ -100,6 +100,12 @@ export default function ODPortal() {
         return;
     }
 
+    // Date Range Validation
+    if (new Date(formData.startDate) > new Date(formData.endDate)) {
+        toast.error("End date cannot be before Start date");
+        return;
+    }
+
     // OD always requires document
     if (!fileAttached) {
         toast.error(`Document attachment is required for OD requests`);
@@ -321,14 +327,22 @@ export default function ODPortal() {
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">From Date</Label>
                     <DatePicker 
-                        date={formData.startDate ? new Date(formData.startDate) : undefined}
+                        date={formData.startDate ? new Date(
+                          parseInt(formData.startDate.split('-')[0]),
+                          parseInt(formData.startDate.split('-')[1]) - 1,
+                          parseInt(formData.startDate.split('-')[2])
+                        ) : undefined}
                         onChange={date => setFormData({...formData, startDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">To Date</Label>
                     <DatePicker 
-                        date={formData.endDate ? new Date(formData.endDate) : undefined}
+                        date={formData.endDate ? new Date(
+                          parseInt(formData.endDate.split('-')[0]),
+                          parseInt(formData.endDate.split('-')[1]) - 1,
+                          parseInt(formData.endDate.split('-')[2])
+                        ) : undefined}
                         onChange={date => setFormData({...formData, endDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
                   </div>
