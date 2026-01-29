@@ -1,2 +1,47 @@
-route-messenger-vite.js:27 [RouteMessenger-Vite] Not in iframe, skipping initialization
-:3007/api/students:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+PS C:\Projects\cyber_web_portal\server> npm run check-db   
+
+> server@1.0.0 check-db
+> npx tsx check_db_connection.ts
+
+[INFO] Loading .env from: C:\Projects\cyber_web_portal\server\.env
+[SUCCESS] .env file found and loaded.
+
+=============================================
+       SERVER DIAGNOSTIC & DB CHECKER
+=============================================
+
+--- SYSTEM INFORMATION ---
+OS: Windows_NT 10.0.22631 (win32)
+Node Version: v22.18.0
+Current Working Dir: C:\Projects\cyber_web_portal\server
+Server Directory: C:\Projects\cyber_web_portal\server
+
+--- FILE SYSTEM CHECKS ---
+Checking 'uploads' directory: C:\Projects\cyber_web_portal\uploads
+[OK] 'uploads' directory exists.
+Checking 'dist' (frontend build): C:\Projects\cyber_web_portal\dist
+[OK] 'dist' directory exists.
+
+--- DATABASE CONFIGURATION (Masked) ---
+DB_HOST: localhost
+DB_USER: root
+DB_NAME: Cyber_Dept_Portal
+DB_PORT: 3306
+DB_PASSWORD: ****** (Set)
+
+--- CONNECTING TO DATABASE ---
+[SUCCESS] Connected to MySQL server successfully!
+[INFO] Connected to Database Schema: cyber_dept_portal
+
+--- VERIFYING CRITICAL TABLES ---
+[OK] Table 'users' exists. Rows: 5
+[OK] Table 'departments' exists. Rows: 1
+[OK] Table 'academic_years' exists. Rows: 2
+[OK] Table 'batches' exists. Rows: 2
+[OK] Table 'sections' exists. Rows: 3
+
+=============================================
+       DIAGNOSTIC COMPLETED SUCCESSFULLY
+=============================================
+
+PS C:\Projects\cyber_web_portal\server> 
