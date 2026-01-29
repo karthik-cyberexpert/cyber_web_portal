@@ -14,6 +14,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // Use relative path from this file to ensure consistency with index.ts
         const uploadDir = path.join(__dirname, '../uploads/assignments');
+        console.log('[DEBUG] Assignment Upload Dir:', uploadDir);
         
         // Create directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
