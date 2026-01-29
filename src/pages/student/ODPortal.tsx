@@ -130,6 +130,11 @@ export default function ODPortal() {
         }
 
         // Call backend API
+        console.log('[OD] Submitting request...', { 
+            selectedFile: selectedFile ? { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type } : 'null',
+            formDataKeys: Array.from(formDataToSend.keys())
+        });
+        
         const response = await fetch(`${API_BASE_URL}/od/request`, {
             method: 'POST',
             headers: {

@@ -13,6 +13,11 @@ import { getFileUrl } from './upload.config.js';
 export async function createODRequest(req: Request, res: Response) {
     try {
         const userId = (req as any).user.id;
+        console.log('[OD SERVER] Received request from user', userId);
+        console.log('[OD SERVER] Headers content-type:', req.headers['content-type']);
+        console.log('[OD SERVER] File:', req.file);
+        console.log('[OD SERVER] Body:', req.body);
+        
         const { category, start_date, end_date, is_half_day, session, reason, duration_type, place_to_visit } = req.body;
 
         // Validate required fields
