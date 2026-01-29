@@ -21,7 +21,7 @@ const pool = createPool({
 
 async function run() {
     try {
-        const [rows] = await pool.query('SELECT id, file_url, created_at, student_id FROM assignment_submissions ORDER BY created_at DESC LIMIT 5');
+        const [rows] = await pool.query('SELECT id, file_url, submitted_at, student_id FROM assignment_submissions ORDER BY submitted_at DESC LIMIT 5');
         console.log('Latest Submissions:', rows);
     } catch (error) {
         console.error('Error:', error);

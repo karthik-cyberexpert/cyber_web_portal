@@ -4,10 +4,16 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Configure storage for assignment submissions
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'uploads', 'assignments');
+        // Use relative path from this file to ensure consistency with index.ts
+        const uploadDir = path.join(__dirname, '../uploads/assignments');
         
         // Create directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
