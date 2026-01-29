@@ -326,7 +326,8 @@ export default function LeavePortal() {
                         date={formData.startDate ? new Date(
                           parseInt(formData.startDate.split('-')[0]),
                           parseInt(formData.startDate.split('-')[1]) - 1,
-                          parseInt(formData.startDate.split('-')[2])
+                          parseInt(formData.startDate.split('-')[2]),
+                          12, 0, 0
                         ) : undefined}
                         onChange={date => setFormData({...formData, startDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
@@ -337,7 +338,8 @@ export default function LeavePortal() {
                         date={formData.endDate ? new Date(
                           parseInt(formData.endDate.split('-')[0]),
                           parseInt(formData.endDate.split('-')[1]) - 1,
-                          parseInt(formData.endDate.split('-')[2])
+                          parseInt(formData.endDate.split('-')[2]),
+                          12, 0, 0
                         ) : undefined}
                         onChange={date => setFormData({...formData, endDate: date ? format(date, "yyyy-MM-dd") : ''})}
                     />
