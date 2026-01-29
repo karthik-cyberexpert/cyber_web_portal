@@ -1,2 +1,14 @@
 route-messenger-vite.js:27 [RouteMessenger-Vite] Not in iframe, skipping initialization
-:3007/api/calendar/events:1  Failed to load resource: the server responded with a status of 409 (Conflict)
+index-Dlib7PJl.js:266  POST http://192.168.46.90:3007/api/calendar/events 409 (Conflict)
+G @ index-Dlib7PJl.js:266
+bi @ index-Dlib7PJl.js:5
+ce @ index-Dlib7PJl.js:5
+de @ index-Dlib7PJl.js:5
+$5 @ index-Dlib7PJl.js:5
+z5 @ index-Dlib7PJl.js:5
+(anonymous) @ index-Dlib7PJl.js:5
+cN @ index-Dlib7PJl.js:8
+Wa @ index-Dlib7PJl.js:5
+cj @ index-Dlib7PJl.js:5
+Hw @ index-Dlib7PJl.js:5
+Cee @ index-Dlib7PJl.js:5
