@@ -24,7 +24,8 @@ export const promoteStudents = async (req: Request, res: Response) => {
         );
 
         // 2. Update Batches (if applicable)
-        // Find batches where students were promoted to a higher semester than the batch's current
+        // LOGIC REMOVED: Batch semester should be constant and cycle-based, not driven by student promotion.
+        /* 
         const [batchesToUpdate]: any = await connection.query(
             `SELECT DISTINCT sp.batch_id 
              FROM student_profiles sp 
@@ -35,19 +36,12 @@ export const promoteStudents = async (req: Request, res: Response) => {
         );
 
         if (batchesToUpdate.length > 0) {
-            const batchIds = batchesToUpdate.map((b: any) => b.batch_id);
-            const batchPlaceholders = batchIds.map(() => '?').join(',');
-            
-            console.log(`[Promote] Updating batches ${batchIds} to semester ${targetSemester}`);
-            
-            await connection.query(
-                `UPDATE batches SET current_semester = ? WHERE id IN (${batchPlaceholders})`,
-                [targetSemester, ...batchIds]
-            );
+            // ... (Removed)
         }
+        */
 
         await connection.commit();
-        res.json({ message: `Students ${batchesToUpdate.length > 0 ? 'and their Batches ' : ''}promoted successfully` });
+        res.json({ message: 'Students promoted successfully' });
 
     } catch (error: any) {
         await connection.rollback();

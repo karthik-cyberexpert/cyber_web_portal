@@ -453,7 +453,10 @@ export default function BatchesClasses() {
                              <Settings2 className="w-4 h-4 mr-2" />
                              Settings
                            </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => setSemesterEditBatch(batch)}>
+                           <DropdownMenuItem onClick={() => setSemesterEditBatch({
+                             ...batch,
+                             current_semester: academicState.semester
+                           })}>
                              <Calendar className="w-4 h-4 mr-2" />
                              Edit Semester Dates
                            </DropdownMenuItem>
