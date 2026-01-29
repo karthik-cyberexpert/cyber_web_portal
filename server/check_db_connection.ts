@@ -2,20 +2,68 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load .env from server directory
-dotenv.config({ path: path.join(__dirname, '.env') });
+const envPath = path.join(__dirname, '.env');
+console.log(`[INFO] Loading .env from: ${envPath}`);
+if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    console.log('[SUCCESS] .env file found and loaded.');
+} else {
+    console.error('[CRITICAL WARNING] .env file NOT found! Server will use default/fallback values (which may fail).');
+    console.error('[HINT] Create a .env file in the server directory with DB_HOST, DB_USER, DB_PASSWORD, DB_NAME.');
+}
 
 async function checkConnection() {
-    console.log('--- DATABASE CONNECTION CHECK ---');
-    console.log(`Host: ${process.env.DB_HOST}`);
-    console.log(`User: ${process.env.DB_USER}`);
-    console.log(`Database: ${process.env.DB_NAME}`);
-    console.log(`Port: ${process.env.DB_PORT}`);
+    console.log('\n=============================================');
+    console.log('       SERVER DIAGNOSTIC & DB CHECKER       ');
+    console.log('=============================================\n');
+
+    console.log('--- SYSTEM INFORMATION ---');
+    console.log(`OS: ${os.type()} ${os.release()} (${os.platform()})`);
+    console.log(`Node Version: ${process.version}`);
+    console.log(`Current Working Dir: ${process.cwd()}`);
+    console.log(`Server Directory: ${__dirname}`);
+    
+    console.log('\n--- FILE SYSTEM CHECKS ---');
+    const uploadsPath = path.join(__dirname, '../uploads');
+    const distPath = path.join(__dirname, '../dist');
+    
+    console.log(`Checking 'uploads' directory: ${uploadsPath}`);
+    if (fs.existsSync(uploadsPath)) {
+        console.log(`[OK] 'uploads' directory exists.`);
+    } else {
+        console.warn(`[WARNING] 'uploads' directory MISSING! File uploads will fail.`);
+        try {
+            fs.mkdirSync(uploadsPath, { recursive: true });
+            console.log(`[FIXED] Created 'uploads' directory.`);
+        } catch (e: any) {
+            console.error(`[ERROR] Failed to create 'uploads' directory: ${e.message}`);
+        }
+    }
+
+    console.log(`Checking 'dist' (frontend build): ${distPath}`);
+    if (fs.existsSync(distPath)) {
+        console.log(`[OK] 'dist' directory exists.`);
+    } else {
+        console.warn(`[WARNING] 'dist' directory MISSING! Frontend will not be served via Express (Dev mode might be fine).`);
+    }
+
+    console.log('\n--- DATABASE CONFIGURATION (Masked) ---');
+    console.log(`DB_HOST: ${process.env.DB_HOST || 'localhost (default)'}`);
+    console.log(`DB_USER: ${process.env.DB_USER || 'root (default)'}`);
+    console.log(`DB_NAME: ${process.env.DB_NAME || 'Cyber_Dept_Portal (default)'}`);
+    console.log(`DB_PORT: ${process.env.DB_PORT || '3306 (default)'}`);
+    const hasPassword = !!process.env.DB_PASSWORD;
+    console.log(`DB_PASSWORD: ${hasPassword ? '****** (Set)' : '(Empty/Unset)'}`);
+
+    console.log('\n--- CONNECTING TO DATABASE ---');
     
     try {
         const connection = await mysql.createConnection({
@@ -26,77 +74,61 @@ async function checkConnection() {
             port: parseInt(process.env.DB_PORT || '3306')
         });
 
-        console.log('\n[SUCCESS] Connected to server successfully!');
+        console.log('[SUCCESS] Connected to MySQL server successfully!');
 
         // Check if database exists and we are using it
         const [dbResult]: any = await connection.query('SELECT DATABASE() as db');
-        console.log(`[INFO] Current Database: ${dbResult[0].db}`);
+        console.log(`[INFO] Connected to Database Schema: ${dbResult[0].db}`);
 
-        // Check for 'batches' table
-        try {
-            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM batches');
-            console.log(`[SUCCESS] Table 'batches' found. Row count: ${rows[0].count}`);
-        } catch (tableError: any) {
-            console.error(`\n[ERROR] Could not query 'batches' table: ${tableError.message}`);
-        }
+        console.log('\n--- VERIFYING CRITICAL TABLES ---');
+        
+        const tablesToCheck = [
+            { name: 'users', critical: true, warning: 'You won\'t be able to login.' },
+            { name: 'departments', critical: true, warning: 'FK constraints will fail for new records.' },
+            { name: 'academic_years', critical: true, warning: 'Subject assignment and academic features will fail.' },
+            { name: 'batches', critical: true, warning: 'Student grouping will fail.' },
+            { name: 'sections', critical: false, warning: 'Section data missing.' }
+        ];
 
-        // Check for 'departments' table - Critical for Foreign Keys
-        try {
-            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM departments');
-            console.log(`[SUCCESS] Table 'departments' found. Row count: ${rows[0].count}`);
-            if (rows[0].count === 0) {
-                console.warn('[WARNING] Table "departments" is EMPTY. This will cause 500 errors when creating Batches due to FK constraints (default department_id=1).');
+        for (const table of tablesToCheck) {
+             try {
+                const [rows]: any = await connection.query(`SELECT COUNT(*) as count FROM ${table.name}`);
+                console.log(`[OK] Table '${table.name}' exists. Rows: ${rows[0].count}`);
+                if (rows[0].count === 0 && table.critical) {
+                    console.warn(`   [WARNING] Table '${table.name}' is EMPTY! ${table.warning}`);
+                }
+            } catch (tableError: any) {
+                console.error(`[ERROR] Table '${table.name}' MISSING or invalid! Message: ${tableError.message}`);
             }
-        } catch (tableError: any) {
-            console.error(`\n[ERROR] Could not query 'departments' table: ${tableError.message}`);
-        }
-
-        // Check for 'users' table
-        try {
-            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM users');
-            console.log(`[SUCCESS] Table 'users' found. Row count: ${rows[0].count}`);
-            if (rows[0].count === 0) {
-                console.warn('[WARNING] Table "users" is EMPTY. You wont be able to login.');
-            }
-        } catch (tableError: any) {
-            console.error(`\n[ERROR] Could not query 'users' table: ${tableError.message}`);
-        }
-
-        // Check for 'academic_years' table
-        try {
-            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM academic_years');
-            console.log(`[SUCCESS] Table 'academic_years' found. Row count: ${rows[0].count}`);
-            if (rows[0].count === 0) {
-                console.warn('[WARNING] Table "academic_years" is EMPTY. This will cause 500 errors when assigning subjects.');
-            }
-        } catch (tableError: any) {
-            console.error(`\n[ERROR] Could not query 'academic_years' table: ${tableError.message}`);
-        }
-
-        // Check for 'sections' table
-        try {
-            const [rows]: any = await connection.query('SELECT COUNT(*) as count FROM sections');
-            console.log(`[SUCCESS] Table 'sections' found. Row count: ${rows[0].count}`);
-        } catch (tableError: any) {
-             console.log(`[WARNING] Could not query 'sections': ${tableError.message}`);
         }
 
         await connection.end();
+        console.log('\n=============================================');
+        console.log('       DIAGNOSTIC COMPLETED SUCCESSFULLY      ');
+        console.log('=============================================\n');
 
     } catch (error: any) {
-        console.error('\n[FATAL ERROR] Connection Failed!');
+        console.error('\n[FATAL ERROR] Database Connection Failed!');
         console.error(`Message: ${error.message}`);
         console.error(`Code: ${error.code}`);
+        console.error(`Errno: ${error.errno}`);
         
         if (error.code === 'ECONNREFUSED') {
-            console.error('[HINT] Is MySQL running? Is the port correct?');
+            console.error('\n[TROUBLESHOOTING] Connection Refused.');
+            console.error('1. Is MySQL Server running?');
+            console.error('2. Is it listening on the configured port?');
+            console.error('3. Does the host name resolve?');
         } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-            console.error('[HINT] Check your DB_USER and DB_PASSWORD in .env');
+            console.error('\n[TROUBLESHOOTING] Access Denied.');
+            console.error('1. Check DB_USER and DB_PASSWORD in .env');
+            console.error('2. Ensure this user has permission to connect from this host.');
         } else if (error.code === 'ER_BAD_DB_ERROR') {
-            console.error('[HINT] Database "Cyber_Dept_Portal" does not exist. Run "CREATE DATABASE Cyber_Dept_Portal;"');
+            console.error('\n[TROUBLESHOOTING] Database Not Found.');
+            console.error(`1. The database '${process.env.DB_NAME || 'Cyber_Dept_Portal'}' does not exist.`);
+            console.error('2. Run the SQL initialization script to create the schema.');
         }
+        process.exit(1);
     }
-    console.log('\n---------------------------------');
 }
 
 checkConnection();

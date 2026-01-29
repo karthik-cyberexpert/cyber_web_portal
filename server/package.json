@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "npx tsx index.ts",
-    "dev": "npx nodemon --watch './**/*.ts' --exec \"npx tsx\" index.ts"
+    "dev": "npx nodemon --watch './**/*.ts' --exec \"npx tsx\" index.ts",
+    "check-db": "npx tsx check_db_connection.ts"
   },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",

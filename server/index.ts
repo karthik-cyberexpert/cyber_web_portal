@@ -14,7 +14,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3007;
 
-console.log(`Starting Server... Time: ${new Date().toISOString()} - Restart 19`);
+console.log(`Starting Server... Time: ${new Date().toISOString()}`);
+console.log(`[INIT] Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`[INIT] DB Host: ${process.env.DB_HOST || 'localhost (default)'}`);
+console.log(`[INIT] DB Database: ${process.env.DB_NAME || 'Cyber_Dept_Portal (default)'}`);
+console.log(`[INIT] Server Directory: ${__dirname}`);
+
 import authRoutes from './auth.routes.js';
 import adminRoutes from './admin.routes.js';
 import academicRoutes from './academic.routes.js';
