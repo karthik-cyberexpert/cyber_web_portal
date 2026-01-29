@@ -87,7 +87,7 @@ export const submitAssignment = async (req: Request | any, res: Response) => {
         await pool.query(
             `INSERT INTO assignment_submissions 
              (assignment_id, student_id, file_url, status, submitted_at) 
-             VALUES (?, ?, ?, 'Submitted', NOW())`,
+             VALUES (?, ?, ?, 'submitted', NOW())`,
             [assignmentId, studentId, fileUrl]
         );
 
