@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { pool } from './db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
 
@@ -163,3 +164,73 @@ export const updatePassword = async (req: Request | any, res: Response) => {
 };
 
 
+
+// Google Login
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID');
+
+export const googleLogin = async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  try {
+    console.log('[AUTH] Verifying Google Token...');
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
+    });
+    
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Invalid Google Token: Email missing' });
+    }
+
+    console.log(`[AUTH] Google User Email: ${email}`);
+
+    // Check if user exists (Whitelist Check)
+    const [rows]: any = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    
+    if (rows.length === 0) {
+      console.log(`[AUTH] Login denied. Email not registered: ${email}`);
+      return res.status(403).json({ message: 'Login not registered' });
+    }
+
+    const user = rows[0];
+    
+    // Role Elevation logic (same as standard login)
+    let effectiveRole = user.role;
+    if (user.role === 'faculty') {
+        const [tutors]: any = await pool.query(
+            'SELECT id FROM tutor_assignments WHERE faculty_id = ? AND is_active = TRUE',
+            [user.id]
+        );
+        if (tutors.length > 0) {
+            effectiveRole = 'tutor';
+        }
+    }
+
+    // Generate Token
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email, role: effectiveRole, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    res.json({
+      token: accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: effectiveRole,
+        avatar: user.avatar_url,
+        google_login: true
+      },
+      requiresPasswordChange: false // Google login doesn't need password change
+    });
+
+  } catch (error: any) {
+    console.error('Google Login error:', error);
+    res.status(500).json({ message: 'Google authentication failed' });
+  }
+};
