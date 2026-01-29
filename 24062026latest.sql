@@ -297,6 +297,19 @@ CREATE TABLE `notes` (
     FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
 );
 
+CREATE TABLE `subject_syllabus` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `subject_id` INT NOT NULL,
+    `faculty_id` INT NOT NULL,
+    `file_url` VARCHAR(500) NOT NULL,
+    `original_filename` VARCHAR(255),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`faculty_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_subject_faculty` (`subject_id`, `faculty_id`)
+);
+
 CREATE TABLE `assignments` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `title` VARCHAR(255) NOT NULL,

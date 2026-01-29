@@ -1,48 +1,12 @@
- Get Student Assignments Error: Error: Unknown column 'asub.score' in 'field list'
-[1]     at PromisePool.query (C:\Projects\cyber_web_portal\server\node_modules\mysql2\lib\promise\pool.js:36:22)
-[1]     at getStudentAssignments (C:\Projects\cyber_web_portal\server\student-assignments.controller.ts:27:47)
-[1]     at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
-[1]   code: 'ER_BAD_FIELD_ERROR',
-[1]   errno: 1054,
-[1]   sql: 'SELECT \n' +
-[1]     '                a.id,\n' +
-[1]     '                a.title,\n' +
-[1]     '                a.description,\n' +
-[1]     '                a.due_date,\n' +
-[1]     '                a.max_score as max_marks,\n' +
-[1]     '                a.created_at,\n' +
-[1]     '                a.attachment_url,\n' +
-[1]     '                s.name as subject_name,\n' +
-[1]     '                s.code as subject_code,\n' +
-[1]     '                u.name as assigned_by_name,\n' +
-[1]     '                asub.id as submission_id,\n' +
-[1]     '                asub.submitted_at,\n' +
-[1]     '                asub.score as marks_obtained,\n' +
-[1]     '                asub.feedback,\n' +
-[1]     '                asub.status as submission_status,\n' +
-[1]     '                sa.section_id\n' +
-[1]     '             FROM assignments a\n' +
-[1]     '             JOIN subject_allocations sa ON a.subject_allocation_id = sa.id\n' +
-[1]     '             JOIN subjects s ON sa.subject_id = s.id\n' +
-[1]     '             JOIN sections sec ON sa.section_id = sec.id\n' +
-[1]     '             JOIN batches b ON sec.batch_id = b.id\n' +
-[1]     '             LEFT JOIN users u ON sa.faculty_id = u.id\n' +
-[1]     '             LEFT JOIN assignment_submissions asub ON a.id = asub.assignment_id AND asub.student_id = 6\n' +
-[1]     '             WHERE sa.section_id = 2\n' +
-[1]     '               AND sa.is_active = TRUE\n' +
-[1]     '               AND s.semester = b.current_semester\n' +
-[1]     '             ORDER BY a.due_date ASC',
-[1]   sqlState: '42S22',
-[1]   sqlMessage: "Unknown column 'asub.score' in 'field list'"
-[1] }
-
-
-     at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
-[1]   code: 'ER_BAD_FIELD_ERROR',
-[1]   errno: 1054,
-[1]   sql: 'UPDATE od_requests \n' +
-[1]     "            SET status = 'rejected', approved_by = 'Tutor', approver_id = 2, rejection_reason = 'ejected', approved_at = NOW() \n" +
-[1]     "            WHERE id = '2'",
-[1]   sqlState: '42S22',
-[1]   sqlMessage: "Unknown column 'approved_by' in 'field list'"
-[1] }
+CREATE TABLE `subject_syllabus` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `subject_id` INT NOT NULL,
+    `faculty_id` INT NOT NULL,
+    `file_url` VARCHAR(500) NOT NULL,
+    `original_filename` VARCHAR(255),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`faculty_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_subject_faculty` (`subject_id`, `faculty_id`)
+);
