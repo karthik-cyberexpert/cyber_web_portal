@@ -30,17 +30,72 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { getResources, Resource } from '@/lib/data-store';
+import { API_BASE_URL } from '@/lib/api-config';
+
+interface NoteResource {
+  id: number;
+  title: string;
+  type: string;
+  subject_name: string;
+  subject_code: string;
+  faculty_name: string;
+  download_count: number;
+  batch_name: string;
+  batch_id: number;
+  semester: number;
+}
+
+interface Batch {
+  id: number;
+  name: string;
+}
 
 export default function NotesAnalytics() {
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
-  const [resources, setResources] = useState<Resource[]>([]);
+  const [resources, setResources] = useState<NoteResource[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    setResources(getResources());
+    fetchBatches();
   }, []);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [selectedBatch]);
+
+  const fetchBatches = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/academic/batches`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBatches(data);
+      }
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+    }
+  };
+
+  const fetchNotes = async () => {
+    try {
+      const url = selectedBatch === 'all' 
+        ? `${API_BASE_URL}/notes/analytics`
+        : `${API_BASE_URL}/notes/analytics?batchId=${selectedBatch}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResources(data);
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  };
 
   // Filter resources based on viewMode (Mock logic: Assuming all are current for now, but adding structure)
   const filteredResources = resources.filter(r => {
@@ -52,12 +107,12 @@ export default function NotesAnalytics() {
   const totalNotes = filteredResources.filter(r => r.type === 'Note').length;
   const totalQPs = filteredResources.filter(r => r.type === 'QP').length;
   const totalManuals = filteredResources.filter(r => r.type === 'Manual').length;
-  const totalDownloads = filteredResources.reduce((acc, curr) => acc + curr.downloads, 0);
+  const totalDownloads = filteredResources.reduce((acc, curr) => acc + (curr.download_count || 0), 0);
 
   const subjectStats = filteredResources.reduce((acc: any[], curr) => {
-    const existing = acc.find(s => s.subjectCode === curr.subjectCode);
+    const existing = acc.find(s => s.subjectCode === curr.subject_code);
     if (!existing) {
-        acc.push({ subject: curr.subject, subjectCode: curr.subjectCode, uploaded: 1, total: 5, faculty: curr.facultyName });
+        acc.push({ subject: curr.subject_name, subjectCode: curr.subject_code, uploaded: 1, total: 5, faculty: curr.faculty_name });
     } else {
         existing.uploaded += 1;
     }
@@ -113,6 +168,9 @@ export default function NotesAnalytics() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
+              {batches.map(batch => (
+                <SelectItem key={batch.id} value={String(batch.id)}>{batch.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
