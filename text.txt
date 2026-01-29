@@ -1,1 +1,8 @@
-Error Code: 1553. Cannot drop index 'unique_section_slot': needed in a foreign key constraint
+PS C:\Projects\cyber_web_portal> cd server
+PS C:\Projects\cyber_web_portal\server> npx tsx verify_500.ts
+Checking Server Health...
+Health Check Failed: fetch failed
+
+Checking Database Connection...
+Database Connection Failed: Access denied for user 'root'@'localhost' (using password: NO)
+PS C:\Projects\cyber_web_portal\server>
