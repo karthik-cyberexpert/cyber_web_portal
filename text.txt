@@ -1,3 +1,1 @@
-ALTER TABLE faculty_profiles 
-ADD COLUMN employment_type ENUM('Full-Time', 'Part-Time', 'Contract', 'Guest') DEFAULT 'Full-Time' AFTER joining_date,
-ADD COLUMN current_status ENUM('Active', 'On Leave', 'Resigned') DEFAULT 'Active' AFTER employment_type;
+npm install google-auth-library

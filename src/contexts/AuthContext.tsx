@@ -10,6 +10,7 @@ interface AuthContextType {
   token: string | null;
   requiresPasswordChange: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (credential: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
   setRequiresPasswordChange: (value: boolean) => void;
@@ -82,6 +83,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (credential: string): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credential })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStoredAuth({ 
+          user: data.user, 
+          isAuthenticated: true, 
+          requiresPasswordChange: false 
+        });
+        setAuthState({ 
+          user: data.user, 
+          isAuthenticated: true,
+          requiresPasswordChange: false
+        });
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+        
+        const dashboardPath = getRoleDashboardPath(data.user.role);
+        navigate(dashboardPath);
+        
+        setIsLoading(false);
+        return { success: true };
+      } else {
+        setIsLoading(false);
+        return { success: false, error: data.message || 'Google login failed' };
+      }
+    } catch (error) {
+      console.error('Google Login API error:', error);
+      setIsLoading(false);
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  };
+
   const logout = () => {
     clearStoredAuth();
     localStorage.removeItem('token');
@@ -118,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         requiresPasswordChange,
         login,
+        loginWithGoogle,
         logout,
         updateUser,
         setRequiresPasswordChange: setRequiresPasswordChangePersistent,
