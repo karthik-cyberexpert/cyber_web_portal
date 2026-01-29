@@ -317,6 +317,7 @@ CREATE TABLE `assignment_submissions` (
     `file_url` VARCHAR(500) NOT NULL,
     `submitted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `status` ENUM('submitted', 'late', 'graded') DEFAULT 'submitted',
+    `score` INT,
     `grade` VARCHAR(10),
     `feedback` TEXT,
     FOREIGN KEY (`assignment_id`) REFERENCES `assignments`(`id`) ON DELETE CASCADE,

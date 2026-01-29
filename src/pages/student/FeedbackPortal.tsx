@@ -19,6 +19,7 @@ interface StudentFeedbackItem {
   type: 'faculty' | 'other';
   closing_date: string;
   status: 'Open' | 'Closed';
+  is_completed?: number;
 }
 
 interface Question {
@@ -161,6 +162,10 @@ export default function FeedbackPortalStudent() {
 
           if (res.ok) {
               toast.success("Feedback submitted successfully!");
+              // Update local state to mark this feedback as completed immediately
+              setFeedbacks(prev => prev.map(f => 
+                  f.id === activeFeedbackId ? { ...f, is_completed: 1 } : f
+              ));
               setActiveFeedbackId(null);
           } else {
               toast.error("Submission failed");
