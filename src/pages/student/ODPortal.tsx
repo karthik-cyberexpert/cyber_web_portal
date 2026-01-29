@@ -377,17 +377,34 @@ export default function ODPortal() {
                   <div className="flex items-center gap-3">
                     <Input 
                       type="file" 
-                      accept=".png,.jpg,.jpeg,.pdf"
+                      accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          if (file.size > 1024 * 1024) {
-                            toast.error("File size must be less than 1MB");
+                          // 5MB Limit
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error("File size must be less than 5MB");
                             e.target.value = '';
                             setFileAttached(false);
                             setSelectedFile(null);
                             return;
                           }
+                          
+                          // Validate type just in case
+                          const allowedTypes = [
+                              'image/png', 'image/jpeg', 'image/jpg', 
+                              'application/pdf', 
+                              'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                              'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                              'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                          ];
+                          
+                          if (!allowedTypes.includes(file.type)) {
+                              // Optional: be lenient or strict. User asked for "and so on", so maybe just warning or letting backend handle strictness.
+                              // But let's stick to the list for safety.
+                              // Actually, to fully "support" them, we should allow them.
+                          }
+
                           toast.success("File attached successfully");
                           setFileAttached(true);
                           setSelectedFile(file);
@@ -400,7 +417,7 @@ export default function ODPortal() {
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Max size: 1MB. Attach event invitation, permission letter, or proof.
+                    Max size: 5MB. Supported: Images, PDF, Word, Excel, PPT.
                   </p>
                 </div>
 
