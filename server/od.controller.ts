@@ -166,7 +166,7 @@ export async function getAdminODRequests(req: Request, res: Response) {
                     od.admin_id as adminId, 
                     od.rejection_reason as rejectionReason,
                     u.name as user_name, sp.roll_number, sp.batch_id, sp.section_id, b.current_semester,
-                    b.name as batch_name, t.name as tutor_name
+                    b.name as batch_name, t.name as forwarded_by_name
             FROM od_requests od
             JOIN users u ON od.user_id = u.id
             JOIN student_profiles sp ON od.user_id = sp.user_id
