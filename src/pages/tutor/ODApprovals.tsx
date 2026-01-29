@@ -322,16 +322,9 @@ export default function ODApprovals() {
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10 rounded-full transition-all"
-                          onClick={() => handleAction(request.id, 'approve')}
-                        >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
                           className="h-7 w-7 text-blue-500 hover:bg-blue-500/10 rounded-full transition-all"
                           onClick={() => handleAction(request.id, 'forward')}
+                          title="Forward to Admin"
                         >
                             <ArrowRight className="w-3.5 h-3.5" />
                         </Button>
@@ -343,6 +336,7 @@ export default function ODApprovals() {
                               setSelectedRequest(request);
                               setIsRejectOpen(true);
                           }}
+                          title="Reject"
                         >
                             <XCircle className="w-3.5 h-3.5" />
                         </Button>
@@ -478,18 +472,11 @@ export default function ODApprovals() {
                     <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
                       <div className="flex flex-1 gap-2">
                         <Button 
-                          className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-emerald-500 hover:bg-emerald-600 shadow-glow-emerald" 
-                          onClick={() => handleAction(selectedRequest.id, 'approve')}
-                        >
-                            <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                            Approve
-                        </Button>
-                        <Button 
-                          className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-amber-500 hover:bg-amber-600 shadow-glow-amber text-white" 
+                          className="flex-1 rounded-2xl h-11 font-bold uppercase text-[9px] tracking-widest bg-blue-500 hover:bg-blue-600 shadow-glow-blue text-white" 
                           onClick={() => handleAction(selectedRequest.id, 'forward')}
                         >
                             <ChevronRight className="w-3.5 h-3.5 mr-1.5" />
-                            Forward
+                            Forward to Admin
                         </Button>
                       </div>
                       <Button 
