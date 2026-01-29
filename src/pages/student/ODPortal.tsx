@@ -62,6 +62,7 @@ export default function ODPortal() {
   });
 
   const [fileAttached, setFileAttached] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,9 +125,8 @@ export default function ODPortal() {
         formDataToSend.append('session', formData.durationType);
 
         // Append file if exists
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput?.files?.[0]) {
-            formDataToSend.append('file', fileInput.files[0]);
+        if (selectedFile) {
+            formDataToSend.append('file', selectedFile);
         }
 
         // Call backend API
@@ -385,12 +385,15 @@ export default function ODPortal() {
                             toast.error("File size must be less than 1MB");
                             e.target.value = '';
                             setFileAttached(false);
+                            setSelectedFile(null);
                             return;
                           }
                           toast.success("File attached successfully");
                           setFileAttached(true);
+                          setSelectedFile(file);
                         } else {
                             setFileAttached(false);
+                            setSelectedFile(null);
                         }
                       }}
                       className="bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-success/10 file:text-success hover:file:bg-success/20" 
