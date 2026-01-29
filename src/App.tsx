@@ -14,6 +14,13 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Public Pages
+// Public Pages
+import LandingPage from "@/pages/LandingPage";
+import AboutPage from "@/pages/public/AboutPage";
+import FacilitiesPage from "@/pages/public/FacilitiesPage";
+import AcademicsPage from "@/pages/public/AcademicsPage";
+import ProjectsPage from "@/pages/public/ProjectsPage";
+import ContactPage from "@/pages/public/ContactPage";
 import LoginPage from "@/pages/LoginPage";
 import SetPassword from "@/pages/SetPassword";
 import NotFound from "@/pages/NotFound";
@@ -114,7 +121,12 @@ const App = () => {
           <AuthProvider>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/facilities" element={<FacilitiesPage />} />
+              <Route path="/academics" element={<AcademicsPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/set-password" element={<SetPassword />} />
               
