@@ -136,6 +136,8 @@ CREATE TABLE `faculty_profiles` (
     `specialization` VARCHAR(255),
     `experience_years` INT DEFAULT 0,
     `joining_date` DATE,
+    `employment_type` ENUM('Full-Time', 'Part-Time', 'Contract', 'Guest') DEFAULT 'Full-Time',
+    `current_status` ENUM('Active', 'On Leave', 'Resigned') DEFAULT 'Active',
     `cabin_location` VARCHAR(100),
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`department_id`) REFERENCES `departments`(`id`) ON DELETE SET NULL
