@@ -235,12 +235,24 @@ export async function rejectODRequest(req: Request, res: Response) {
         
         console.log(`[REJECT DEBUG] Processing OD rejection for ID ${id}. Raw Status: "${request.status}", Trimmed: "${currentStatus}", IsCancellation: ${isCancellationReject}, New Status: "${newStatus}"`);
 
-        await pool.query(
-            `UPDATE od_requests 
-            SET status = ?, approved_by = ?, approver_id = ?, rejection_reason = ?, approved_at = NOW() 
-            WHERE id = ?`,
-            [newStatus, userId === 1 ? 'Admin' : 'Tutor', userId, rejection_reason, id]
-        );
+        // Determine if user is admin or tutor based on role
+        const role = (req as any).user.role;
+        
+        if (role === 'admin') {
+            await pool.query(
+                `UPDATE od_requests 
+                SET status = ?, admin_id = ?, rejection_reason = ? 
+                WHERE id = ?`,
+                [newStatus, userId, rejection_reason, id]
+            );
+        } else {
+            await pool.query(
+                `UPDATE od_requests 
+                SET status = ?, tutor_id = ?, rejection_reason = ? 
+                WHERE id = ?`,
+                [newStatus, userId, rejection_reason, id]
+            );
+        }
 
         res.json({ message: 'OD request processed' });
 
