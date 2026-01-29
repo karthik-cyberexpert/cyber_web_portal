@@ -166,16 +166,22 @@ export const updatePassword = async (req: Request | any, res: Response) => {
 
 
 // Google Login
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID');
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const client = new OAuth2Client(googleClientId);
 
 export const googleLogin = async (req: Request, res: Response) => {
   const { token } = req.body;
+
+  if (!googleClientId) {
+    console.error('[AUTH] GOOGLE_CLIENT_ID is not defined in server environment variables.');
+    return res.status(500).json({ message: 'Server configuration error' });
+  }
 
   try {
     console.log('[AUTH] Verifying Google Token...');
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
+      audience: googleClientId,
     });
     
     const payload = ticket.getPayload();
