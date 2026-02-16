@@ -1,0 +1,1 @@
+'12', 'admin@css.com', 'Admin CSS', '$2b$10$z3xbQdlmFOi/h2/8AfWk1eaUj02j3GHzZW/bAcOukyB1TpGRf5rEK', 'admin', NULL, NULL, NULL, '1', '1', NULL, '2026-01-22 21:31:50', '2026-01-22 21:47:37'
