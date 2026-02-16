@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3007;
+const PORT = process.env.VITE_BACKEND_PORT || process.env.PORT || 3007;
 
 console.log(`Starting Server... Time: ${new Date().toISOString()}`);
 console.log(`[INIT] Environment: ${process.env.NODE_ENV || 'development'}`);

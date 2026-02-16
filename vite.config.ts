@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 // @ts-ignore - No type declarations available
@@ -63,26 +63,29 @@ const logErrorsPlugin = () => ({
 });
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: true,  // Listen on all network interfaces
-    port: 3000,
-    proxy: {
-    '/api': {
-        target: 'http://localhost:3007',
-        changeOrigin: true,
-        secure: false,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
+    server: {
+      host: true,  // Listen on all network interfaces
+      port: Number(env.VITE_FRONTEND_PORT) || 3000,
+      proxy: {
+        '/api': {
+          target: `http://localhost:${env.VITE_BACKEND_PORT || 3007}`,
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
+    plugins: [
+      react(),
+      logErrorsPlugin(),
+      mode === 'development' && componentTaggerPlugin(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  plugins: [
-    react(),
-    logErrorsPlugin(),
-    mode === 'development' && componentTaggerPlugin(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-}));
+  };
+});
