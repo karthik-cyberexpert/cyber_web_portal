@@ -550,6 +550,8 @@ export default function ManageStudents() {
       } catch (error) {
         console.error("Error parsing file:", error);
         toast.error("Failed to parse the file. Please check the format.");
+      } finally {
+        setIsUploading(false);
       }
     };
 
@@ -567,42 +569,48 @@ export default function ManageStudents() {
     let addedCount = 0;
     let errorCount = 0;
 
-    for (const row of validRows) {
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE_URL}/students`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: row['Full Name'],
-                    roll_number: row['Roll Number'],
-                    register_number: row['Roll Number'],
-                    email: row['Email'],
-                    phone: row['Phone'] || '',
-                    batch_id: row.mappedBatchId,
-                    section_id: row.mappedSectionId,
-                    dob: '2000-01-01',
-                    gender: row['Gender'] || 'Not Specified',
-                })
-            });
-            
-            if (res.ok) addedCount++;
-            else errorCount++;
-        } catch (e) {
-            errorCount++;
+    try {
+        for (const row of validRows) {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_BASE_URL}/students`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: row['Full Name'],
+                        roll_number: row['Roll Number'],
+                        register_number: row['Roll Number'],
+                        email: row['Email'],
+                        phone: row['Phone'] || '',
+                        batch_id: row.mappedBatchId,
+                        section_id: row.mappedSectionId,
+                        dob: '2000-01-01',
+                        gender: row['Gender'] || 'Not Specified',
+                    })
+                });
+                
+                if (res.ok) addedCount++;
+                else errorCount++;
+            } catch (e) {
+                errorCount++;
+            }
         }
-    }
 
-    setIsUploading(false);
-    setShowPreview(false);
-    setPreviewData([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    fetchData();
-    toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
-    setIsBulkUploadModalOpen(false);
+        setShowPreview(false);
+        setPreviewData([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        fetchData();
+        toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
+        setIsBulkUploadModalOpen(false);
+    } catch (criticalError) {
+        console.error("Critical error during bulk upload:", criticalError);
+        toast.error("A critical error occurred during upload.");
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   return (
