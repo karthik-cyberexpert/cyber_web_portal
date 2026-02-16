@@ -104,7 +104,7 @@ export default function LeavePortal() {
     }
 
     // Conditional File Upload Validation
-    if (formData.type !== 'Casual' && !fileAttached) {
+    if (['Sick', 'Medical'].includes(formData.type) && !fileAttached) {
         toast.error(`Document attachment is required for ${formData.type}`);
         return;
     }
@@ -199,7 +199,7 @@ export default function LeavePortal() {
   };
 
   const isGraduated = studentData?.status === 'Graduated';
-  const isFileUploadRequired = formData.type !== 'Casual';
+  const isFileUploadRequired = ['Sick', 'Medical'].includes(formData.type);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

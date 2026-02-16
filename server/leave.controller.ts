@@ -78,6 +78,8 @@ export async function createLeaveRequest(req: Request, res: Response) {
         let fileUrl = null;
         if (req.file) {
             fileUrl = getFileUrl(req.file.path);
+        } else if (['Sick', 'Medical'].includes(category)) {
+             return res.status(400).json({ error: `Document attachment is required for ${category} leave` });
         }
 
 
@@ -407,7 +409,7 @@ export async function adminRevokeLeaveRequest(req: Request, res: Response) {
 
         await pool.query(
             `UPDATE leave_requests 
-            SET status = 'pending_admin', approved_by = NULL, approver_id = NULL, approved_at = NULL, rejection_reason = NULL 
+            SET status = 'forwarded_to_admin', admin_id = NULL, rejection_reason = NULL 
             WHERE id = ?`,
             [id]
         );
@@ -426,7 +428,7 @@ export async function tutorRevokeLeaveRequest(req: Request, res: Response) {
         console.log('[TUTOR REVOKE] Request ID:', id);
 
         // Check if leave has already started and is NOT forwarded
-        const [requests]: any = await pool.query('SELECT start_date, status, working_days, approved_by FROM leave_requests WHERE id = ?', [id]);
+        const [requests]: any = await pool.query('SELECT start_date, status, working_days, admin_id FROM leave_requests WHERE id = ?', [id]);
         console.log('[TUTOR REVOKE] Request found:', requests);
         
         if (requests.length === 0) {
@@ -436,11 +438,11 @@ export async function tutorRevokeLeaveRequest(req: Request, res: Response) {
         const request = requests[0];
         console.log('[TUTOR REVOKE] Request details:', request);
         
-        if (request.status === 'pending_admin' || request.status === 'forwarded_to_admin') {
+        if (request.status === 'forwarded_to_admin') {
             return res.status(400).json({ error: 'Cannot revoke a request that has been forwarded to admin' });
         }
 
-        if (request.approved_by === 'Admin') {
+        if (request.admin_id) {
             return res.status(400).json({ error: 'Cannot revoke a request approved by Admin' });
         }
 
