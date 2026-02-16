@@ -25,7 +25,12 @@ import adminRoutes from './admin.routes.js';
 import academicRoutes from './academic.routes.js';
 import studentRoutes from './student.routes.js';
 
-app.use(cors());
+app.use(cors({
+  origin: true, // Reflect request origin to allow any network IP
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json());
 
 // Request Logger

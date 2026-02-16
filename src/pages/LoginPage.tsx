@@ -287,7 +287,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center w-full">
                <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     if (credentialResponse.credential) {
@@ -298,11 +298,11 @@ export default function LoginPage() {
                     }
                   }}
                   onError={() => {
-                    setError('Google Login Failed');
+                    console.warn('Google Login likely failed due to unauthorized origin (Local Network IP)');
+                    setError('Google Login not available for this network address. Please use email/password.');
                   }}
-                  useOneTap
                   theme={theme === 'dark' ? 'filled_black' : 'outline'}
-                  shape="circle"
+                  shape="pill"
                   width="100%"
                 />
             </div>
