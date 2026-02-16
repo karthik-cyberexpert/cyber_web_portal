@@ -10,6 +10,7 @@ import {
 } from './leave-od.utils.js';
 import { getFileUrl } from './upload.config.js';
 import { canApplyCasualLeave } from './attendance.utils.js';
+import { sendApprovalEmail } from './email.utils.js';
 
 // Create a new leave request (Student)
 export async function createLeaveRequest(req: Request, res: Response) {
@@ -250,6 +251,15 @@ export async function approveLeaveRequest(req: Request, res: Response) {
                 `Your leave request for ${new Date(request.start_date).toLocaleDateString()} to ${new Date(request.end_date).toLocaleDateString()} has been approved by Tutor.`,
                 '/student/leave'
             );
+            
+            // Send Email Notification (Non-blocking)
+            pool.query('SELECT email, name FROM users WHERE id = ?', [request.user_id])
+                .then(([users]: any) => {
+                    if (users.length > 0) {
+                        sendApprovalEmail(users[0].email, users[0].name, 'Leave', 'Approved', request.start_date, request.end_date)
+                            .catch(err => console.error('[EMAIL] Background error:', err));
+                    }
+                });
         }
     } catch (error: any) {
         console.error('Error approving leave request:', error);
@@ -382,6 +392,15 @@ export async function adminApproveLeaveRequest(req: Request, res: Response) {
                 `Your leave request for ${new Date(request.start_date).toLocaleDateString()} has been approved by Admin.`,
                 '/student/leave'
             );
+            
+            // Send Email Notification (Non-blocking)
+            pool.query('SELECT email, name FROM users WHERE id = ?', [request.user_id])
+                .then(([users]: any) => {
+                    if (users.length > 0) {
+                        sendApprovalEmail(users[0].email, users[0].name, 'Leave', 'Approved', request.start_date, request.end_date)
+                            .catch(err => console.error('[EMAIL] Background error:', err));
+                    }
+                });
         }
     } catch (error: any) {
         console.error('Error approving leave request:', error);

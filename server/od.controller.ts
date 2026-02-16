@@ -8,6 +8,7 @@ import {
     checkExamDatesInRange
 } from './leave-od.utils.js';
 import { getFileUrl } from './upload.config.js';
+import { sendApprovalEmail } from './email.utils.js';
 
 // Create a new OD request (Student)
 export async function createODRequest(req: Request, res: Response) {
@@ -315,6 +316,15 @@ export async function adminApproveODRequest(req: Request, res: Response) {
                 `Your OD request for ${new Date(request.start_date).toLocaleDateString()} has been approved by Admin.`,
                 '/student/od'
             );
+            
+            // Send Email Notification (Non-blocking)
+            pool.query('SELECT email, name FROM users WHERE id = ?', [request.user_id])
+                .then(([users]: any) => {
+                    if (users.length > 0) {
+                        sendApprovalEmail(users[0].email, users[0].name, 'OD', 'Approved', request.start_date, request.end_date)
+                            .catch(err => console.error('[EMAIL] Background error:', err));
+                    }
+                });
         }
     } catch (error: any) {
         console.error('Error approving OD request:', error);

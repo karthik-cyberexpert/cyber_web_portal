@@ -3,6 +3,7 @@ import { pool } from './db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+import { sendLoginEmail } from './email.utils.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
 
@@ -64,6 +65,10 @@ export const login = async (req: Request, res: Response) => {
     );
 
     console.log(`[AUTH] Returning user with effective role: ${effectiveRole}`);
+    
+    // Send Login Notification Email (Non-blocking)
+    sendLoginEmail(user.email, user.name).catch(err => console.error('[EMAIL] Background error:', err));
+
     res.json({
       token: accessToken,
       user: {
@@ -221,6 +226,9 @@ export const googleLogin = async (req: Request, res: Response) => {
       JWT_SECRET,
       { expiresIn: '12h' }
     );
+
+    // Send Login Notification Email (Non-blocking)
+    sendLoginEmail(user.email, user.name).catch(err => console.error('[EMAIL] Background error:', err));
 
     res.json({
       token: accessToken,
