@@ -498,9 +498,10 @@ export default function ManageStudents() {
             // Map Batch
             let batchId = row['Batch ID'];
             if (!batchId && row['Batch']) {
-                const match = batches.find((b: any) => b.name === row['Batch']);
+                const batchName = String(row['Batch']).trim().toLowerCase().replace('batch', '').trim();
+                const match = batches.find((b: any) => b.name.trim().toLowerCase().replace('batch', '').trim() === batchName);
                 if (match) batchId = match.id;
-                else errors.push(`Invalid Batch: ${row['Batch']}`);
+                else errors.push(`Invalid Batch: "${row['Batch']}"`);
             }
             if (!batchId) {
                 batchId = batchFilter !== 'all' ? Number(batchFilter) : (batches[0]?.id || 5);
@@ -509,9 +510,10 @@ export default function ManageStudents() {
             // Map Section
             let sectionId = row['Section ID'];
             if (!sectionId && row['Section']) {
-                const match = sections.find((s: any) => s.name === row['Section']);
+                const sectionName = String(row['Section']).trim().toLowerCase().replace('section', '').trim();
+                const match = sections.find((s: any) => s.name.trim().toLowerCase().replace('section', '').trim() === sectionName);
                 if (match) sectionId = match.id;
-                else errors.push(`Invalid Section: ${row['Section']}`);
+                else errors.push(`Invalid Section: "${row['Section']}"`);
             }
             if (!sectionId) {
                 sectionId = sectionFilter !== 'all' ? Number(sectionFilter) : (sections[0]?.id || 5);
@@ -1218,17 +1220,22 @@ export default function ManageStudents() {
                                             <p className="text-[10px] text-muted-foreground mt-0.5">Section {row['Section'] || 'A'}</p>
                                         </td>
                                         <td className="p-3">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col gap-1">
                                                 {row.status === 'Good' ? (
-                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-medium border border-success/20">
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 w-fit rounded-full bg-success/10 text-success text-[10px] font-medium border border-success/20">
                                                         <CheckCircle2 className="w-3 h-3" />
                                                         Good
                                                     </span>
                                                 ) : (
-                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-medium border border-destructive/20" title={row.reason}>
-                                                        <XCircle className="w-3 h-3" />
-                                                        Fail
-                                                    </span>
+                                                    <>
+                                                        <span className="flex items-center gap-1.5 px-2 py-0.5 w-fit rounded-full bg-destructive/10 text-destructive text-[10px] font-medium border border-destructive/20">
+                                                            <XCircle className="w-3 h-3" />
+                                                            Fail
+                                                        </span>
+                                                        <p className="text-[10px] text-destructive font-medium mt-1 leading-tight">
+                                                            {row.reason}
+                                                        </p>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
