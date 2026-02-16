@@ -75,7 +75,9 @@ export default function SemesterDatePopup({ batch, onSave, onClose, readOnly = f
   };
 
   return (
-    <Dialog open={true} onOpenChange={() => onClose()}>
+    <Dialog open={true} onOpenChange={(open) => {
+      if (!open && onClose) onClose();
+    }}>
       <DialogContent className="sm:max-w-md glass-card border-white/10">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">

@@ -253,6 +253,7 @@ export default function AdminDashboard() {
         <SemesterDatePopup 
           batch={currentPendingBatch} 
           onSave={handleSemesterDateSaved}
+          onClose={() => setCurrentPendingBatch(null)}
         />
       )}
       

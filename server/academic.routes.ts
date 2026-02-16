@@ -20,7 +20,7 @@ router.delete('/sections/:id', authenticateToken, deleteSection);
 
 // Semester Management Routes
 router.get('/pending-semester-updates', authenticateToken, getPendingSemesterUpdates);
-router.post('/batches/:id/semester-dates', authenticateToken, setSemesterDates);
+router.put('/batches/:id/semester-dates', authenticateToken, setSemesterDates);
 
 // Subject Routes
 import { 
