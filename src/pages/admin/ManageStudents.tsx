@@ -159,11 +159,15 @@ export default function ManageStudents() {
           const resAllSections = await fetch(`${API_BASE_URL}/academic/sections`, { headers });
           if (resAllSections.ok) {
               const data = await resAllSections.json();
+              console.log("[DEBUG] All Sections Fetched:", data);
               setAllSections(data);
+          } else {
+              console.warn("[DEBUG] Failed to fetch all sections:", resAllSections.status);
+              toast.error("Format mapping might fail: Sections could not be loaded");
           }
 
       } catch (error) {
-          console.error("Failed to fetch data", error);
+          console.error("[DEBUG] Failed to fetch data", error);
           toast.error("Failed to load data");
       }
   };
@@ -519,10 +523,16 @@ export default function ManageStudents() {
             if (!sectionId && row['Section']) {
                 const sectionName = String(row['Section']).trim().toLowerCase().replace('section', '').trim();
                 const match = allSections.find((s: any) => s.name.trim().toLowerCase().replace('section', '').trim() === sectionName);
-                if (match) sectionId = match.id;
-                else errors.push(`Invalid Section: "${row['Section']}"`);
+                if (match) {
+                    sectionId = match.id;
+                    console.log(`[DEBUG] Mapped Section "${row['Section']}" to ID ${sectionId}`);
+                } else {
+                    errors.push(`Invalid Section: "${row['Section']}"`);
+                    console.warn(`[DEBUG] Failed to map Section "${row['Section']}". Available sections:`, allSections.map(s => s.name));
+                }
             }
             if (!sectionId) {
+                console.log("[DEBUG] No Section ID/Name provided, falling back to filter or default");
                 sectionId = sectionFilter !== 'all' ? Number(sectionFilter) : (allSections[0]?.id || 5);
             }
 

@@ -2,7 +2,7 @@ import express from 'express';
 import { 
   getBatches, createBatch, getSections, createSection, 
   updateBatch, deleteBatch, updateSection, deleteSection,
-  getPendingSemesterUpdates, setSemesterDates
+  getPendingSemesterUpdates, setSemesterDates, getAllSections
 } from './academic.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 
@@ -11,6 +11,7 @@ const router = express.Router();
 router.get('/batches', authenticateToken, getBatches);
 router.post('/batches', authenticateToken, createBatch);
 router.get('/batches/:batchId/sections', authenticateToken, getSections);
+router.get('/sections', authenticateToken, getAllSections); // New route for all sections
 router.post('/sections', authenticateToken, createSection);
 router.put('/batches/:id', authenticateToken, updateBatch);
 router.delete('/batches/:id', authenticateToken, deleteBatch);

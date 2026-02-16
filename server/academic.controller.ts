@@ -95,6 +95,17 @@ export const getSections = async (req: Request, res: Response) => {
   }
 };
 
+// Get All Sections (Master List)
+export const getAllSections = async (req: Request, res: Response) => {
+  try {
+    const [rows]: any = await pool.query('SELECT * FROM sections ORDER BY name ASC');
+    res.json(rows);
+  } catch (error: any) {
+    console.error('Get All Sections Error:', error);
+    res.status(500).json({ message: 'Error fetching all sections' });
+  }
+};
+
 // Create Section
 export const createSection = async (req: Request, res: Response) => {
   const { batch_id, name } = req.body;
