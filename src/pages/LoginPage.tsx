@@ -15,8 +15,10 @@ import {
   Moon,
   ChevronRight,
   Mail,
-  Lock
+  Lock,
+  ArrowLeft
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function LoginPage() {
   const { login, loginWithGoogle, isLoading } = useAuth();
@@ -42,7 +44,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-pattern">
+    <div className="min-h-screen flex bg-pattern relative">
+      {/* Back Button */}
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="absolute top-6 left-6 z-50"
+      >
+        <Link to="/">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full pr-6"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold uppercase tracking-widest text-[10px]">Back to Home</span>
+          </Button>
+        </Link>
+      </motion.div>
       {/* Left Panel - Branding */}
       <motion.div 
         initial={{ opacity: 0, x: -50 }}
@@ -52,7 +70,7 @@ export default function LoginPage() {
       >
         <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
         
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-between pt-24 px-12 pb-12 text-white">
           <div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -64,8 +82,8 @@ export default function LoginPage() {
                 <GraduationCap className="w-10 h-10" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">ACE-HOSUR</h2>
-                <p className="text-white/80 text-sm">Academic Management System</p>
+                <h2 className="text-xl font-bold">Cyber Security Academic Portal</h2>
+                <p className="text-white/80 text-sm">ACE-HOSUR</p>
               </div>
             </motion.div>
           </div>
@@ -77,11 +95,11 @@ export default function LoginPage() {
               transition={{ delay: 0.4 }}
               className="text-5xl font-bold mb-6 leading-tight"
             >
+              Secure
+              <br />
               Academic
               <br />
-              Management
-              <br />
-              System
+              Portal
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 30 }}
@@ -89,8 +107,7 @@ export default function LoginPage() {
               transition={{ delay: 0.5 }}
               className="text-xl text-white/90 max-w-md"
             >
-              Manage your academic institution efficiently 
-              with our comprehensive management system.
+              The unified digital gateway for students and faculty of the CSE Cyber Security department.
             </motion.p>
           </div>
 
@@ -139,7 +156,7 @@ export default function LoginPage() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-6 right-6"
+          className="absolute top-6 right-6 z-50"
         >
           <Button
             variant="glass"

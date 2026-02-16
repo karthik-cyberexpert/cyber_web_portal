@@ -21,7 +21,9 @@ import {
   Lock,
   Upload, 
   FileSpreadsheet,
-  KeyRound
+  KeyRound,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +103,8 @@ export default function ManageStudents() {
   // Bulk Upload State
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -485,67 +489,101 @@ export default function ManageStudents() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
 
-        let addedCount = 0;
-        let errorCount = 0;
+        const validatedRows = data.map((row: any) => {
+            const errors = [];
+            if (!row['Full Name']) errors.push('Missing Name');
+            if (!row['Roll Number']) errors.push('Missing Roll Number');
+            if (!row['Email']) errors.push('Missing Email');
 
-        // Process in chunks or sequentially
-        const uploadStudents = async () => {
-             for (const row of data as any[]) {
-                // Basic validation
-                if (!row['Full Name'] || !row['Roll Number'] || !row['Email']) {
-                  errorCount++;
-                  continue;
-                }
+            // Map Batch
+            let batchId = row['Batch ID'];
+            if (!batchId && row['Batch']) {
+                const match = batches.find((b: any) => b.name === row['Batch']);
+                if (match) batchId = match.id;
+                else errors.push(`Invalid Batch: ${row['Batch']}`);
+            }
+            if (!batchId) {
+                batchId = batchFilter !== 'all' ? Number(batchFilter) : (batches[0]?.id || 5);
+            }
 
-                try {
-                    const token = localStorage.getItem('token');
-                    const res = await fetch(`${API_BASE_URL}/students`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            name: row['Full Name'],
-                            roll_number: row['Roll Number'],
-                            register_number: row['Roll Number'], // Sync with Roll Number
-                            email: row['Email'],
-                            phone: row['Phone'] || '',
-                            batch_id: row['Batch ID'] || 1, 
-                            section_id: row['Section ID'] || 1, 
-                            dob: '2000-01-01', 
-                            gender: row['Gender'] || 'Not Specified',
-                            // Add other fields as necessary mapped from Excel
-                        })
-                    });
-                    
-                    if (res.ok) addedCount++;
-                    else errorCount++;
-                } catch (e) {
-                    errorCount++;
-                }
-             }
-             
-             setIsUploading(false);
-             if (fileInputRef.current) fileInputRef.current.value = '';
-             fetchData();
-             toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
-             setIsBulkUploadModalOpen(false);
-        };
-        
-        uploadStudents();
+            // Map Section
+            let sectionId = row['Section ID'];
+            if (!sectionId && row['Section']) {
+                const match = sections.find((s: any) => s.name === row['Section']);
+                if (match) sectionId = match.id;
+                else errors.push(`Invalid Section: ${row['Section']}`);
+            }
+            if (!sectionId) {
+                sectionId = sectionFilter !== 'all' ? Number(sectionFilter) : (sections[0]?.id || 5);
+            }
+
+            return {
+                ...row,
+                mappedBatchId: batchId,
+                mappedSectionId: sectionId,
+                status: errors.length === 0 ? 'Good' : 'Fail',
+                reason: errors.join(', ')
+            };
+        });
+
+        setPreviewData(validatedRows);
+        setShowPreview(true);
       } catch (error) {
         console.error("Error parsing file:", error);
         toast.error("Failed to parse the file. Please check the format.");
-      } finally {
-        setIsUploading(false);
-        if (fileInputRef.current) {
-           fileInputRef.current.value = '';
-        }
       }
     };
 
     reader.readAsBinaryString(file);
+  };
+
+  const confirmBulkUpload = async () => {
+    const validRows = previewData.filter(r => r.status === 'Good');
+    if (validRows.length === 0) {
+        toast.error("No valid rows to upload");
+        return;
+    }
+
+    setIsUploading(true);
+    let addedCount = 0;
+    let errorCount = 0;
+
+    for (const row of validRows) {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/students`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: row['Full Name'],
+                    roll_number: row['Roll Number'],
+                    register_number: row['Roll Number'],
+                    email: row['Email'],
+                    phone: row['Phone'] || '',
+                    batch_id: row.mappedBatchId,
+                    section_id: row.mappedSectionId,
+                    dob: '2000-01-01',
+                    gender: row['Gender'] || 'Not Specified',
+                })
+            });
+            
+            if (res.ok) addedCount++;
+            else errorCount++;
+        } catch (e) {
+            errorCount++;
+        }
+    }
+
+    setIsUploading(false);
+    setShowPreview(false);
+    setPreviewData([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fetchData();
+    toast.success(`Upload complete. Added: ${addedCount}, Failed: ${errorCount}`);
+    setIsBulkUploadModalOpen(false);
   };
 
   return (
@@ -1095,57 +1133,146 @@ export default function ManageStudents() {
       </Dialog>
       
       {/* Bulk Upload Modal */}
-      <Dialog open={isBulkUploadModalOpen} onOpenChange={setIsBulkUploadModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isBulkUploadModalOpen} onOpenChange={(open) => {
+          setIsBulkUploadModalOpen(open);
+          if (!open) {
+              setShowPreview(false);
+              setPreviewData([]);
+          }
+      }}>
+        <DialogContent className={showPreview ? "max-w-4xl max-h-[90vh] overflow-y-auto" : "sm:max-w-md"}>
           <DialogHeader>
-            <DialogTitle>Bulk Upload Students</DialogTitle>
+            <DialogTitle>{showPreview ? 'Review Students' : 'Bulk Upload Students'}</DialogTitle>
             <DialogDescription>
-              Upload an Excel file to add multiple students at once.
+              {showPreview 
+                ? `Review ${previewData.length} records found in the file.`
+                : 'Upload an Excel file to add multiple students at once.'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-             <div className="flex flex-col gap-4">
-                <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <FileSpreadsheet className="w-6 h-6 text-primary" />
+             {!showPreview ? (
+                 <div className="flex flex-col gap-4">
+                    <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <FileSpreadsheet className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Download Template</p>
+                          <p className="text-sm text-muted-foreground">Use this format to import students</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+                        Download
+                      </Button>
                     </div>
-                    <div>
-                      <p className="font-medium">Download Template</p>
-                      <p className="text-sm text-muted-foreground">Use this format to import students</p>
+                    
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center space-y-4 hover:bg-muted/50 transition-colors">
+                      <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div>
+                         <p className="font-medium">Click to upload or drag and drop</p>
+                         <p className="text-sm text-muted-foreground">XLSX files only</p>
+                      </div>
+                      <Input 
+                        ref={fileInputRef}
+                        type="file" 
+                        accept=".xlsx, .xls"
+                        className="hidden" 
+                        id="file-upload"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                      />
+                      <Label 
+                        htmlFor="file-upload" 
+                        className={`inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        {isUploading ? 'Uploading...' : 'Select File'}
+                      </Label>
                     </div>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
-                    Download
-                  </Button>
-                </div>
-                
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center space-y-4 hover:bg-muted/50 transition-colors">
-                  <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <div>
-                     <p className="font-medium">Click to upload or drag and drop</p>
-                     <p className="text-sm text-muted-foreground">XLSX files only</p>
-                  </div>
-                  <Input 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept=".xlsx, .xls"
-                    className="hidden" 
-                    id="file-upload"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                  />
-                  <Label 
-                    htmlFor="file-upload" 
-                    className={`inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                  >
-                    {isUploading ? 'Uploading...' : 'Select File'}
-                  </Label>
-                </div>
-             </div>
+                 </div>
+             ) : (
+                 <div className="space-y-4">
+                     <div className="rounded-xl border overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-muted/50 border-b">
+                                <tr>
+                                    <th className="p-3 text-left font-medium">Name</th>
+                                    <th className="p-3 text-left font-medium">Roll Number</th>
+                                    <th className="p-3 text-left font-medium">Batch/Section</th>
+                                    <th className="p-3 text-left font-medium">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {previewData.map((row, idx) => (
+                                    <tr key={idx} className="border-b last:border-0 hover:bg-muted/30">
+                                        <td className="p-3">
+                                            <p className="font-medium">{row['Full Name'] || '---'}</p>
+                                            <p className="text-xs text-muted-foreground">{row['Email'] || 'no-email'}</p>
+                                        </td>
+                                        <td className="p-3 font-mono text-xs">{row['Roll Number'] || '---'}</td>
+                                        <td className="p-3">
+                                            <p className="text-xs">{row['Batch'] || (batches.find((b: any) => b.id === row.mappedBatchId)?.name || 'Default')}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Section {row['Section'] || 'A'}</p>
+                                        </td>
+                                        <td className="p-3">
+                                            <div className="flex items-center gap-2">
+                                                {row.status === 'Good' ? (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-medium border border-success/20">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        Good
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-medium border border-destructive/20" title={row.reason}>
+                                                        <XCircle className="w-3 h-3" />
+                                                        Fail
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                     </div>
+                     
+                     <div className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded-lg">
+                        <div className="flex gap-4">
+                            <span className="text-success font-medium">Valid: {previewData.filter(r => r.status === 'Good').length}</span>
+                            <span className="text-destructive font-medium">Invalid: {previewData.filter(r => r.status === 'Fail').length}</span>
+                        </div>
+                        <p className="text-muted-foreground">Only valid rows will be uploaded.</p>
+                     </div>
+
+                     <DialogFooter className="pt-4">
+                        <Button variant="outline" onClick={() => {
+                            setShowPreview(false);
+                            setPreviewData([]);
+                        }}>
+                           Discard
+                        </Button>
+                        <Button 
+                            variant="gradient" 
+                            disabled={isUploading || previewData.filter(r => r.status === 'Good').length === 0}
+                            onClick={confirmBulkUpload}
+                        >
+                            {isUploading ? (
+                                <>
+                                    <span className="animate-spin mr-2">◌</span>
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Confirm & Upload
+                                </>
+                            )}
+                        </Button>
+                     </DialogFooter>
+                 </div>
+             )}
           </div>
         </DialogContent>
       </Dialog>
