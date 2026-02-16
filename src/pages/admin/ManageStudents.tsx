@@ -86,6 +86,7 @@ export default function ManageStudents() {
   const [filteredStudents, setFilteredStudents] = useState<LocalStudent[]>([]);
   const [batches, setBatches] = useState<any[]>([]); // New State for Batches
   const [sections, setSections] = useState<any[]>([]); // New State for Sections
+  const [allSections, setAllSections] = useState<any[]>([]); // Full list for Bulk Upload
   
   const [searchTerm, setSearchTerm] = useState('');
   const [batchFilter, setBatchFilter] = useState('all');
@@ -154,6 +155,13 @@ export default function ManageStudents() {
               setBatches(data);
           }
 
+          // 3. Fetch All Sections for Bulk Upload Mapping
+          const resAllSections = await fetch(`${API_BASE_URL}/academic/sections`, { headers });
+          if (resAllSections.ok) {
+              const data = await resAllSections.json();
+              setAllSections(data);
+          }
+
       } catch (error) {
           console.error("Failed to fetch data", error);
           toast.error("Failed to load data");
@@ -173,7 +181,7 @@ export default function ManageStudents() {
             const data = await res.json();
             setSections(data);
           } else {
-             setSections([]); // Reset if fetch fails
+            setSections([]); // Reset if fetch fails
           }
         } catch (error) {
           console.error("Failed to fetch sections", error);
@@ -450,7 +458,6 @@ export default function ManageStudents() {
       'On Leave': 'bg-warning/10 text-warning border-warning/20',
     };
     return styles[status] || styles.Active;
-    return styles[status] || styles.Active;
   };
 
   const handleDownloadTemplate = () => {
@@ -511,12 +518,12 @@ export default function ManageStudents() {
             let sectionId = row['Section ID'];
             if (!sectionId && row['Section']) {
                 const sectionName = String(row['Section']).trim().toLowerCase().replace('section', '').trim();
-                const match = sections.find((s: any) => s.name.trim().toLowerCase().replace('section', '').trim() === sectionName);
+                const match = allSections.find((s: any) => s.name.trim().toLowerCase().replace('section', '').trim() === sectionName);
                 if (match) sectionId = match.id;
                 else errors.push(`Invalid Section: "${row['Section']}"`);
             }
             if (!sectionId) {
-                sectionId = sectionFilter !== 'all' ? Number(sectionFilter) : (sections[0]?.id || 5);
+                sectionId = sectionFilter !== 'all' ? Number(sectionFilter) : (allSections[0]?.id || 5);
             }
 
             return {
@@ -766,7 +773,7 @@ export default function ManageStudents() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`font-semibold ${
+                       <span className={`font-semibold ${
                         student.cgpa >= 8 ? 'text-success' : 
                         student.cgpa >= 6 ? 'text-warning' : 'text-destructive'
                       }`}>
