@@ -275,6 +275,11 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
             ORDER BY sp.roll_number
         `, [batchId]);
 
+        if (students.length === 0) {
+            console.log(`[getTheoryInternalMarks] No students found for batch ${batchId}`);
+            return res.json([]);
+        }
+
         // 2. Fetch Theory Subjects for the context (semester)
         let subjectQuery = "SELECT id, name, code FROM subjects WHERE type = 'theory'";
         const subjectParams: any[] = [];
@@ -283,6 +288,11 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
             subjectParams.push(semester);
         }
         const [subjects]: any = await connection.query(subjectQuery, subjectParams);
+
+        if (subjects.length === 0) {
+            console.log(`[getTheoryInternalMarks] No theory subjects found for semester ${semester}`);
+            return res.json([]);
+        }
 
         // 3. Fetch Marks (CIA 1, CIA 2, CIA 3, Model)
         // Optimization: Fetch all marks for this batch and filter in JS
@@ -296,8 +306,6 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
         `, [batchId]);
 
         // 4. Fetch Assignment Stats
-        // We need: For each student+subject, count of assigned vs submitted
-        // Assignments are linked to subject_allocations -> subject
         const [assignmentStats]: any = await connection.query(`
             SELECT 
                 u.id as student_id,
@@ -307,7 +315,6 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
             FROM users u
             JOIN student_profiles sp ON u.id = sp.user_id
             JOIN sections sec ON sp.section_id = sec.id
-            -- Link students to assignments via their section's allocations
             JOIN subject_allocations sa ON sa.section_id = sec.id
             JOIN subjects s ON sa.subject_id = s.id
             JOIN assignments a ON a.subject_allocation_id = sa.id
@@ -327,7 +334,7 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
                 // Helper to get normalized score
                 const getScore = (examName: string, maxTarget: number) => {
                     const entry = studentMarks.find((m: any) => m.exam_name.toUpperCase() === examName.toUpperCase());
-                    if (!entry || !entry.max_marks) return 0;
+                    if (!entry || !entry.max_marks || entry.max_marks === 0) return 0;
                     return (entry.marks_obtained / entry.max_marks) * maxTarget;
                 };
 
@@ -336,17 +343,9 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
                 const cia3 = getScore('CIA 3', 10);
                 const model = getScore('Model', 5);
 
-                // Assignment Logic: (Submitted / Total) * 5
-                let assignmentScore = 0;
-                if (assignStat && assignStat.total_assignments > 0) {
-                    assignmentScore = (assignStat.submitted_assignments / assignStat.total_assignments) * 5;
-                } else if (assignStat && assignStat.total_assignments === 0) {
-                     // If no assignments given...
-                     assignmentScore = 0;
-                }
-
-                // If user meant "Assignment total is 5 and we add it", we do exactly that.
-                // If they meant something else, we can adjust.
+                const assignmentScore = (assignStat && assignStat.total_assignments > 0) 
+                    ? (assignStat.submitted_assignments / assignStat.total_assignments) * 5 
+                    : 0;
                 
                 const total = cia1 + cia2 + cia3 + model + assignmentScore;
 
@@ -362,7 +361,7 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
                     cia3: parseFloat(cia3.toFixed(2)),
                     model: parseFloat(model.toFixed(2)),
                     assignment: parseFloat(assignmentScore.toFixed(2)),
-                    total: parseFloat(total.toFixed(2)) // Should be out of 40
+                    total: parseFloat(total.toFixed(2))
                 });
             }
         }
@@ -370,10 +369,14 @@ export const getTheoryInternalMarks = async (req: Request, res: Response) => {
         res.json(report);
 
     } catch (e: any) {
-        console.error("Get Theory Internal Marks Error:", e);
-        res.status(500).json({ message: 'Error calculating internal marks' });
+        console.error("Get Theory Internal Marks Error Detailed:", {
+            message: e.message,
+            stack: e.stack,
+            query: { batchId, semester }
+        });
+        res.status(500).json({ message: 'Error calculating internal marks', error: e.message });
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 };
 

@@ -348,7 +348,7 @@ export const createSubject = async (req: Request, res: Response) => {
 
   try {
     const [result]: any = await pool.execute(
-      'INSERT INTO subjects (name, code, credits, semester, type) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO subjects (name, code, credits, semester, type, department_id) VALUES (?, ?, ?, ?, ?, 1)',
       [name, code, credits, semester, type || 'theory']
     );
     res.status(201).json({ id: result.insertId, message: 'Subject created successfully' });
@@ -405,6 +405,14 @@ export const updateSubjectFaculties = async (req: Request, res: Response) => {
   try {
     await connection.beginTransaction();
 
+    // 0. Verify subject exists
+    const [subjectCheck]: any = await connection.query('SELECT id FROM subjects WHERE id = ?', [id]);
+    if (subjectCheck.length === 0) {
+        await connection.rollback();
+        console.warn(`[Update Faculties] Subject ID ${id} not found.`);
+        return res.status(404).json({ message: `Subject with ID ${id} not found` });
+    }
+
     // 1. Remove existing "general" allocations (section_id IS NULL) for this subject
     await connection.execute(
       'DELETE FROM subject_allocations WHERE subject_id = ? AND section_id IS NULL',
@@ -413,7 +421,13 @@ export const updateSubjectFaculties = async (req: Request, res: Response) => {
 
     // 2. Insert new allocations
     if (facultyIds.length > 0) {
-      const values = facultyIds.map((fid: number) => [id, fid, null, 1]); // subject_id, faculty_id, section_id, academic_year_id
+      // Find active academic year or pick the latest
+      const [ayRows]: any = await connection.query('SELECT id FROM academic_years ORDER BY is_active DESC, start_year DESC LIMIT 1');
+      const academicYearId = ayRows.length > 0 ? ayRows[0].id : 1;
+
+      console.log(`[Update Faculties] Using Academic Year ID: ${academicYearId} for Subject ID: ${id}`);
+
+      const values = facultyIds.map((fid: number) => [id, fid, null, academicYearId]); // subject_id, faculty_id, section_id, academic_year_id
       // Construct bulk insert query
       const placeholders = facultyIds.map(() => '(?, ?, ?, ?)').join(', ');
       const flatValues = values.flat();
@@ -427,11 +441,21 @@ export const updateSubjectFaculties = async (req: Request, res: Response) => {
     await connection.commit();
     res.json({ message: 'Subject faculties updated successfully' });
   } catch (error: any) {
-    await connection.rollback();
-    console.error('Update Subject Faculties Error:', error);
-    res.status(500).json({ message: 'Error updating subject faculties' });
+    if (connection) await connection.rollback();
+    console.error('Update Subject Faculties Error Detailed:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlMessage: error.sqlMessage,
+        params: { id, facultyIds }
+    });
+    res.status(500).json({ 
+        message: 'Error updating subject faculties',
+        error: error.message,
+        code: error.code
+    });
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 };
 // -----------------------------------------------------------------------------
