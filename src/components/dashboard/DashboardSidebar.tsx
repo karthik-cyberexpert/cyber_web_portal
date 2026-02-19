@@ -26,7 +26,8 @@ import {
   Sun,
   Moon,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { UserRole } from '@/lib/auth';
 
@@ -257,25 +258,35 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
       )}
     >
       {/* Header */}
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <AnimatePresence>
-            {!collapsed && (
+            {(!collapsed || isMobile) && (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="overflow-hidden"
+                className="overflow-hidden flex-1 min-w-0"
               >
-                <p className="font-bold text-sidebar-foreground text-sm">Cyber Security Department</p>
-                <p className="text-xs text-sidebar-foreground/60">ACE-HOSUR</p>
+                <p className="font-bold text-sidebar-foreground text-sm truncate">Cyber Security Department</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">ACE-HOSUR</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNavigate}
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -485,7 +496,10 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
         {/* Logout */}
         <Button
           variant="ghost"
-          onClick={logout}
+          onClick={() => {
+            onNavigate?.();
+            logout();
+          }}
           className={cn(
             'w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10',
             collapsed && 'justify-center px-0'

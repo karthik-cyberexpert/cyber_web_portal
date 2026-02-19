@@ -223,7 +223,7 @@ export default function TutorDashboard() {
           <h1 className="text-2xl sm:text-3xl 3xl:text-4xl font-black italic tracking-tighter uppercase">
             Good Morning, {user?.name?.split(' ')[0]}! 👩‍🏫
           </h1>
-          <p className="text-muted-foreground font-black uppercase tracking-widest text-[9px] sm:text-[10px]">
+          <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px] sm:text-xs mt-1">
             Section In-Charge • {tutor?.section} Section • {tutor?.batch}
           </p>
         </div>
@@ -255,25 +255,25 @@ export default function TutorDashboard() {
                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
                      <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                  </div>
-                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Marks Entry</span>
+                 <span className="font-black uppercase text-[10px] sm:text-xs tracking-widest">Marks Entry</span>
              </Button>
              <Button onClick={() => navigate('/faculty/notes')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-accent/50 hover:bg-accent/5 rounded-2xl group">
                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                  </div>
-                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Upload Notes</span>
+                 <span className="font-black uppercase text-[10px] sm:text-xs tracking-widest">Upload Notes</span>
              </Button>
              <Button onClick={() => navigate('/faculty/assignments')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-success/50 hover:bg-success/5 rounded-2xl group">
                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
                      <FileCheck className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                  </div>
-                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">Assignments</span>
+                 <span className="font-black uppercase text-[10px] sm:text-xs tracking-widest">Assignments</span>
              </Button>
              <Button onClick={() => navigate('/faculty/timetable')} variant="outline" className="h-20 sm:h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 hover:border-warning/50 hover:bg-warning/5 rounded-2xl group">
                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/50 flex items-center justify-center group-hover:scale-110 transition-transform">
                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
                  </div>
-                 <span className="font-black uppercase text-[9px] sm:text-[10px] tracking-widest">My Timetable</span>
+                 <span className="font-black uppercase text-[10px] sm:text-xs tracking-widest">My Timetable</span>
              </Button>
          </div>
       </motion.div>

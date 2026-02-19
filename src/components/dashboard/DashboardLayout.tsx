@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import NotificationDropdown from '@/components/dashboard/NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,27 +48,37 @@ export default function DashboardLayout() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         isMobile={false}
+        className="hidden lg:flex"
       />
 
       {/* Sidebar - Mobile Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar - Mobile */}
-      {!isDesktop && mobileMenuOpen && (
-        <div className="fixed left-0 top-0 h-screen z-50">
-          <DashboardSidebar
-            collapsed={false}
-            onToggle={() => setMobileMenuOpen(false)}
-            onNavigate={() => setMobileMenuOpen(false)}
-            isMobile={true}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 bg-background/60 backdrop-blur-md z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.div 
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="lg:hidden fixed left-0 top-0 h-screen z-50 w-[280px]"
+            >
+              <DashboardSidebar
+                collapsed={false}
+                onToggle={() => setMobileMenuOpen(false)}
+                onNavigate={() => setMobileMenuOpen(false)}
+                isMobile={true}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
       <motion.main
@@ -81,7 +91,7 @@ export default function DashboardLayout() {
       >
         {/* Header */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"

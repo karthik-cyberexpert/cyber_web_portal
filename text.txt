@@ -20,3 +20,11 @@ DB_PORT=3306
 PORT=3007
 JWT_SECRET=supersecretkey123
 VITE_GOOGLE_CLIENT_ID=363966790178-8v9327hdsrfctip65kig0uai5rtd8m3o.apps.googleusercontent.com
+
+
+
+
+INSERT INTO users VALUES('1', 'admin@css.com', 'Admin CSS', '$2b$10$z3xbQdlmFOi/h2/8AfWk1eaUj02j3GHzZW/bAcOukyB1TpGRf5rEK', 'admin', NULL, NULL, NULL, '1', '0', NULL, NULL, NULL)
+
+
+INSERT INTO departments VALUES('1','CSE(CYBER SECURITY)', 'CSS', '1', NULL);

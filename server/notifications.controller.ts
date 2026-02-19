@@ -18,8 +18,11 @@ export const getNotifications = async (req: Request, res: Response) => {
         
         res.json(rows);
     } catch (error: any) {
-        console.error('Error fetching notifications:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        console.error('[GET NOTIFICATIONS ERROR]', error);
+        res.status(500).json({ 
+            message: 'Internal Server Error',
+            details: error.message 
+        });
     }
 };
 

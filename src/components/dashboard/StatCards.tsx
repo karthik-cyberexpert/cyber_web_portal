@@ -52,7 +52,7 @@ export function StatCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm opacity-80 mb-1">{title}</p>
-          <p className="text-3xl font-bold">{value}</p>
+          <p className="text-2xl sm:text-3xl font-bold">{value}</p>
           {subtitle && (
             <p className="text-sm opacity-70 mt-1">{subtitle}</p>
           )}
@@ -108,7 +108,7 @@ export function GlassStatCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-foreground">{value}</p>
           {subtitle && (
             <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
           )}

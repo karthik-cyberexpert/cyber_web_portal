@@ -372,23 +372,29 @@ export default function FacultyDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 4xl:grid-cols-4 gap-3 sm:gap-4">
           {[
             { icon: Upload, label: 'Upload Notes', color: 'primary', path: '/faculty/notes' },
-            { icon: FileText, label: 'Create Assignment', color: 'accent', path: '/faculty/assignments' },
+            { icon: FileText, label: 'Assignments', color: 'accent', path: '/faculty/assignments' },
             { icon: ClipboardCheck, label: 'Enter Marks', color: 'warning', path: '/faculty/marks' },
             { icon: Users, label: 'View Students', color: 'success', path: '/faculty/students' },
           ].map((action, index) => {
             const Icon = action.icon;
+            const colorMap: Record<string, string> = {
+              primary: 'bg-primary/10 text-primary',
+              accent: 'bg-accent/10 text-accent',
+              success: 'bg-success/10 text-success',
+              warning: 'bg-warning/10 text-warning',
+            };
             return (
               <motion.button
                 key={index}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(action.path)}
-                className="p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group"
+                className="p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all text-center group flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px]"
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-xl flex items-center justify-center mb-2 sm:mb-3 bg-${action.color}/10 text-${action.color} group-hover:scale-110 transition-transform`}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${colorMap[action.color]} group-hover:scale-110 transition-transform`}>
                   <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-xs sm:text-sm font-medium">{action.label}</p>
+                <p className="text-xs sm:text-sm font-medium leading-tight">{action.label}</p>
               </motion.button>
             );
           })}

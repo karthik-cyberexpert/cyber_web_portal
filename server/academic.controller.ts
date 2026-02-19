@@ -347,11 +347,11 @@ export const createSubject = async (req: Request, res: Response) => {
   const { name, code, credits, semester, type } = req.body;
 
   try {
-    const [result]: any = await pool.execute(
-      'INSERT INTO subjects (name, code, credits, semester, type, department_id) VALUES (?, ?, ?, ?, ?, 1)',
+    const [result]: any = await pool.query(
+      'INSERT INTO subjects (name, code, credits, semester, type) VALUES (?, ?, ?, ?, ?)',
       [name, code, credits, semester, type || 'theory']
     );
-    res.status(201).json({ id: result.insertId, message: 'Subject created successfully' });
+    res.status(201).json({ id: result.insertId, message: 'Subject created successfully (v2)' });
   } catch (error: any) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Subject code already exists' });

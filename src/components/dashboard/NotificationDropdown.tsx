@@ -85,7 +85,7 @@ export default function NotificationDropdown() {
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 overflow-hidden bg-card border-border">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-80 md:w-96 p-0 overflow-hidden bg-card border-border">
                 <DropdownMenuLabel className="p-4 flex items-center justify-between">
                     <span className="text-base font-semibold">Notifications</span>
                     {unreadCount > 0 && (

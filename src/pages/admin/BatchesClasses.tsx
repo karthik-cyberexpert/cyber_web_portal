@@ -219,9 +219,9 @@ export default function BatchesClasses() {
                   Authorization: `Bearer ${token}`
               },
               body: JSON.stringify({
-                  currentSemester: editBatchSemester % 2 === 0 ? 'Even' : 'Odd', 
-                  semesterStartDate: editBatchStartDate,
-                  semesterEndDate: editBatchEndDate
+                  semester: editBatchSemester, 
+                  semester_start_date: editBatchStartDate,
+                  semester_end_date: editBatchEndDate
               })
           });
           if (res.ok) {
