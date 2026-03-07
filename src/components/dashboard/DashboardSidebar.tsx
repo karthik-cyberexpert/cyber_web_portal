@@ -238,6 +238,8 @@ interface DashboardSidebarProps {
   className?: string;
 }
 
+import logo from '@/assets/logo.png';
+
 export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMobile, className }: DashboardSidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -260,8 +262,8 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center flex-shrink-0">
-            <GraduationCap className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-white">
+            <img src={logo} alt="ACE Logo" className="w-full h-full object-contain" />
           </div>
           <AnimatePresence>
             {(!collapsed || isMobile) && (
@@ -271,7 +273,7 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden flex-1 min-w-0"
               >
-                <p className="font-bold text-sidebar-foreground text-sm truncate">Cyber Security Department</p>
+                <p className="font-bold text-sidebar-foreground text-sm truncate">Cyber Security Dept</p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">ACE-HOSUR</p>
               </motion.div>
             )}

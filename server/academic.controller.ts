@@ -609,23 +609,27 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
     }
 
     // 3. Upsert Timetable Slot
+    // Validate inputs to avoid 500
+    const sem = parseInt(semester);
+    if (isNaN(sem)) {
+        console.error('[Timetable Save] Invalid Semester:', semester);
+        await connection.rollback();
+        return res.status(400).json({ message: 'Valid Semester count is required' });
+    }
+
     // Remove existing slot for this time in this section AND SEMESTER
-    // This allows distinct timetables for different semesters
     await connection.execute(
         'DELETE FROM timetable_slots WHERE section_id = ? AND day_of_week = ? AND period_number = ? AND semester = ?',
-        [section_id, day, period, semester]
+        [section_id, day, period, sem]
     );
 
     if (allocationId || type === 'free') {
-        // Only insert if it's a real slot (not just a delete/clear)
-        // Wait, 'free' usually doesn't need a record unless we strictly track 'Free' periods?
-        // Use implicit deletion for clear. If type='free' and no allocation, we effectively just deleted above.
-        // But if type != 'free' (e.g. valid allocation), insert.
+        const slotType = type || 'theory';
         if (allocationId) {
              await connection.execute(
                 `INSERT INTO timetable_slots (section_id, day_of_week, period_number, subject_allocation_id, room_number, type, semester) 
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [section_id, day, period, allocationId, room, type || 'theory', semester]
+                [section_id, day, period, allocationId, room || null, slotType, sem]
             );
         }
     }
@@ -634,10 +638,13 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
     res.json({ message: 'Timetable updated' });
 
   } catch (error: any) {
-    await connection.rollback();
-    console.error('Save Timetable Error:', error);
-    res.status(500).json({ message: 'Error saving timetable slot' });
+    if (connection) await connection.rollback();
+    console.error('Save Timetable Database Error:', error);
+    res.status(500).json({ 
+        message: 'Database error saving timetable slot',
+        error: error.message 
+    });
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 };

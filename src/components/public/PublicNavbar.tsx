@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, ArrowRight, Menu, X, Globe, Phone, Mail, Instagram, Twitter, Facebook } from 'lucide-react';
 
+import logo from '@/assets/logo.png';
+
 const PublicNavbar = () => {
     const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
@@ -47,11 +49,11 @@ const PublicNavbar = () => {
           
           {/* Logo & College Info */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-              <GraduationCap className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform overflow-hidden bg-white">
+              <img src={logo} alt="ACE Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-wider text-white uppercase">Adhiyamaan</span>
+              <span className="text-sm font-bold tracking-wider text-white uppercase leading-tight">Adhiyamaan College</span>
               <span className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest leading-tight">Cyber Security Dept</span>
             </div>
           </Link>

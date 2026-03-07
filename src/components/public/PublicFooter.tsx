@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, MapPin, Phone, Mail, Clock, Lock } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Lock } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const PublicFooter = () => {
   return (
@@ -9,8 +10,8 @@ const PublicFooter = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                 <div className="space-y-4 col-span-1 md:col-span-2">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <GraduationCap className="w-5 h-5 text-primary" />
+                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                            <img src={logo} alt="ACE Logo" className="w-full h-full object-contain" />
                         </div>
                         <span className="text-lg font-bold text-white">Adhiyamaan College</span>
                     </div>

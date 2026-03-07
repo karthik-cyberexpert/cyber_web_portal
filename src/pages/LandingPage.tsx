@@ -196,8 +196,8 @@ const LandingPage = () => {
                   "State-of-the-Art Cybersecurity Labs",
                   "Industry Integrated Curriculum",
                   "Excellent Placement Record in Top Tech Firms"
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                     <span className="text-white/80 font-medium">{item}</span>
                   </div>
@@ -291,8 +291,8 @@ const LandingPage = () => {
                     "Forensics Lab",
                     "Network Ops Center",
                     "Incubation Center"
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-white/70 font-medium">
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-white/70 font-medium">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                       {item}
                     </div>

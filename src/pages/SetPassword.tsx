@@ -10,6 +10,8 @@ import { Lock, Eye, EyeOff, Shield, GraduationCap, Loader2, ChevronRight, Sun, M
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/api-config';
 
+import logo from '@/assets/logo.png';
+
 export default function SetPassword() {
   const navigate = useNavigate();
   const { user, token, setRequiresPasswordChange } = useAuth();
@@ -87,8 +89,8 @@ export default function SetPassword() {
               transition={{ delay: 0.3 }}
               className="flex items-center gap-3 mb-8"
             >
-              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                <GraduationCap className="w-10 h-10" />
+              <div className="p-2 bg-white rounded-full overflow-hidden w-16 h-16 flex items-center justify-center">
+                <img src={logo} alt="ACE Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">ACE-HOSUR</h2>
@@ -172,8 +174,8 @@ export default function SetPassword() {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="p-3 bg-gradient-primary rounded-2xl">
-              <GraduationCap className="w-8 h-8 text-white" />
+            <div className="p-2 bg-white rounded-full w-12 h-12 flex items-center justify-center overflow-hidden">
+              <img src={logo} alt="ACE Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-lg font-bold">ACE-HOSUR</h2>
