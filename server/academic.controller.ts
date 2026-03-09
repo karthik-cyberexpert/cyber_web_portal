@@ -468,12 +468,11 @@ export const getTimetable = async (req: Request, res: Response) => {
 
   try {
     let query = `
-      SELECT ts.*, 
-             s.name as subject, s.code as subject_code, s.semester,
+      SELECT ts.id, ts.day_of_week, ts.period_number, ts.room_number, ts.type, ts.semester as timetable_semester,
+             s.name as subject, s.code as subject_code, s.semester as subject_semester,
              u.id as faculty_id, u.name as faculty_name,
              sec.name as section_name, b.name as batch_name,
-             sec.id as section_id, b.id as batch_id,
-             ts.type as type
+             sec.id as section_id, b.id as batch_id
       FROM timetable_slots ts
       LEFT JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
       LEFT JOIN subjects s ON sa.subject_id = s.id
@@ -495,7 +494,7 @@ export const getTimetable = async (req: Request, res: Response) => {
     }
 
     if (semester) {
-        query += ' AND s.semester = ?';
+        query += ' AND ts.semester = ?';
         params.push(semester);
     }
 
@@ -515,14 +514,15 @@ export const getTimetable = async (req: Request, res: Response) => {
       id: r.id,
       day: r.day_of_week,
       period: r.period_number,
-      classId: r.batch_id?.toString(), // Use batch_id as classId for frontend compatibility
+      classId: r.batch_id?.toString(), 
       sectionId: r.section_id?.toString(),
-      subject: r.subject || 'Free',
+      subject: r.subject || (r.type === 'free' ? 'Free' : ''),
       subjectCode: r.subject_code || '',
       facultyId: r.faculty_id?.toString() || '',
       facultyName: r.faculty_name || '',
       room: r.room_number || '',
-      type: r.type || 'theory' // Assuming type column exists or derived
+      type: r.type || 'theory',
+      semester: r.timetable_semester
     }));
 
     res.json(formatted);
@@ -596,13 +596,16 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
         if (allocs.length > 0) {
             allocationId = allocs[0].id;
         } else {
-            // Implicitly create allocation
+            // Find any active academic year
+            const [years]: any = await connection.query('SELECT id FROM academic_years WHERE is_active = 1 LIMIT 1');
+            const academic_year_id = years[0]?.id || 1; // Fallback if none found
+            
             const [ins]: any = await connection.execute(
-                'INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES (?, ?, ?, 1)',
-                [subjectId, faculty_id, section_id]
+                'INSERT INTO subject_allocations (subject_id, faculty_id, section_id, academic_year_id) VALUES (?, ?, ?, ?)',
+                [subjectId, faculty_id, section_id, academic_year_id]
             );
             allocationId = ins.insertId;
-            console.log(`Implicitly created allocation ${allocationId} for subject ${subjectId}, faculty ${faculty_id}, section ${section_id}`);
+            console.log(`Implicitly created allocation ${allocationId} for subject ${subjectId}, faculty ${faculty_id}, section ${section_id} (AY: ${academic_year_id})`);
         }
     } else {
         console.log(`Clearing slot for section ${section_id}, day ${day}, period ${period}`);
@@ -625,13 +628,11 @@ export const saveTimetableSlot = async (req: Request, res: Response) => {
 
     if (allocationId || type === 'free') {
         const slotType = type || 'theory';
-        if (allocationId) {
-             await connection.execute(
-                `INSERT INTO timetable_slots (section_id, day_of_week, period_number, subject_allocation_id, room_number, type, semester) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [section_id, day, period, allocationId, room || null, slotType, sem]
-            );
-        }
+        await connection.execute(
+            `INSERT INTO timetable_slots (section_id, day_of_week, period_number, subject_allocation_id, room_number, type, semester) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [section_id, day, period, allocationId || null, room || null, slotType, sem]
+        );
     }
 
     await connection.commit();

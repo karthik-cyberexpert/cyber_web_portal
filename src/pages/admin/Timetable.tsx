@@ -195,7 +195,7 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
   // Reload when filters change
   useEffect(() => {
       loadTimetableData();
-  }, [view, selectedBatch, selectedSection, selectedFacultyId]);
+  }, [view, selectedBatch, selectedSection, selectedFacultyId, selectedYearSem]);
 
   const currentTimetable = timetable; // Filter handled by API
 
