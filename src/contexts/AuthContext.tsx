@@ -28,7 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-const HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds
+const HEARTBEAT_INTERVAL = 5 * 1000; // 5 seconds (Reduced for faster security response)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({ user: null, isAuthenticated: false });
@@ -36,6 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [sessionError, setSessionError] = useState<{ title: string; message: string } | null>(null);
+  
+  // Use a ref for the token to always have the latest value in event listeners
+  const tokenRef = useRef<string | null>(null);
   const navigate = useNavigate();
 
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     setAuthState({ user: null, isAuthenticated: false });
     setToken(null);
+    tokenRef.current = null;
     setRequiresPasswordChange(false);
     
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -73,11 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authState.isAuthenticated, logout]);
 
   const checkSession = React.useCallback(async () => {
-    if (!authState.isAuthenticated || !token) return;
+    const currentToken = tokenRef.current;
+    if (!authState.isAuthenticated || !currentToken) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/auth/check-session`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${currentToken}` }
         });
 
         if (!response.ok) {
@@ -94,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
         console.error('[AUTH] Heartbeat error:', err);
     }
-  }, [authState.isAuthenticated, token, logout]);
+  }, [authState.isAuthenticated, logout]);
 
   useEffect(() => {
     // Check for stored auth on mount
@@ -102,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedToken = localStorage.getItem('token');
     setAuthState(stored);
     setToken(storedToken);
+    tokenRef.current = storedToken;
     setRequiresPasswordChange(!!stored.requiresPasswordChange);
     setIsLoading(false);
   }, []);
@@ -112,6 +118,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'];
         events.forEach(event => window.addEventListener(event, resetInactivityTimer));
         
+        // Immediate check on focus or storage change (another tab login/logout)
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'token') {
+                if (!e.newValue) {
+                    console.log('[AUTH] Token removed in another tab, logging out...');
+                    logout();
+                } else {
+                    console.log('[AUTH] Token changed in another tab, verifying current session...');
+                    checkSession();
+                }
+            }
+        };
+
+        const handleFocus = () => {
+             console.log('[AUTH] Tab focused, checking session...');
+             checkSession();
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('focus', handleFocus);
+        
         // Initial setup
         resetInactivityTimer();
         
@@ -120,6 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => {
             events.forEach(event => window.removeEventListener(event, resetInactivityTimer));
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', handleFocus);
             if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
             if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
         };
@@ -151,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         localStorage.setItem('token', data.token);
         setToken(data.token);
+        tokenRef.current = data.token;
         
         // Check if password change is required
         if (data.requiresPasswordChange) {
@@ -198,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         localStorage.setItem('token', data.token);
         setToken(data.token);
+        tokenRef.current = data.token;
         
         const dashboardPath = getRoleDashboardPath(data.user.role);
         navigate(dashboardPath);

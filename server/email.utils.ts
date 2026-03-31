@@ -1,7 +1,11 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -14,6 +18,11 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
+    if (process.env.ENABLE_EMAIL !== 'true') {
+        console.log(`[EMAIL] 🔕 Email sending is DISABLED (ENABLE_EMAIL=${process.env.ENABLE_EMAIL}). Skipping: ${subject}`);
+        return { success: true, message: 'Email sending is disabled' };
+    }
+
     try {
         console.log(`[EMAIL] 📨 Sending email to: ${to} | Subject: ${subject}`);
         const info = await transporter.sendMail({
