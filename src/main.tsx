@@ -51,6 +51,26 @@ if (typeof window !== "undefined") {
   });
 }
 
+// --- Security & Console Protection ---
+if (import.meta.env.PROD || true) {
+  const warningTitle = 'STOP!';
+  const warningMessage = 'This is a browser feature intended for developers. If someone told you to copy-paste something here to enable a feature or "hack" someone\'s account, it is a scam and will give them access to your account.';
+  
+  console.log(`%c${warningTitle}`, 'color: red; font-size: 50px; font-weight: bold; -webkit-text-stroke: 1px black;');
+  console.log(`%c${warningMessage}`, 'color: #333; font-size: 18px;');
+  
+  // Anti-debugging check
+  setInterval(() => {
+    const startTime = Date.now();
+    // eslint-disable-next-line no-debugger
+    debugger;
+    if (Date.now() - startTime > 100) {
+      console.warn('[SECURITY] Debugger detected! Session integrity check initiated.');
+    }
+  }, 5000);
+}
+// -------------------------------------
+
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";

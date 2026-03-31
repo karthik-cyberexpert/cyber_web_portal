@@ -18,9 +18,9 @@ interface AuthContextType {
   isLoading: boolean;
   token: string | null;
   requiresPasswordChange: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; isLockout?: boolean }>;
   loginWithGoogle: (credential: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: (isForced?: boolean) => void;
   updateUser: (data: Partial<User>) => void;
   setRequiresPasswordChange: (value: boolean) => void;
 }
@@ -44,14 +44,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const logout = React.useCallback(() => {
-    console.log('[AUTH] Logging out user and clearing session');
-    clearStoredAuth();
-    localStorage.removeItem('token');
+  const logout = React.useCallback((isForced = false) => {
+    console.log(`[AUTH] Logging out user and clearing session (isForced: ${isForced})`);
+    
+    // Clear in-memory state
     setAuthState({ user: null, isAuthenticated: false });
     setToken(null);
     tokenRef.current = null;
     setRequiresPasswordChange(false);
+    
+    // Crucial: Only clear shared storage if this ISN'T a forced lockout.
+    // If it IS forced, it means another tab just logged in with a VALID token.
+    // We don't want to delete that new tab's valid token!
+    if (!isForced) {
+        clearStoredAuth();
+        localStorage.removeItem('token');
+    }
     
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
@@ -93,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     title: "Security Alert",
                     message: "Someone else logged in to this account from a different session. You have been automatically logged out for your security."
                 });
-                logout();
+                logout(true); // Forced logout (don't clear localStorage)
             }
         }
     } catch (err) {
@@ -122,10 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'token') {
                 if (!e.newValue) {
-                    console.log('[AUTH] Token removed in another tab, logging out...');
-                    logout();
-                } else {
-                    console.log('[AUTH] Token changed in another tab, verifying current session...');
+                    // ONLY logout if we actually HAVE a token locally.
+                    // This prevents Tab A from sabotaging Tab B's fresh login.
+                    if (tokenRef.current) {
+                        console.log('[AUTH] Token removed in another tab, logging out...');
+                        logout();
+                    }
+                } else if (e.newValue !== tokenRef.current) {
+                    console.log('[AUTH] Token updated by another session, verifying current integrity...');
                     checkSession();
                 }
             }
@@ -155,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authState.isAuthenticated, resetInactivityTimer, checkSession]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; isLockout?: boolean }> => {
     setIsLoading(true);
     
     try {
@@ -166,6 +178,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       const data = await response.json();
+
+      if (response.status === 429) {
+          setIsLoading(false);
+          return { success: false, error: data.message, isLockout: true };
+      }
 
       if (response.ok) {
         setStoredAuth({ 

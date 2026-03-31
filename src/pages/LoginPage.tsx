@@ -28,9 +28,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [lockoutTimer, setLockoutTimer] = useState(0);
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (lockoutTimer > 0) {
+      interval = setInterval(() => {
+        setLockoutTimer((prev) => {
+          if (prev <= 1) {
+            setError('');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [lockoutTimer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutTimer > 0) return;
     setError('');
     
     if (!email || !password) {
@@ -41,6 +59,9 @@ export default function LoginPage() {
     const result = await login(email, password);
     if (!result.success) {
       setError(result.error || 'Login failed');
+      if (result.isLockout) {
+          setLockoutTimer(30);
+      }
     }
   };
 
@@ -264,12 +285,17 @@ export default function LoginPage() {
               variant="gradient"
               size="xl"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || lockoutTimer > 0}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Signing in...
+                </>
+              ) : lockoutTimer > 0 ? (
+                <>
+                  <Lock className="w-5 h-5" />
+                  Wait {lockoutTimer < 10 ? `0${lockoutTimer}` : lockoutTimer}s
                 </>
               ) : (
                 <>

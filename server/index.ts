@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url';
 import { pool } from './db.js';
 import { authenticateToken } from './auth.middleware.js';
 
+import helmet from 'helmet';
+import { sanitizeInput, apiLimiter, authLimiter } from './security.middleware.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -25,13 +28,25 @@ import adminRoutes from './admin.routes.js';
 import academicRoutes from './academic.routes.js';
 import studentRoutes from './student.routes.js';
 
+// Hardening HTTP Headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: false, // Set false to allow external fonts/images if needed, or refine CSP
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Apply Rate Limiting to all API requests
+app.use('/api', apiLimiter);
+
 app.use(cors({
   origin: true, // Reflect request origin to allow any network IP
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Sanitize all incoming requests before processing
 app.use(express.json());
+app.use(sanitizeInput);
 
 // Request Logger
 app.use((req, res, next) => {
