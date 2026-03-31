@@ -1,9 +1,10 @@
 import express from 'express';
-import { login, googleLogin, setPassword, updatePassword } from './auth.controller.js';
+import { login, googleLogin, setPassword, updatePassword, checkSession } from './auth.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 
 const router = express.Router();
 
+router.get('/check-session', authenticateToken, checkSession);
 router.post('/login', login);
 router.post('/google', googleLogin);
 router.post('/set-password', authenticateToken, setPassword);

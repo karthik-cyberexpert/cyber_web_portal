@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { sendLoginEmail } from './email.utils.js';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
 
@@ -57,9 +58,14 @@ export const login = async (req: Request, res: Response) => {
     const requiresPasswordChange = user.password_changed === 0 || user.password_changed === false;
     console.log(`[AUTH] Password changed status: ${user.password_changed}, requires change: ${requiresPasswordChange}`);
 
+    // Generate Session Token for Single-Session Enforcement
+    const sessionToken = crypto.randomUUID();
+    await pool.query('UPDATE users SET session_token = ? WHERE id = ?', [sessionToken, user.id]);
+    console.log(`[AUTH] Normal Login: Session Token generated for user ${user.id}: ${sessionToken}`);
+
     // Generate Token
     const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: effectiveRole, name: user.name },
+      { id: user.id, email: user.email, role: effectiveRole, name: user.name, session_token: sessionToken },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -220,9 +226,14 @@ export const googleLogin = async (req: Request, res: Response) => {
         }
     }
 
+    // Generate Session Token for Google Login
+    const sessionToken = crypto.randomUUID();
+    await pool.query('UPDATE users SET session_token = ? WHERE id = ?', [sessionToken, user.id]);
+    console.log(`[AUTH] Google Login: Session Token generated for user ${user.id}: ${sessionToken}`);
+
     // Generate Token
     const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: effectiveRole, name: user.name },
+      { id: user.id, email: user.email, role: effectiveRole, name: user.name, session_token: sessionToken },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -247,4 +258,8 @@ export const googleLogin = async (req: Request, res: Response) => {
     console.error('Google Login error:', error);
     res.status(500).json({ message: 'Google authentication failed' });
   }
+};
+
+export const checkSession = async (req: Request | any, res: Response) => {
+  res.json({ valid: true, timestamp: new Date().toISOString() });
 };

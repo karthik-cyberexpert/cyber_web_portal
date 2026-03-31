@@ -1,18 +1,15 @@
 import bcrypt from 'bcrypt';
 
-const hash = '$2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/'; // Hash from SQL file
 const password = 'password123';
+const saltRounds = 10;
 
-console.log(`Testing password: '${password}' against hash: '${hash}'`);
+async function check() {
+    const hash = await bcrypt.hash(password, saltRounds);
+    console.log('Original Hash:', '$2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/');
+    console.log('New Hash:', hash);
+    
+    const match = await bcrypt.compare(password, '$2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/');
+    console.log('Match Result:', match);
+}
 
-bcrypt.compare(password, hash).then(result => {
-    console.log(`Match Result: ${result}`);
-    if (!result) {
-        console.log("Generating new hash for 'password123'...");
-        bcrypt.hash(password, 10).then(newHash => {
-            console.log(`New Hash: ${newHash}`);
-        });
-    }
-}).catch(err => {
-    console.error("Error comparing:", err);
-});
+check();

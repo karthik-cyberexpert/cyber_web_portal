@@ -21,13 +21,23 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return res.sendStatus(403);
     }
     
-    // Safety Check: Ensure user still exists in DB
+    // Safety Check: Ensure user still exists in DB and session is valid
     try {
-        const [rows]: any = await pool.query('SELECT id, role FROM users WHERE id = ?', [user.id]);
+        const [rows]: any = await pool.query('SELECT id, role, session_token FROM users WHERE id = ?', [user.id]);
         if (rows.length === 0) {
              console.log('Token valid but User ID not found in DB (Stale Token). Rejecting.');
              return res.sendStatus(401); 
         }
+
+        // Single-Session Enforcement: Check if session token matches
+        if (user.session_token && rows[0].session_token !== user.session_token) {
+            console.warn(`[AUTH] Session mismatch for user ${user.id}. Expected: ${rows[0].session_token}, Got in JWT: ${user.session_token}`);
+            return res.status(401).json({ 
+                message: 'Multiple Logins Detected', 
+                code: 'ANOTHER_DEVICE_LOGGED_IN' 
+            });
+        }
+
         (req as any).user = user;
         next();
     } catch(dbErr) {

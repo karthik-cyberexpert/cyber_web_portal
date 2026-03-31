@@ -1094,6 +1094,7 @@ CREATE TABLE `users` (
   `avatar_url` varchar(255) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `password_changed` tinyint(1) DEFAULT '0',
+  `session_token` varchar(36) DEFAULT NULL,
   `last_login` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -1107,7 +1108,7 @@ CREATE TABLE `users` (
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` (email, name, password_hash, role, is_active, password_changed) 
-VALUES ('admin@css.com', 'Admin', '$2b$10$XuSlmr1dCNHhfrnDI/DMQ4noxSuFhe6CCsIavAxdG/', 'admin', 1, 1);
+VALUES ('admin@css.com', 'Admin', '$2b$10$H.OniaPl/.sRzfgySM9xjeLj2AmHvf8g6rWT10ykJINzLlBeAmuue', 'admin', 1, 1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -1,7 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { User, AuthState, getStoredAuth, setStoredAuth, clearStoredAuth, getRoleDashboardPath } from '@/lib/auth';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/api-config';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AuthContextType {
   user: User | null;
@@ -18,12 +27,74 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({ user: null, isAuthenticated: false });
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
+  const [sessionError, setSessionError] = useState<{ title: string; message: string } | null>(null);
   const navigate = useNavigate();
+
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const logout = React.useCallback(() => {
+    console.log('[AUTH] Logging out user and clearing session');
+    clearStoredAuth();
+    localStorage.removeItem('token');
+    setAuthState({ user: null, isAuthenticated: false });
+    setToken(null);
+    setRequiresPasswordChange(false);
+    
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+    
+    navigate('/login');
+  }, [navigate]);
+
+  const resetInactivityTimer = React.useCallback(() => {
+    if (!authState.isAuthenticated) return;
+
+    if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+    }
+
+    inactivityTimerRef.current = setTimeout(() => {
+        console.warn('[AUTH] Session timed out due to inactivity');
+        setSessionError({
+            title: "Session Expired",
+            message: "You have been logged out due to 15 minutes of inactivity. Please log in again to continue."
+        });
+        logout();
+    }, INACTIVITY_TIMEOUT);
+  }, [authState.isAuthenticated, logout]);
+
+  const checkSession = React.useCallback(async () => {
+    if (!authState.isAuthenticated || !token) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/check-session`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            if (data.code === 'ANOTHER_DEVICE_LOGGED_IN' || response.status === 401) {
+                console.error('[AUTH] Multi-session detected or session invalid');
+                setSessionError({
+                    title: "Security Alert",
+                    message: "Someone else logged in to this account from a different session. You have been automatically logged out for your security."
+                });
+                logout();
+            }
+        }
+    } catch (err) {
+        console.error('[AUTH] Heartbeat error:', err);
+    }
+  }, [authState.isAuthenticated, token, logout]);
 
   useEffect(() => {
     // Check for stored auth on mount
@@ -34,6 +105,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRequiresPasswordChange(!!stored.requiresPasswordChange);
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+        // Activity listeners
+        const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'];
+        events.forEach(event => window.addEventListener(event, resetInactivityTimer));
+        
+        // Initial setup
+        resetInactivityTimer();
+        
+        // Heartbeat setup
+        heartbeatTimerRef.current = setInterval(checkSession, HEARTBEAT_INTERVAL);
+
+        return () => {
+            events.forEach(event => window.removeEventListener(event, resetInactivityTimer));
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+            if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+        };
+    }
+  }, [authState.isAuthenticated, resetInactivityTimer, checkSession]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
@@ -124,15 +215,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    clearStoredAuth();
-    localStorage.removeItem('token');
-    setAuthState({ user: null, isAuthenticated: false });
-    setToken(null);
-    setRequiresPasswordChange(false);
-    navigate('/login');
-  };
-
   const updateUser = (data: Partial<User>) => {
     if (authState.user) {
       const updatedUser = { ...authState.user, ...data };
@@ -167,6 +249,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      
+      {/* Session Error Notification */}
+      <AlertDialog open={!!sessionError} onOpenChange={(open) => !open && setSessionError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+                <span className="text-destructive font-bold">!</span> {sessionError?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {sessionError?.message}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => {
+                setSessionError(null);
+                navigate('/login');
+            }}>
+                Log In Again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AuthContext.Provider>
   );
 }
