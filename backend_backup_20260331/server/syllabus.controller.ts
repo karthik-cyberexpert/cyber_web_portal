@@ -57,7 +57,7 @@ export const getStudentSyllabus = async (req: Request | any, res: Response) => {
     try {
         // Get student's section and semester
         const [studentProfile]: any = await pool.query(
-            `SELECT sp.section_id, COALESCE(b.current_semester, 1) as current_semester 
+            `SELECT sp.section_id, COALESCE(sp.current_semester, b.current_semester, 1) as current_semester 
              FROM student_profiles sp
              LEFT JOIN batches b ON sp.batch_id = b.id
              WHERE sp.user_id = ?`,

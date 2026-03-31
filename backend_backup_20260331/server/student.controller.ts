@@ -16,11 +16,11 @@ export const promoteStudents = async (req: Request, res: Response) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Logic Changed: Promotion now drives the Batch semester, not the individual students.
-        // All students in a batch share the same semester.
+        // 1. Update Students
+        const placeholders = studentIds.map(() => '?').join(',');
         await connection.query(
-            `UPDATE batches SET current_semester = ?, semester_dates_pending = TRUE WHERE id = (SELECT batch_id FROM student_profiles WHERE user_id = ? LIMIT 1)`,
-            [targetSemester, studentIds[0]]
+            `UPDATE student_profiles SET current_semester = ? WHERE user_id IN (${placeholders})`,
+            [targetSemester, ...studentIds]
         );
 
         // 2. Update Batches (if applicable)
@@ -61,8 +61,7 @@ export const getStudents = async (req: Request, res: Response) => {
       SELECT 
         u.id, u.email, u.name, u.role, u.phone, u.avatar_url, u.address,
         sp.roll_number, sp.register_number, sp.dob, sp.gender, sp.blood_group,
-        sp.guardian_name, sp.guardian_phone,
-        b.current_semester,
+        sp.guardian_name, sp.guardian_phone, sp.current_semester,
         b.name as batch_name, sp.batch_id,
         s.name as section_name, sp.section_id
       FROM users u
@@ -286,8 +285,8 @@ export const getStudentProfile = async (req: Request | any, res: Response) => {
                 'Full Time' as enrollmentType,
                 IFNULL(b.start_year, 2023) as batchStartYear,
                 IFNULL(b.end_year, 2027) as batchEndYear,
-                COALESCE(b.current_semester, 1) as semester,
-                CEIL(COALESCE(b.current_semester, 1) / 2.0) as year, 
+                COALESCE(sp.current_semester, b.current_semester, 1) as semester,
+                CEIL(COALESCE(sp.current_semester, b.current_semester, 1) / 2.0) as year, 
                 sp.cgpa,             
                 sp.attendance_percentage as attendance,
                 sp.linkedin_url as linkedinUrl,
@@ -441,7 +440,7 @@ export const getStudentSubjects = async (req: Request | any, res: Response) => {
     try {
         // Get student's section and batch info
         const [students]: any = await pool.query(
-            `SELECT sp.section_id, b.id as batch_id, b.current_semester 
+            `SELECT sp.section_id, s.batch_id, COALESCE(sp.current_semester, b.current_semester) as current_semester 
              FROM student_profiles sp
              JOIN sections s ON sp.section_id = s.id
              JOIN batches b ON s.batch_id = b.id

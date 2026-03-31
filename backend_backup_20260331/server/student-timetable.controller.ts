@@ -44,7 +44,7 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              JOIN batches b ON sp.batch_id = b.id
              WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = COALESCE(sp.current_semester, b.current_semester, 1)
              ORDER BY 
                 FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
                 ts.period_number`,
@@ -93,7 +93,7 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              JOIN batches b ON sp.batch_id = b.id
              WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = COALESCE(sp.current_semester, b.current_semester, 1)
              ORDER BY s.name`,
             [studentId]
         );
