@@ -57,8 +57,8 @@ export default function ViewMarks() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Data
-  const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uniqueExams, setUniqueExams] = useState<string[]>([]);
 
   // Details Modal
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -85,6 +85,8 @@ export default function ViewMarks() {
         if (res.ok) {
             const data = await res.json();
             setSubmissions(data);
+            const exams = Array.from(new Set(data.map((s: any) => s.examType).filter(Boolean))) as string[];
+            setUniqueExams(exams);
         }
     } catch (error) {
         toast.error("Failed to fetch data");
@@ -188,16 +190,14 @@ export default function ViewMarks() {
                 
                 {activeTab === 'internal' && (
                     <Select value={selectedExam} onValueChange={setSelectedExam}>
-                        <SelectTrigger className="w-full md:w-40">
-                            <SelectValue placeholder="Exam Type" />
+                        <SelectTrigger className="w-full md:w-40 bg-white/5 border-white/10 rounded-xl">
+                            <SelectValue placeholder="Exam" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="glass-card">
                             <SelectItem value="all">All Exams</SelectItem>
-                            <SelectItem value="UT-1">UT-1</SelectItem>
-                            <SelectItem value="UT-2">UT-2</SelectItem>
-                            <SelectItem value="UT-3">UT-3</SelectItem>
-                            <SelectItem value="MODEL">Model Exam</SelectItem>
-                            <SelectItem value="ASSIGNMENT">Assignment</SelectItem>
+                            {uniqueExams.map(ex => (
+                                <SelectItem key={ex} value={ex}>{ex}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 )}
@@ -293,7 +293,7 @@ export default function ViewMarks() {
                     <TableRow className="border-white/5 hover:bg-transparent">
                         <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
-                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                        {[...new Set(['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER', ...details.flatMap(d => d.marks ? Object.keys(d.marks).map(k => k.toUpperCase()) : [])])].map(exam => {
                             const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
                             if (!hasDataMixed) return null;
                             return (
@@ -318,7 +318,7 @@ export default function ViewMarks() {
                             </div>
                         </TableCell>
                         
-                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
+                        {[...new Set(['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER', ...details.flatMap(d => d.marks ? Object.keys(d.marks).map(k => k.toUpperCase()) : [])])].map(exam => {
                              const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
                              if (!hasDataMixed) return null;
 

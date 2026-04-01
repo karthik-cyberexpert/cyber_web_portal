@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
 import { getFileUrl } from './upload.config.js';
+import { exec } from 'child_process';
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -293,5 +297,65 @@ export const resetUserPassword = async (req: Request | any, res: Response) => {
     } catch (error) {
         console.error('Reset User Password Error:', error);
         res.status(500).json({ message: 'Error resetting password' });
+    }
+};
+
+// SQL System Backup Exporter
+export const exportSystemBackup = async (req: Request | any, res: Response) => {
+    // Only admins should do this (middleware already checks, but extra safety)
+    if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Unauthorized: Admin access required' });
+    }
+
+    try {
+        const dbHost = process.env.DB_HOST || 'localhost';
+        const dbUser = process.env.DB_USER || 'root';
+        const dbPass = process.env.DB_PASSWORD || '';
+        const dbName = process.env.DB_NAME || 'cyber_dept_portal';
+
+        // Filename based on date/time
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+        const fileName = `ACE_PORTAL_BACKUP_${dateStr}_${timeStr}.sql`;
+        
+        // Path to System Documents
+        const documentsDir = path.join(os.homedir(), 'Documents');
+        
+        // Ensure folder existence (though Documents is standard)
+        if (!fs.existsSync(documentsDir)) {
+            fs.mkdirSync(documentsDir, { recursive: true });
+        }
+
+        const outPath = path.join(documentsDir, fileName);
+
+        // Build command
+        // -h host -u user -ppassword DB --result-file=PATH
+        // result-file is safer for redirects and special characters
+        const passArg = dbPass ? `-p${dbPass}` : '';
+        const command = `mysqldump -h ${dbHost} -u ${dbUser} ${passArg} ${dbName} --result-file="${outPath}"`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[BACKUP] mysqldump failed:', error);
+                console.error('[BACKUP] stderr:', stderr);
+                return res.status(500).json({ 
+                    message: 'Backup failed. Ensure mysqldump is installed and in your PATH.',
+                    error: error.message 
+                });
+            }
+            
+            console.log(`[BACKUP] SUCCESS: SQL Dump saved to ${outPath}`);
+            res.json({ 
+                message: 'System backup database dump completed successfully!',
+                fileName: fileName,
+                folder: 'Documents',
+                fullPath: outPath
+            });
+        });
+
+    } catch (error: any) {
+        console.error('[BACKUP] Controller Error:', error);
+        res.status(500).json({ message: 'Error initiating backup: ' + error.message });
     }
 };

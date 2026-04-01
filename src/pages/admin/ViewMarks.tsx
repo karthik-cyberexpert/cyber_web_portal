@@ -61,6 +61,7 @@ export default function ViewMarks() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [subjectsMap, setSubjectsMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const [uniqueExams, setUniqueExams] = useState<string[]>([]);
 
   // Details Modal
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -145,8 +146,11 @@ export default function ViewMarks() {
         if (res.ok) {
             const data = await res.json();
             setSubmissions(data);
+            const exams = Array.from(new Set(data.map((s: any) => s.examType).filter(Boolean))) as string[];
+            setUniqueExams(exams);
         }
     } catch (error) {
+        console.error("Fetch Data Error", error);
         toast.error("Failed to fetch data");
     } finally {
         setLoading(false);
@@ -296,18 +300,16 @@ export default function ViewMarks() {
                 
                 {activeTab === 'internal' && (
                     <Select value={selectedExam} onValueChange={setSelectedExam}>
-                        <SelectTrigger className="w-full md:w-40">
-                            <SelectValue placeholder="Exam Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Exams</SelectItem>
-                            <SelectItem value="UT-1">UT-1</SelectItem>
-                            <SelectItem value="UT-2">UT-2</SelectItem>
-                            <SelectItem value="UT-3">UT-3</SelectItem>
-                            <SelectItem value="MODEL">Model Exam</SelectItem>
-                            <SelectItem value="ASSIGNMENT">Assignment</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <SelectTrigger className="w-full md:w-32 bg-white/5 border-white/10 rounded-xl">
+                        <SelectValue placeholder="Exam" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card">
+                        <SelectItem value="all">All Exams</SelectItem>
+                        {uniqueExams.map(ex => (
+                            <SelectItem key={ex} value={ex}>{ex}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 )}
           </CardContent>
       </Card>
@@ -399,90 +401,69 @@ export default function ViewMarks() {
             ) : (
                 <Table>
                     <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                        <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
-                        {/* Dynamic Exam Headers */}
-                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
-                            // Only show if at least one student has marks for this exam OR if we are in 'All' mode (maybe show all empty?)
-                            // Better: Show only exams that exist in data to avoid clutter, or fixed set if preferred.
-                            // Let's show columns that have ANY data or matches current filter?
-                            // Simple: Show all generic exams found in the data keys.
-                            const hasData = details.some(d => d.marks && d.marks[exam] !== undefined);
-                            const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
-                            
-                            // Case insensitive matching
-                            const actualKey = details.flatMap(d => Object.keys(d.marks || {})).find(k => k.toUpperCase() === exam) || exam;
-                            
-                            if (!hasDataMixed) return null;
-                            
-                            return (
-                                <TableHead key={exam} className="text-center font-black uppercase text-[10px] tracking-widest text-primary/80">
-                                    {exam}
-                                </TableHead>
-                            );
-                        })}
-                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest pr-6">Status</TableHead>
-                    </TableRow>
+                        <TableRow className="border-white/5 hover:bg-transparent">
+                            <TableHead className="w-[100px] font-black uppercase text-[10px] tracking-widest pl-6">Roll No</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] tracking-widest">Student Name</TableHead>
+                            {[...new Set(['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER', ...details.flatMap(d => d.marks ? Object.keys(d.marks).map(k => k.toUpperCase()) : [])])].map(exam => {
+                                const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                                if (!hasDataMixed) return null;
+                                return (
+                                    <TableHead key={exam} className="text-center font-black uppercase text-[10px] tracking-widest text-primary/80">
+                                        {exam}
+                                    </TableHead>
+                                );
+                            })}
+                            <TableHead className="text-center font-black uppercase text-[10px] tracking-widest pr-6">Status</TableHead>
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {details.map((student) => (
-                        <TableRow key={student.id || student.rollNumber} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="font-mono font-bold text-xs pl-6">{student.rollNumber}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Users className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="font-bold text-sm tracking-tight">{student.name}</span>
-                            </div>
-                        </TableCell>
-                        
-                        {/* Dynamic Exam Cells */}
-                        {['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER'].map(exam => {
-                             const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
-                             if (!hasDataMixed) return null;
-
-                             // Find key that matches this exam (unsafe casing handling)
-                             // Assuming backend returns consistent casing "UT-1" etc from `sch.category`.
-                             // `sch.category` usually matches the array above.
-                             // Let's try direct access or find key.
-                             const markVal = student.marks ? (student.marks[exam] ?? student.marks[exam.replace('-', ' ')] ?? student.marks[exam.toUpperCase()]) : undefined;
-                             // Try varied keys: "UT-1", "UT 1", "Model", "MODEL"
-                             // Best approach: Normalize keys in backend or here?
-                             // Let's iterate keys once.
-                             
-                             let displayMark = '-';
-                             if (student.marks) {
-                                 const key = Object.keys(student.marks).find(k => k.toUpperCase() === exam.replace('-', ' ') || k.toUpperCase() === exam);
-                                 if (key) displayMark = student.marks[key];
-                             }
-
-                             return (
-                                <TableCell key={exam} className="text-center">
-                                    <span className={`font-medium ${displayMark !== '-' ? 'text-foreground' : 'text-muted-foreground/30'}`}>
-                                        {displayMark}
-                                    </span>
+                        {details.map((student) => (
+                            <TableRow key={student.id || student.rollNumber} className="border-white/5 hover:bg-white/[0.02]">
+                                <TableCell className="font-mono font-bold text-xs pl-6">{student.rollNumber}</TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                            <Users className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <span className="font-bold text-sm tracking-tight">{student.name}</span>
+                                    </div>
                                 </TableCell>
-                             );
-                        })}
+                                
+                                {[...new Set(['UT-1', 'UT-2', 'UT-3', 'MODEL', 'ASSIGNMENT', 'SEMESTER', ...details.flatMap(d => d.marks ? Object.keys(d.marks).map(k => k.toUpperCase()) : [])])].map(exam => {
+                                     const hasDataMixed = details.some(d => d.marks && Object.keys(d.marks).some(k => k.toUpperCase() === exam));
+                                     if (!hasDataMixed) return null;
 
-                        <TableCell className="text-center pr-6">
-                            <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest border-none ${
-                                student.status === 'approved' ? 'text-success bg-success/10' : 
-                                student.status === 'pending_admin' ? 'text-warning bg-warning/10' : 
-                                'text-muted-foreground bg-white/5'
-                            }`}>
-                                {student.status?.replace('_', ' ') || 'Pending'}
-                            </Badge>
-                        </TableCell>
-                        </TableRow>
-                    ))}
-                    {details.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={8} className="text-center py-8">No students found for this section.</TableCell>
-                        </TableRow>
-                    )}
+                                     let displayMark = '-';
+                                     if (student.marks) {
+                                         const key = Object.keys(student.marks).find(k => k.toUpperCase() === exam.replace('-', ' ') || k.toUpperCase() === exam);
+                                         if (key) displayMark = student.marks[key];
+                                     }
+
+                                     return (
+                                        <TableCell key={exam} className="text-center">
+                                            <span className={`font-medium ${displayMark !== '-' ? 'text-foreground' : 'text-muted-foreground/30'}`}>
+                                                {displayMark}
+                                            </span>
+                                        </TableCell>
+                                     );
+                                })}
+
+                                <TableCell className="text-center pr-6">
+                                    <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest border-none ${
+                                        student.status === 'approved' ? 'text-success bg-success/10' : 
+                                        student.status === 'pending_admin' ? 'text-warning bg-warning/10' : 
+                                        'text-muted-foreground bg-white/5'
+                                    }`}>
+                                        {student.status?.replace('_', ' ') || 'Pending'}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {details.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground italic">No students found for this section.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             )}

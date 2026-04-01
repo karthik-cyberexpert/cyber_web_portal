@@ -53,6 +53,7 @@ import NotesUploadFaculty from "@/pages/faculty/NotesUpload";
 import AssignmentsFaculty from "@/pages/faculty/Assignments";
 import MarksEntry from "@/pages/faculty/MarksEntry";
 import MarksEntrySheet from "@/pages/faculty/MarksEntrySheet";
+import Examinations from "@/pages/faculty/Examinations";
 import CircularsFaculty from "@/pages/faculty/Circulars";
 import StudentsFaculty from "@/pages/faculty/Students";
 
@@ -62,7 +63,6 @@ import PersonalDetails from "@/pages/tutor/PersonalDetails";
 import ClassManagement from "@/pages/tutor/ClassManagement";
 import StudentProfileView from "@/pages/tutor/StudentProfileView";
 import TimetableTutor from "@/pages/tutor/Timetable";
-import VerifyMarks from "@/pages/tutor/VerifyMarks";
 import ViewMarksTutor from "@/pages/tutor/ViewMarks";
 import NotesStatus from "@/pages/tutor/NotesStatus";
 import AssignmentStatus from "@/pages/tutor/AssignmentStatus";
@@ -83,7 +83,6 @@ import PromoteStudents from "@/pages/admin/PromoteStudents";
 import ManageSubjects from "@/pages/admin/ManageSubjects";
 import BatchesClasses from "@/pages/admin/BatchesClasses";
 import TimetableAdmin from "@/pages/admin/Timetable";
-import ApproveMarks from "@/pages/admin/ApproveMarks";
 import NotesAnalytics from "@/pages/admin/NotesAnalytics";
 import Assignments from "@/pages/admin/Assignments";
 import CircularsAdmin from "@/pages/admin/Circulars";
@@ -177,6 +176,7 @@ const App = () => {
                 <Route path="students" element={<StudentsFaculty />} />
                 <Route path="marks/entry" element={<MarksEntry />} />
                 <Route path="marks/sheet" element={<MarksEntrySheet />} />
+                <Route path="exams" element={<Examinations />} />
               </Route>
               
                 {/* Tutor Routes */}
@@ -193,7 +193,6 @@ const App = () => {
                     <Route path="class" element={<ClassManagement />} />
                     <Route path="student/:id" element={<StudentProfileView />} />
                     <Route path="timetable" element={<TimetableTutor />} />
-                    <Route path="marks" element={<VerifyMarks />} />
                     <Route path="view-marks" element={<ViewMarksTutor />} />
                   <Route path="notes" element={<NotesStatus />} />
                   <Route path="assignments" element={<AssignmentStatus />} />
@@ -230,7 +229,7 @@ const App = () => {
                   <Route path="timetable" element={<Navigate to="/admin/timetable/students" replace />} />
                   <Route path="timetable/students" element={<TimetableAdmin view="students" />} />
                   <Route path="timetable/faculty" element={<TimetableAdmin view="faculty" />} />
-                  <Route path="marks" element={<ApproveMarks />} />
+                  <Route path="marks" element={<Navigate to="/admin/view-marks" replace />} />
                   <Route path="requests" element={<Navigate to="/admin/requests/leave" replace />} />
                   <Route path="requests/leave" element={<LeaveApprovalsAdmin filterType="leave" />} />
                   <Route path="requests/od" element={<LeaveApprovalsAdmin filterType="od" />} />
@@ -242,7 +241,6 @@ const App = () => {
                   <Route path="schedule/exams" element={<ExamSchedule />} />
                   <Route path="schedule/holidays" element={<HolidaysSchedule />} />
 
-                  <Route path="marks" element={<ApproveMarks />} />
                   <Route path="view-marks" element={<ViewMarks />} />
                   <Route path="notes" element={<NotesAnalytics />} />
                   <Route path="assignments" element={<Assignments />} />

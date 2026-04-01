@@ -58,3 +58,23 @@ export const markAllAsRead = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
+// Utility to create notifications programmatically
+export const createNotification = async (
+    userId: number, 
+    title: string, 
+    message: string, 
+    type: string = 'info', 
+    actionUrl?: string
+) => {
+    try {
+        await pool.execute(
+            'INSERT INTO notifications (user_id, title, message, type, action_url) VALUES (?, ?, ?, ?, ?)',
+            [userId, title, message, type, actionUrl || null]
+        );
+        return true;
+    } catch (error) {
+        console.error('[Create Notification Error]', error);
+        return false;
+    }
+};

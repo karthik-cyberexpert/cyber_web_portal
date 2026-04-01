@@ -85,6 +85,7 @@ const facultyLinks: SidebarLink[] = [
   },
   { label: 'Timetable', icon: Calendar, path: '/faculty/timetable' },
   { label: 'Marks Entry', icon: ClipboardList, path: '/faculty/marks' },
+  { label: 'Examinations', icon: GraduationCap, path: '/faculty/exams' },
   { label: 'Notes Upload', icon: BookOpen, path: '/faculty/notes' },
   { label: 'Assignments', icon: FileText, path: '/faculty/assignments' },
   { label: 'Circulars', icon: Bell, path: '/faculty/circulars' },
@@ -99,7 +100,6 @@ const tutorLinks: SidebarLink[] = [
     children: [
       { label: 'My Class', icon: Users, path: '/tutor/class' },
       { label: 'Class Time Table', icon: Calendar, path: '/tutor/timetable' },
-      { label: 'Verify Marks', icon: ClipboardList, path: '/tutor/marks' },
       { label: 'View Marks', icon: BookOpen, path: '/tutor/view-marks' },
       { label: 'Notes Status', icon: BookOpen, path: '/tutor/notes' },
       { label: 'Assignment Status', icon: FileText, path: '/tutor/assignments' },
@@ -143,6 +143,7 @@ const tutorLinks: SidebarLink[] = [
   },
   { label: 'My Timetable', icon: Calendar, path: '/faculty/timetable' },
   { label: 'Marks Entry', icon: ClipboardList, path: '/faculty/marks' },
+  { label: 'Examinations', icon: GraduationCap, path: '/faculty/exams' },
   { label: 'Notes Upload', icon: BookOpen, path: '/faculty/notes' },
   { label: 'Assignments', icon: FileText, path: '/faculty/assignments' },
   { label: 'Faculty Circulars', icon: Bell, path: '/faculty/circulars' },
@@ -181,7 +182,6 @@ const adminLinks: SidebarLink[] = [
       { label: 'Faculty Timetable', icon: Users, path: '/admin/timetable/faculty' }
     ]
   },
-  { label: 'Approve Marks', icon: ClipboardList, path: '/admin/marks' },
   { label: 'View Marks', icon: BookOpen, path: '/admin/view-marks' },
   {
     label: 'Portals',

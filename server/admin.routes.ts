@@ -8,7 +8,8 @@ import {
   getAdminProfile,
   updateAdminProfile,
   updateAdminAvatar,
-  resetUserPassword
+  resetUserPassword,
+  exportSystemBackup
 } from './admin.controller.js';
 import { authenticateToken } from './auth.middleware.js';
 import { uploadAvatar } from './upload.config.js';
@@ -29,5 +30,8 @@ router.post('/profile/avatar', authenticateToken, uploadAvatar.single('avatar'),
 
 // Password Reset (Admin only)
 router.post('/reset-password/:userId', authenticateToken, resetUserPassword);
+
+// System Export/Backup
+router.post('/export-backup', authenticateToken, exportSystemBackup);
 
 export default router;

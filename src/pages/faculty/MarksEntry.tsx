@@ -25,7 +25,7 @@ import { API_BASE_URL } from '@/lib/api-config';
 export default function MarksEntrySelection() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [selectedExam, setSelectedExam] = useState<'UT-1' | 'UT-2' | 'UT-3' | 'MODEL' | 'ASSIGNMENT'>('UT-1');
+  const [selectedExam, setSelectedExam] = useState<string>('UT-1');
   const [selectedSubject, setSelectedSubject] = useState(''); 
   const [selectedSection, setSelectedSection] = useState('');
   
@@ -33,9 +33,11 @@ export default function MarksEntrySelection() {
   const [allocations, setAllocations] = useState<any[]>([]);
   const [availableSections, setAvailableSections] = useState<any[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+  const [customExams, setCustomExams] = useState<any[]>([]);
 
   useEffect(() => {
     fetchClasses();
+    fetchCustomExams();
   }, []);
 
   const fetchClasses = async () => {
@@ -59,6 +61,20 @@ export default function MarksEntrySelection() {
           console.error("Failed to fetch classes", error);
           toast.error("Failed to load your classes");
       }
+  };
+
+  const fetchCustomExams = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/custom-exams`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            setCustomExams(await res.json());
+        }
+    } catch (e) {
+        console.error("Failed to fetch custom exams", e);
+    }
   };
 
   // Filter subjects based on selected section
@@ -162,6 +178,9 @@ export default function MarksEntrySelection() {
                                 <SelectItem value="UT-3">Unit Test 3 (UT-3)</SelectItem>
                                 <SelectItem value="MODEL">Model Examination</SelectItem>
                                 <SelectItem value="ASSIGNMENT">Assignment</SelectItem>
+                                {customExams.filter(ce => ce.subjectCode === selectedSubject && ce.sectionName.includes(availableSections.find(s=>s.id.toString()===selectedSection)?.name || 'NONE')).map(ce => (
+                                    <SelectItem key={ce.id} value={ce.exam_type_label} className="text-primary font-bold">{ce.title}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

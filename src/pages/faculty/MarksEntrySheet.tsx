@@ -5,7 +5,8 @@ import {
   ArrowLeft,
   CheckCircle2, 
   AlertCircle,
-  Hash
+  Hash,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,12 +46,39 @@ export default function MarksEntrySheet() {
 
   const [students, setStudents] = useState<StudentWithMarks[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customSchema, setCustomSchema] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredStudents = students.filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      s.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     if (section && subject && exam) {
+      if (exam.startsWith('CUSTOM_')) {
+          fetchCustomExamDetails();
+      } else {
+          setCustomSchema(null);
+      }
       loadData();
     }
   }, [section, subject, exam]);
+
+  const fetchCustomExamDetails = async () => {
+    try {
+        const res = await fetch(`${API_BASE_URL}/custom-exams`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const current = data.find((d: any) => d.exam_type_label === exam);
+            if (current) {
+                setCustomSchema(current);
+            }
+        }
+    } catch (e) {}
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -113,36 +141,39 @@ export default function MarksEntrySheet() {
      if (breakdown.absent) return 0;
  
      let total = 0;
-     if (type.startsWith('UT-')) {
-         // 5 x 2m, 5 x 8m
-         const partA = breakdown['partA'] || [];
-         const partB = breakdown['partB'] || [];
-         total += partA.reduce((a: number, b: number) => a + (b || 0), 0);
-         total += partB.reduce((a: number, b: number) => a + (b || 0), 0);
-     } else if (type === 'MODEL') {
-         // 10 x 2, 5 x 16
-         const partA = breakdown['partA'] || [];
-         const partB = breakdown['partB'] || [];
-         total += partA.reduce((a: number, b: number) => a + (b || 0), 0);
-         total += partB.reduce((a: number, b: number) => a + (b || 0), 0);
-     }
-     return total;
+      if (type.startsWith('UT-')) {
+          // 5 x 2m, 5 x 8m
+          const partA = breakdown['partA'] || [];
+          const partB = breakdown['partB'] || [];
+          total += partA.reduce((a: number, b: number) => a + (b || 0), 0);
+          total += partB.reduce((a: number, b: number) => a + (b || 0), 0);
+      } else if (type === 'MODEL') {
+          // 10 x 2, 5 x 16
+          const partA = breakdown['partA'] || [];
+          const partB = breakdown['partB'] || [];
+          total += partA.reduce((a: number, b: number) => a + (b || 0), 0);
+          total += partB.reduce((a: number, b: number) => a + (b || 0), 0);
+      } else if (type.startsWith('CUSTOM_') && customSchema) {
+          customSchema.question_breakdown?.forEach((p: any, i: number) => {
+              const part = breakdown[`part${i}`] || [];
+              total += part.reduce((a: number, b: number) => a + (b || 0), 0);
+          });
+      }
+      return total;
   };
 
   const handleAbsentToggle = (studentId: string, isAbsent: boolean) => {
       setStudents(prev => prev.map(s => {
           if (s.id !== studentId) return s;
-          
+
           const newBreakdown = { ...s.breakdown, absent: isAbsent };
-          // If absent, clear marks or set to 0. Let's keep existing values but total becomes 0
-          const total = calculateTotal(newBreakdown, exam);
-          
-          return { 
-              ...s, 
-              absent: isAbsent, 
-              breakdown: newBreakdown, 
-              currentMarks: total,
-              markStatus: 'changed' 
+
+          return {
+              ...s,
+              absent: isAbsent,
+              breakdown: newBreakdown,
+              currentMarks: calculateTotal(newBreakdown, exam),
+              markStatus: 'changed'
           };
       }));
   };
@@ -167,7 +198,7 @@ export default function MarksEntrySheet() {
       return;
     }
 
-    const itemsToProcess = targetStatus === 'pending_tutor' ? students : changed;
+    const itemsToProcess = targetStatus === 'approved' ? students : changed;
     if (itemsToProcess.length === 0) return;
 
     try {
@@ -178,7 +209,7 @@ export default function MarksEntrySheet() {
             marks: itemsToProcess.map(s => ({
                 studentId: s.id,
                 marks: s.absent ? 0 : (s.currentMarks || 0),
-                maxMarks: exam === 'MODEL' ? 100 : exam === 'ASSIGNMENT' ? 1 : 50,
+                maxMarks: customSchema ? customSchema.total_marks : (exam === 'MODEL' ? 100 : exam === 'ASSIGNMENT' ? 1 : 50),
                 status: targetStatus || 'draft',
                 breakdown: { ...s.breakdown, absent: s.absent }
             }))
@@ -210,16 +241,21 @@ export default function MarksEntrySheet() {
   // Generate headers based on exam type
   const getQuestionHeaders = () => {
       if (exam === 'ASSIGNMENT') return ['Submission'];
+      if (exam.startsWith('CUSTOM_') && customSchema) {
+          const headers: string[] = [];
+          customSchema.question_breakdown?.forEach((p: any, i: number) => {
+              for(let j=1; j<=p.count; j++) headers.push(`P${i+1} Q${j}(${p.mark}M)`);
+          });
+          return headers;
+      }
       if (exam === 'MODEL') {
-          // 10 Qs for Part A, 5 Qs for Part B. Total 15 columns + Absent
-          const headers = [];
+          const headers: string[] = [];
           for(let i=1; i<=10; i++) headers.push(`Q${i}(2M)`);
           for(let i=1; i<=5; i++) headers.push(`Q${i+10}(16M)`);
           return headers;
       }
       // IA 1/2/3
-      // 5 Qs for Part A, 5 Qs for Part B. Total 10 columns
-      const headers = [];
+      const headers: string[] = [];
       for(let i=1; i<=5; i++) headers.push(`Q${i}(2M)`);
       for(let i=1; i<=5; i++) headers.push(`Q${i+5}(8M)`);
       return headers;
@@ -232,7 +268,7 @@ export default function MarksEntrySheet() {
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between sticky top-0 z-50 bg-background/95 backdrop-blur py-4 border-b border-white/10"
+            className="flex flex-col xl:flex-row xl:items-center justify-between sticky top-0 z-50 bg-background/95 backdrop-blur py-4 border-b border-white/10 gap-4"
         >
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -243,14 +279,25 @@ export default function MarksEntrySheet() {
                     <p className="text-muted-foreground text-sm font-medium">Entering marks for Section {sectionName}</p>
                 </div>
             </div>
+
+            <div className="relative flex-1 max-w-md w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by name or register number..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-10 bg-white/5 border-white/10 rounded-xl"
+                />
+            </div>
+
             <div className="flex items-center gap-3">
                 <Button variant="outline" className="rounded-xl border-white/10" onClick={() => handleSaveAll('draft')}>
                     <Save className="w-4 h-4 mr-2" />
                     Save Draft
                 </Button>
-                <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20" onClick={() => handleSaveAll('pending_tutor')}>
+                <Button variant="gradient" className="rounded-xl shadow-lg shadow-primary/20" onClick={() => handleSaveAll('approved')}>
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Forward to Tutor
+                    Submit Marks
                 </Button>
             </div>
         </motion.div>
@@ -277,7 +324,7 @@ export default function MarksEntrySheet() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                        {students.map((student, idx) => (
+                        {filteredStudents.map((student, idx) => (
                             <motion.tr 
                                 key={student.id}
                                 initial={{ opacity: 0 }}
@@ -299,9 +346,26 @@ export default function MarksEntrySheet() {
                                             className="mx-auto"
                                         />
                                     </td>
+                                ) : exam.startsWith('CUSTOM_') && customSchema ? (
+                                    <>
+                                        {customSchema.question_breakdown?.map((p: any, i: number) => (
+                                            <React.Fragment key={`part-${i}`}>
+                                                {Array.from({ length: p.count }).map((_, j) => (
+                                                    <td key={`Q-${i}-${j}`} className="p-2 text-center">
+                                                        <Input
+                                                            className={`w-12 h-9 text-center bg-white/5 border-white/10 ${student.absent ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            value={student.breakdown?.[`part${i}`]?.[j] ?? ''}
+                                                            onChange={(e) => handleDetailedMarkChange(student.id, `part${i}`, j, e.target.value, p.mark)}
+                                                            disabled={student.absent}
+                                                        />
+                                                    </td>
+                                                ))}
+                                            </React.Fragment>
+                                        ))}
+                                    </>
                                 ) : (
                                     <>
-                                        {/* Part A Inputs (1-5 or 1-10) */}
+                                        {/* Standard IA/MODEL Inputs */}
                                         {Array.from({ length: exam === 'MODEL' ? 10 : 5 }).map((_, i) => (
                                             <td key={`A-${i}`} className="p-2 text-center">
                                                 <Input
@@ -312,7 +376,6 @@ export default function MarksEntrySheet() {
                                                 />
                                             </td>
                                         ))}
-                                        {/* Part B Inputs (6-10 or 11-15) */}
                                         {Array.from({ length: 5 }).map((_, i) => (
                                             <td key={`B-${i}`} className="p-2 text-center">
                                                 <Input

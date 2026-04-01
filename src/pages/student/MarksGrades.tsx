@@ -339,6 +339,42 @@ export default function MarksGrades() {
             <ChevronDown className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
           </Button>
         </motion.div>
+        {/* Custom Assessments Section */}
+        {marksData.some(m => m.customExams?.length > 0) && (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="lg:col-span-3 space-y-4"
+            >
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-accent" />
+                    <h3 className="text-xl font-black italic uppercase tracking-tight">Custom Assessments</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {marksData.filter(m => m.customExams?.length > 0).map((subject, sIdx) => 
+                        subject.customExams.map((exam: any, eIdx: number) => (
+                            <div key={`${sIdx}-${eIdx}`} className="glass-card p-4 rounded-2xl border-none bg-gradient-to-br from-primary/5 to-accent/5">
+                                <div className="flex justify-between items-start mb-2">
+                                    <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest border-primary/20 text-primary">
+                                        {subject.code}
+                                    </Badge>
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground italic">Extra Assessment</span>
+                                </div>
+                                <h4 className="font-bold text-sm mb-1 italic uppercase line-clamp-1">{exam.title}</h4>
+                                <div className="flex items-end justify-between mt-4">
+                                    <span className="text-xs font-medium text-muted-foreground">Scored</span>
+                                    <div className="text-right">
+                                        <span className="text-2xl font-black italic text-primary">{exam.marks}</span>
+                                        <span className="text-xs font-bold text-muted-foreground opacity-50 ml-1">/ {exam.max}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </motion.div>
+        )}
       </div>
     </div>
   );

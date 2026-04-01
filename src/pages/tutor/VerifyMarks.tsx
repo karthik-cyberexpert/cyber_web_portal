@@ -102,14 +102,12 @@ export default function VerifyMarks() {
     });
 
     const total = relevantVerifications.length;
-    const pending = relevantVerifications.filter(v => v.markStatus === 'pending_tutor').length;
-    const verified = total - pending;
+    const completed = relevantVerifications.filter(v => (v.studentCount > 0)).length;
     
     return {
         total,
-        pending,
-        verified,
-        completion: total > 0 ? Math.round((verified / total) * 100) : 0
+        completed,
+        completion: total > 0 ? Math.round((completed / total) * 100) : 0
     };
   }, [verifications, markType]);
 
@@ -288,7 +286,7 @@ export default function VerifyMarks() {
       >
         <div>
           <h1 className="text-3xl font-black italic tracking-tighter uppercase">
-            {markType === 'internal' ? 'Internal' : 'External'} Marks Verification 📝
+            {markType === 'internal' ? 'Internal' : 'External'} Marks Viewer 📝
           </h1>
           <p className="text-muted-foreground font-medium">Verify class marks submitted by subject teachers</p>
         </div>
@@ -296,11 +294,7 @@ export default function VerifyMarks() {
             <div className="flex gap-3">
             <Button variant="outline" className="rounded-xl border-white/10 hover:bg-white/5 font-black uppercase text-[10px] tracking-widest italic">
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-primary" />
-                Consolidated
-            </Button>
-            <Button variant="gradient" className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic">
-                <CheckCheck className="w-4 h-4 mr-2" />
-                Verify All
+                Consolidated Report
             </Button>
             </div>
         )}
@@ -330,12 +324,11 @@ export default function VerifyMarks() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: 'Total Subjects', value: stats.total.toString(), icon: BookOpen, color: 'primary' },
-          { label: 'Pending', value: stats.pending.toString(), icon: AlertCircle, color: 'warning' },
-          { label: 'Verified', value: stats.verified.toString(), icon: CheckCircle, color: 'success' },
-          { label: 'Completion', value: `${stats.completion}%`, icon: ClipboardCheck, color: 'accent' },
+          { label: 'Classes Completed', value: stats.completed.toString(), icon: CheckCircle, color: 'success' },
+          { label: 'Completion rate', value: `${stats.completion}%`, icon: ClipboardCheck, color: 'accent' },
         ].map((stat, i) => (
           <motion.div
             key={i}
@@ -410,10 +403,8 @@ export default function VerifyMarks() {
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="flex items-start gap-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-glow ${
-                    subject.markStatus === 'pending_tutor' ? 'bg-primary/10 text-primary shadow-primary/20' : 'bg-success/10 text-success shadow-success/20'
-                  }`}>
-                    {subject.markStatus === 'pending_tutor' ? <ClipboardCheck className="w-7 h-7" /> : <CheckCircle className="w-7 h-7" />}
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-glow bg-success/10 text-success shadow-success/20`}>
+                    <CheckCircle className="w-7 h-7" />
                   </div>
                   <div>
                     <h3 className="text-xl font-black italic tracking-tight uppercase flex items-center gap-3">
@@ -443,21 +434,9 @@ export default function VerifyMarks() {
                      {markType === 'external' ? 'Enter Grades' : 'View Marks'}
                    </Button>
 
-                   {subject.markStatus !== 'pending_tutor' ? (
-                     <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none ml-3">
-                        <CheckCheck className="w-3.5 h-3.5" /> Forwarded
-                      </Badge>
-                   ) : (
-                     <Button 
-                      variant="gradient" 
-                      size="sm"
-                      className="rounded-xl shadow-xl shadow-primary/20 font-black uppercase text-[10px] tracking-widest italic px-8 ml-3"
-                      onClick={() => handleVerify(subject)}
-                     >
-                       Verify & Forward
-                       <ArrowRight className="w-4 h-4 ml-2" />
-                     </Button>
-                   )}
+                   <Badge variant="secondary" className="bg-success text-white px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-success/30 border-none ml-3">
+                      <CheckCheck className="w-3.5 h-3.5" /> Finalized
+                    </Badge>
                 </div>
               </div>
             </motion.div>

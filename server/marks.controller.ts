@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { pool } from './db.js';
+import { createNotification } from './notifications.controller.js';
 
 // Get Faculty Classes (Subjects & Sections)
 export const getFacultyClasses = async (req: Request | any, res: Response) => {
@@ -88,21 +89,28 @@ export const getMarks = async (req: Request, res: Response) => {
         console.log('[getMarks] Batch ID:', batchId);
 
         // 3. Find or Create Schedule
-        // Frontend sends examType as title (e.g., 'cia 1', 'model')
-        const [scheds]: any = await connection.query(
-            'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
-            [batchId, String(examType).toUpperCase()]
-        );
-        
-        let scheduleId;
-        if (scheds.length > 0) {
-            scheduleId = scheds[0].id;
+        let scheduleId = null;
+        let customExamId = null;
+
+        if (String(examType).startsWith('CUSTOM_')) {
+            const [customs]: any = await connection.query('SELECT id FROM custom_exams WHERE exam_type_label = ?', [examType]);
+            if (customs.length === 0) return res.status(404).json({ message: 'Custom exam not found' });
+            customExamId = customs[0].id;
         } else {
-            const [ins]: any = await connection.query(
-                "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
-                [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
+            const [scheds]: any = await connection.query(
+                'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
+                [batchId, String(examType).toUpperCase()]
             );
-            scheduleId = ins.insertId;
+            
+            if (scheds.length > 0) {
+                scheduleId = scheds[0].id;
+            } else {
+                const [ins]: any = await connection.query(
+                    "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
+                    [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
+                );
+                scheduleId = ins.insertId;
+            }
         }
 
         // 4. Fetch Students and Left Join Marks
@@ -116,11 +124,14 @@ export const getMarks = async (req: Request, res: Response) => {
             JOIN student_profiles sp ON u.id = sp.user_id
             JOIN sections sec ON sp.section_id = sec.id
             JOIN batches b ON sec.batch_id = b.id
-            LEFT JOIN marks m ON m.student_id = u.id AND m.schedule_id = ? AND m.subject_id = ?
+            LEFT JOIN marks m ON m.student_id = u.id AND (
+                (m.schedule_id = ? AND ? IS NOT NULL) OR 
+                (m.custom_exam_id = ? AND ? IS NOT NULL)
+            ) AND m.subject_id = ?
             WHERE sp.section_id = ? 
               AND u.role = 'student'
             ORDER BY sp.roll_number ASC
-        `, [scheduleId, subjectId, sectionId]);
+        `, [scheduleId, scheduleId, customExamId, customExamId, subjectId, sectionId]);
 
         console.log('[getMarks] Students fetched:', rows.length);
         res.json(rows);
@@ -152,45 +163,120 @@ export const saveMarks = async (req: Request, res: Response) => {
         if (sections.length === 0) throw new Error('Section not found');
         const batchId = sections[0].batch_id;
 
-        // Find/Create Schedule
-        let scheduleId;
-        const [scheds]: any = await connection.query(
-            'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
-            [batchId, String(examType).toUpperCase()]
-        );
-        if (scheds.length > 0) {
-            scheduleId = scheds[0].id;
+        // Find/Create Schedule or Custom Exam
+        let scheduleId = null;
+        let customExamId = null;
+
+        if (String(examType).startsWith('CUSTOM_')) {
+            const [customs]: any = await connection.query('SELECT id FROM custom_exams WHERE exam_type_label = ?', [examType]);
+            if (customs.length === 0) throw new Error('Custom exam not found');
+            customExamId = customs[0].id;
         } else {
-             const [ins]: any = await connection.execute(
-                "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
-                [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
+            const [scheds]: any = await connection.query(
+                'SELECT id FROM schedules WHERE batch_id = ? AND category = ? LIMIT 1', 
+                [batchId, String(examType).toUpperCase()]
             );
-            scheduleId = ins.insertId;
+            
+            if (scheds.length > 0) {
+                scheduleId = scheds[0].id;
+            } else {
+                const [ins]: any = await connection.query(
+                    "INSERT INTO schedules (batch_id, title, category, start_date, end_date) VALUES (?, ?, ?, CURDATE(), CURDATE())",
+                    [batchId, String(examType).toUpperCase(), String(examType).toUpperCase()]
+                );
+                scheduleId = ins.insertId;
+            }
         }
 
         const facultyId = (req as any).user?.id;
 
         // 2. Loop and Upsert
         for (const entry of marks) {
-            const [existing]: any = await connection.query(
-                'SELECT id FROM marks WHERE schedule_id = ? AND student_id = ? AND subject_id = ?',
-                [scheduleId, entry.studentId, subjectId]
+            const [existing]: any = await connection.execute(
+                'SELECT id FROM marks WHERE ( (schedule_id = ? AND ? IS NOT NULL) OR (custom_exam_id = ? AND ? IS NOT NULL) ) AND student_id = ? AND subject_id = ?',
+                [scheduleId, scheduleId, customExamId, customExamId, entry.studentId, subjectId]
             );
+
+            const finalStatus = entry.status === 'pending_tutor' || entry.status === 'pending_admin' ? 'approved' : (entry.status || 'draft');
 
             if (existing.length > 0) {
                 await connection.execute(
                     'UPDATE marks SET marks_obtained = ?, grade = ?, max_marks = ?, status = ?, faculty_id = ? WHERE id = ?',
-                    [entry.marks, entry.grade || null, entry.maxMarks, entry.status || 'draft', facultyId, existing[0].id]
+                    [entry.marks, entry.grade || null, entry.maxMarks, finalStatus, facultyId, existing[0].id]
                 );
             } else {
                 await connection.execute(
-                    'INSERT INTO marks (schedule_id, student_id, subject_id, marks_obtained, grade, max_marks, status, faculty_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [scheduleId, entry.studentId, subjectId, entry.marks, entry.grade || null, entry.maxMarks, entry.status || 'draft', facultyId]
+                    'INSERT INTO marks (schedule_id, custom_exam_id, student_id, subject_id, marks_obtained, grade, max_marks, status, faculty_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [scheduleId, customExamId, entry.studentId, subjectId, entry.marks, entry.grade || null, entry.maxMarks, finalStatus, facultyId]
                 );
             }
         }
 
         await connection.commit();
+        
+        // --- 3. Notifications (Post-Commit) ---
+        (async () => {
+            try {
+                // Get Faculty, Subject and Section info for pretty messages
+                const [infoRows]: any = await pool.query(`
+                    SELECT 
+                        u.name as facultyName,
+                        s.name as subjectName,
+                        s.code as subjectCode,
+                        sec.id as sectionId,
+                        sec.name as sectionName
+                    FROM users u
+                    JOIN subjects s ON s.id = ?
+                    JOIN sections sec ON sec.id = ?
+                    WHERE u.id = ?
+                `, [subjectId, sectionId, facultyId]);
+                
+                if (infoRows.length > 0) {
+                    const info = infoRows[0];
+                    
+                    let examDisplay = examType;
+                    if (customExamId) {
+                        const [customRows]: any = await pool.query('SELECT title FROM custom_exams WHERE id = ?', [customExamId]);
+                        if (customRows.length > 0) examDisplay = customRows[0].title;
+                    }
+                    const examLabel = String(examDisplay).toUpperCase();
+
+                    // Send Notifications to Students
+                    for (const entry of marks) {
+                        const sStatus = entry.status === 'pending_tutor' || entry.status === 'pending_admin' ? 'approved' : (entry.status || 'draft');
+                        if (sStatus === 'approved') {
+                            await createNotification(
+                                entry.studentId,
+                                'Marks Published 📊',
+                                `${info.facultyName} just published marks for ${info.subjectCode} - ${examLabel}.`,
+                                'success',
+                                '/student/marks'
+                            );
+                        }
+                    }
+
+                    // Send Notification to Tutors
+                    const [tutors]: any = await pool.query(
+                        'SELECT faculty_id FROM tutor_assignments WHERE section_id = ? AND is_active = TRUE',
+                        [sectionId]
+                    );
+                    const uniqueTutorIds = [...new Set(tutors.map((t: any) => t.faculty_id))] as number[];
+                    
+                    for (const tId of uniqueTutorIds) {
+                        await createNotification(
+                            tId,
+                            'Marks Submission ✍️',
+                            `${info.facultyName} has submitted marks for section ${info.sectionName} in ${info.subjectCode}.`,
+                            'info',
+                            '/tutor/view-marks'
+                        );
+                    }
+                }
+            } catch (err) {
+                console.error("[Notification Callback Error]", err);
+            }
+        })();
+
         res.json({ message: 'Marks updated successfully' });
 
     } catch (e: any) {
@@ -404,17 +490,18 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
                     s.id as subjectId,
                     sec.id as sectionId,
                     sec.name as sectionName,
-                    sch.category as examType,
-                    sch.id as scheduleId,
+                    COALESCE(sch.category, ce.exam_type_label) as examType,
+                    COALESCE(sch.id, ce.id) as scheduleId,
                     u.name as facultyName,
                     COUNT(m.id) as studentCount,
                     COUNT(m.id) as studentCount,
-                    SUM(CASE WHEN m.status = 'pending_tutor' THEN 1 ELSE 0 END) as pendingCount,
+                    SUM(CASE WHEN m.status = 'approved' THEN 1 ELSE 0 END) as approvedCount,
                     MIN(m.created_at) as submittedAt,
                     MIN(m.status) as markStatus,
                     MAX(m.grade) as hasGrades
                 FROM marks m
-                JOIN schedules sch ON m.schedule_id = sch.id
+                LEFT JOIN schedules sch ON m.schedule_id = sch.id
+                LEFT JOIN custom_exams ce ON m.custom_exam_id = ce.id
                 JOIN subjects s ON m.subject_id = s.id
                 JOIN (
                     SELECT user_id, section_id, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
@@ -439,13 +526,13 @@ export const getVerificationStatus = async (req: Request | any, res: Response) =
                 params.push(parseInt(semester as string));
             }
 
-            query += ` GROUP BY s.id, sec.id, sch.id, u.id, u.name`;
+            query += ` GROUP BY s.id, sec.id, COALESCE(sch.id, ce.id), u.id, u.name`;
 
             const [rows]: any = await connection.query(query, params);
             allRows.push(...rows);
         }
 
-        res.json(allRows);
+        res.json(allRows.map(row => ({ ...row, pendingCount: 0, isFinal: true })));
     } catch (e) {
         console.error("Get Verification Status Error:", e);
         res.status(500).json({ message: 'Error fetching status' });
@@ -546,7 +633,7 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
                     sp.roll_number as rollNumber,
                     m.marks_obtained as marks,
                     m.status as status,
-                    sch.category as examType
+                    COALESCE(sch.category, ce.exam_type_label) as examType
                 FROM users u
                 JOIN (
                     SELECT user_id, section_id, roll_number, 
@@ -556,6 +643,7 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
                 ) sp ON u.id = sp.user_id
                 LEFT JOIN marks m ON m.student_id = u.id AND m.subject_id = ?
                 LEFT JOIN schedules sch ON m.schedule_id = sch.id
+                LEFT JOIN custom_exams ce ON m.custom_exam_id = ce.id
                 WHERE sp.section_id = ?
                   AND (? IS NULL OR ? IS NULL OR (sp.row_num >= ? AND sp.row_num <= ?))
             `;
@@ -567,7 +655,11 @@ export const getDetailedVerifications = async (req: Request | any, res: Response
              params.push(sectionId, subjectId, sectionId, start, end, start, end);
              
              if (targetScheduleId) {
-                 query += ` AND m.schedule_id = ?`;
+                 if (String(targetScheduleId).startsWith('CUSTOM_')) {
+                     query += ` AND ce.exam_type_label = ?`;
+                 } else {
+                     query += ` AND m.schedule_id = ?`;
+                 }
                  params.push(targetScheduleId);
              }
         }
@@ -636,12 +728,13 @@ export const verifyMarks = async (req: Request | any, res: Response) => {
         if (subjects.length === 0) return res.status(404).json({ message: 'Subject not found' });
         const subjectId = subjects[0].id;
 
+        // Approval logic removed - this endpoint is now redundant or just updates to 'approved' if not already
         await connection.query(
-            "UPDATE marks SET status = 'pending_admin', tutor_id = ? WHERE schedule_id = ? AND subject_id = ? AND student_id IN (SELECT user_id FROM student_profiles WHERE section_id = ?)",
+            "UPDATE marks SET status = 'approved', tutor_id = ? WHERE schedule_id = ? AND subject_id = ? AND student_id IN (SELECT user_id FROM student_profiles WHERE section_id = ?)",
             [userId, scheduleId, subjectId, sectionId]
         );
 
-        res.json({ message: 'Marks verified and forwarded to Admin' });
+        res.json({ message: 'Marks finalized successfully' });
     } catch (e) {
         console.error("Verify Marks Error:", e);
         res.status(500).json({ message: 'Error verifying marks' });
@@ -786,11 +879,8 @@ export const getMarksStatusReport = async (req: Request, res: Response) => {
             
             if (stat.markCount > 0) {
                 if (stat.approvedCount === stat.markCount && stat.markCount > 0) {
-                    statusLabel = 'Verified';
-                } else if (stat.pendingAdminCount > 0) {
-                    statusLabel = 'Forwarded';
-                } else if (stat.pendingTutorCount > 0 || stat.markCount < stat.totalSlots) {
-                    // Partially submitted or waiting for tutor
+                    statusLabel = 'Finalized';
+                } else if (stat.markCount > 0) {
                     statusLabel = 'Submitted';
                 }
             }

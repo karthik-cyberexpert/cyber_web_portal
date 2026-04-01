@@ -61,6 +61,46 @@ export default function Settings() {
   });
   
   const [activeTab, setActiveTab] = useState('general');
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    const toastId = toast.loading('Initiating full system database backup...');
+    
+    try {
+      // Small delay to let user see the loading state
+      await new Promise(r => setTimeout(r, 600));
+
+      const response = await fetch('/api/admin/export-backup', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Backup Successful!', {
+          id: toastId,
+          description: `SQL dump saved to: ${data.fullPath}`,
+          duration: 5000
+        });
+        console.log('[BACKUP] Completed:', data);
+      } else {
+        throw new Error(data.message || 'Server failed to generate backup');
+      }
+    } catch (error: any) {
+      console.error('[BACKUP] Error:', error);
+      toast.error('Backup Failed', {
+        id: toastId,
+        description: error.message || 'Please ensure mysqldump is installed on the server.',
+      });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
 
   const navItems = [
     { id: 'general', label: 'General', icon: SettingsIcon },
@@ -476,13 +516,35 @@ export default function Settings() {
                           <motion.div
                             whileHover={{ scale: 1.02 }}
                             className="p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer"
+                            onClick={!isBackingUp ? handleBackup : undefined}
                           >
                             <div className="flex items-center gap-3 mb-2">
-                              <RefreshCw className="w-5 h-5 text-primary" />
+                              <RefreshCw className={cn("w-5 h-5 text-primary", isBackingUp && "animate-spin")} />
                               <h4 className="font-medium">Create Backup</h4>
                             </div>
-                            <p className="text-sm text-muted-foreground">Create a full system backup</p>
-                            <Button variant="outline" size="sm" className="mt-3">Backup Now</Button>
+                            <p className="text-sm text-muted-foreground">Dump all data and schema to a single SQL file in Documents</p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-3 gap-2" 
+                              disabled={isBackingUp}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBackup();
+                              }}
+                            >
+                              {isBackingUp ? (
+                                <>
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                  Backing Up...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3 h-3" />
+                                  Backup Now
+                                </>
+                              )}
+                            </Button>
                           </motion.div>
                           <motion.div
                             whileHover={{ scale: 1.02 }}

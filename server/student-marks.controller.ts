@@ -24,7 +24,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
         const currentSemester = studentProfile[0]?.current_semester || 8;
         console.log('[Get Student Marks] Determined Semester:', currentSemester);
 
-        // Fetch marks grouped by subject from schedules table
+        // Fetch marks grouped by subject from schedules and custom_exams
         const [marksData]: any = await pool.query(
             `SELECT 
                 s.id as subject_id,
@@ -32,17 +32,18 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                 s.code as subject_code,
                 s.credits,
                 s.semester,
-                sch.title as exam_name,
-                sch.category as exam_type,
+                COALESCE(sch.title, ce.title) as exam_name,
+                COALESCE(sch.category, ce.exam_type_label) as exam_type,
                 m.marks_obtained,
                 m.max_marks,
                 m.status,
                 m.remarks
              FROM marks m
-             JOIN schedules sch ON m.schedule_id = sch.id
+             LEFT JOIN schedules sch ON m.schedule_id = sch.id
+             LEFT JOIN custom_exams ce ON m.custom_exam_id = ce.id
              JOIN subjects s ON m.subject_id = s.id
              WHERE m.student_id = ? AND m.status IN ('approved', 'pending_admin')
-             ORDER BY s.name, sch.category`,
+             ORDER BY s.name, COALESCE(sch.category, ce.exam_type_label)`,
             [studentId]
         );
 
@@ -62,6 +63,7 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                     cia3: null,
                     model: null,
                     assignment: null,
+                    customExams: [],
                     total: 0,
                     grade: null,
                     status: mark.status
@@ -84,6 +86,12 @@ export const getStudentMarks = async (req: Request | any, res: Response) => {
                 subject.model = mark.marks_obtained;
             } else if (type === 'ASSIGNMENT' || title.includes('ASSIGNMENT')) {
                 subject.assignment = mark.marks_obtained;
+            } else if (type.startsWith('CUSTOM_')) {
+                subject.customExams.push({
+                    title: mark.exam_name,
+                    marks: mark.marks_obtained,
+                    max: mark.max_marks
+                });
             }
         });
 

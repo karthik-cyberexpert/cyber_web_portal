@@ -163,7 +163,7 @@ export async function getTutorLeaveRequests(req: Request, res: Response) {
                         u.name as user_name, sp.roll_number, sp.current_semester, b.name as batch_name
                 FROM leave_requests lr
                 JOIN (
-                    SELECT user_id, batch_id, section_id, roll_number, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
+                    SELECT user_id, batch_id, section_id, roll_number, current_semester, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
                     FROM student_profiles
                     WHERE batch_id = ? AND section_id = ?
                 ) sp ON lr.user_id = sp.user_id

@@ -141,6 +141,9 @@ app.use('/api/lost-and-found', lostAndFoundRoutes);
 import marksRoutes from './marks.routes.js';
 app.use('/api/marks', marksRoutes);
 
+import customExamsRoutes from './custom-exams.routes.js';
+app.use('/api/custom-exams', customExamsRoutes);
+
 import { calendarRouter } from './calendar.routes.js';
 app.use('/api/calendar', calendarRouter);
 
