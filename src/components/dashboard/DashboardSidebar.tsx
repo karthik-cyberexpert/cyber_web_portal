@@ -273,7 +273,7 @@ export default function DashboardSidebar({ collapsed, onToggle, onNavigate, isMo
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden flex-1 min-w-0"
               >
-                <p className="font-bold text-sidebar-foreground text-sm truncate">Cyber Security Dept</p>
+                <p className="font-bold text-sidebar-foreground text-sm truncate">CSE(Cyber Security)</p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">ACE-HOSUR</p>
               </motion.div>
             )}

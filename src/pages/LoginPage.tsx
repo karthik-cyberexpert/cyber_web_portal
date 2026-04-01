@@ -129,7 +129,7 @@ export default function LoginPage() {
               transition={{ delay: 0.5 }}
               className="text-xl text-white/90 max-w-md"
             >
-              The unified digital gateway for students and faculty of the CSE Cyber Security department.
+              The unified digital gateway for students and faculty of the CSE(Cyber Security) department.
             </motion.p>
           </div>
 

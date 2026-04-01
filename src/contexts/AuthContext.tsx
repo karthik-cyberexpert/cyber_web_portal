@@ -94,14 +94,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (!response.ok) {
-            const data = await response.json();
-            if (data.code === 'ANOTHER_DEVICE_LOGGED_IN' || response.status === 401) {
-                console.error('[AUTH] Multi-session detected or session invalid');
-                setSessionError({
-                    title: "Security Alert",
-                    message: "Someone else logged in to this account from a different session. You have been automatically logged out for your security."
-                });
-                logout(true); // Forced logout (don't clear localStorage)
+            // Handle specific status codes without assuming JSON body
+            if (response.status === 401 || response.status === 500) {
+                // Try to parse JSON only if content-type is application/json
+                const contentType = response.headers.get("content-type");
+                let data = null;
+                if (contentType && contentType.includes("application/json")) {
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        console.warn('[AUTH] Failed to parse error response as JSON');
+                    }
+                }
+
+                if (response.status === 401 || (data && data.code === 'ANOTHER_DEVICE_LOGGED_IN')) {
+                    console.error('[AUTH] Multi-session detected or session invalid');
+                    setSessionError({
+                        title: "Security Alert",
+                        message: "Someone else logged in to this account from a different session. You have been automatically logged out for your security."
+                    });
+                    logout(true); // Forced logout
+                }
             }
         }
     } catch (err) {

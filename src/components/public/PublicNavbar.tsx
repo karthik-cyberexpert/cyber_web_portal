@@ -54,7 +54,7 @@ const PublicNavbar = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold tracking-wider text-white uppercase leading-tight">Adhiyamaan College</span>
-              <span className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest leading-tight">Cyber Security Dept</span>
+              <span className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest leading-tight">CSE(Cyber Security)</span>
             </div>
           </Link>
 

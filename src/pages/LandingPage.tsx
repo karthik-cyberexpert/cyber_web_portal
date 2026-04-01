@@ -71,9 +71,9 @@ const LandingPage = () => {
       </div>
 
       {/* Hero Section */}
-      <section id="home" className="relative z-10 min-h-screen flex items-center justify-center pt-20">
-        <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8 text-left">
+      <section id="home" className="relative z-10 min-h-screen flex items-center justify-center pt-20 pb-12 lg:pt-0 lg:pb-0">
+        <div className="container mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -87,7 +87,7 @@ const LandingPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-4xl xs:text-5xl lg:text-7xl font-bold tracking-tight leading-tight"
+              className="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1]"
             >
               Mastering the <br />
               <span className="bg-gradient-to-r from-primary via-blue-500 to-primary bg-clip-text text-transparent bg-300% animate-gradient">
@@ -99,9 +99,9 @@ const LandingPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-lg lg:text-xl text-white/50 max-w-xl leading-relaxed"
+              className="text-base sm:text-lg lg:text-xl text-white/50 max-w-xl mx-auto lg:mx-0 leading-relaxed"
             >
-              Join the CSE Cyber Security department at Adhiyamaan College of Engineering. We equip students with cutting-edge skills to protect the digital landscape of tomorrow.
+              Join the CSE(Cyber Security) department at Adhiyamaan College of Engineering. We equip students with cutting-edge skills to protect the digital landscape of tomorrow.
             </motion.p>
             
             <motion.div 
@@ -110,9 +110,9 @@ const LandingPage = () => {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="flex flex-col sm:flex-row items-center gap-4"
             >
-              <Link to="/login">
-                <Button size="lg" className="h-14 px-8 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 relative overflow-hidden group w-full sm:w-auto">
-                  <span className="relative z-10 flex items-center gap-2">Student Portal <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>
+              <Link to="/login" className="w-full sm:w-auto">
+                <Button size="lg" className="h-14 sm:h-12 lg:h-14 px-8 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 relative overflow-hidden group w-full">
+                  <span className="relative z-10 flex items-center justify-center gap-2">Student Portal <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>
                 </Button>
               </Link>
               <a href="#about">
@@ -157,17 +157,17 @@ const LandingPage = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="relative z-10 py-20 bg-white/5 border-y border-white/5 backdrop-blur-sm">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+      <section className="relative z-10 py-12 sm:py-20 bg-white/5 border-y border-white/10 backdrop-blur-sm">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
             {stats.map((stat, idx) => (
               <motion.div 
                 {...fadeInUp}
                 key={idx} 
                 className="text-center space-y-2"
               >
-                <h3 className="text-4xl lg:text-5xl font-bold gradient-text">{stat.value}</h3>
-                <p className="text-white/40 font-medium uppercase tracking-widest text-xs">{stat.label}</p>
+                <h3 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold gradient-text leading-none">{stat.value}</h3>
+                <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] sm:text-xs">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -175,9 +175,9 @@ const LandingPage = () => {
       </section>
 
       {/* About Section */}
-      <section id="about" className="relative z-10 py-24 bg-black">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row gap-16 items-center">
+      <section id="about" className="relative z-10 py-16 sm:py-24 bg-black">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
             <motion.div 
               {...fadeInUp}
               className="lg:w-1/2 space-y-6"
@@ -185,7 +185,7 @@ const LandingPage = () => {
               <h2 className="text-sm font-bold text-primary tracking-widest uppercase">About Our Department</h2>
               <h3 className="text-4xl lg:text-5xl font-bold">Pioneering Cybersecurity Education</h3>
               <p className="text-white/60 leading-relaxed text-lg">
-                The Department of CSE - Cyber Security at Adhiyamaan College of Engineering (ACE) 
+                The CSE(Cyber Security) department at Adhiyamaan College of Engineering (ACE) 
                 is committed to delivering world-class education in the most critical field of modern 
                 computing. Our mission is to produce highly skilled cyber-professionals with deep 
                 technical expertise and strong ethical values.
@@ -196,8 +196,8 @@ const LandingPage = () => {
                   "State-of-the-Art Cybersecurity Labs",
                   "Industry Integrated Curriculum",
                   "Excellent Placement Record in Top Tech Firms"
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3">
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                     <span className="text-white/80 font-medium">{item}</span>
                   </div>
@@ -240,12 +240,12 @@ const LandingPage = () => {
       </section>
 
       {/* Programs/Specializations */}
-      <section className="relative z-10 py-24 bg-black/50">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+      <section className="relative z-10 py-16 sm:py-24 bg-black/50">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16 space-y-4">
             <h2 className="text-sm font-bold text-blue-500 tracking-widest uppercase">Our Core Specializations</h2>
-            <h3 className="text-4xl lg:text-5xl font-bold">Engineered for Technical Excellence</h3>
-            <p className="text-white/40 text-lg">
+            <h3 className="text-3xl sm:text-4xl lg:text-5xl font-bold">Engineered for Technical Excellence</h3>
+            <p className="text-white/40 text-base sm:text-lg">
               Our curriculum is designed to cover the entire spectrum of cybersecurity, 
               from low-level binary analysis to high-level cloud architecture.
             </p>
@@ -272,9 +272,9 @@ const LandingPage = () => {
       </section>
 
       {/* Facilities Preview */}
-      <section className="relative z-10 py-24 bg-black">
-        <div className="container mx-auto px-6">
-          <div className="glass-card rounded-[3rem] p-12 lg:p-20 overflow-hidden relative border-white/5">
+      <section className="relative z-10 py-16 sm:py-24 bg-black">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="glass-card rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 lg:p-20 overflow-hidden relative border-white/10">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
             
             <div className="flex flex-col lg:flex-row justify-between items-center gap-12 relative z-10">
@@ -291,8 +291,8 @@ const LandingPage = () => {
                     "Forensics Lab",
                     "Network Ops Center",
                     "Incubation Center"
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-2 text-white/70 font-medium">
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-white/70 font-medium">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                       {item}
                     </div>
@@ -304,9 +304,9 @@ const LandingPage = () => {
                   </Button>
                 </Link>
               </div>
-              <div className="lg:w-1/2 grid grid-cols-2 gap-4">
+              <div className="lg:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-4">
-                  <div className="h-48 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-500">
+                  <div className="h-48 sm:h-48 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-500">
                     <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc48?auto=format&fit=crop&q=80&w=400" className="w-full h-full object-cover" />
                   </div>
                   <div className="h-64 rounded-2xl overflow-hidden shadow-2xl shadow-primary/20">
@@ -328,14 +328,14 @@ const LandingPage = () => {
       </section>
 
       {/* Contact Section Preview */}
-      <section id="contact" className="relative z-10 py-24 bg-black">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            <motion.div {...fadeInUp} className="space-y-8">
+      <section id="contact" className="relative z-10 py-16 sm:py-24 bg-black">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+            <motion.div {...fadeInUp} className="space-y-6 sm:space-y-8 text-center lg:text-left">
               <div className="space-y-4">
                 <h2 className="text-sm font-bold text-primary tracking-widest uppercase">Get in Touch</h2>
-                <h3 className="text-4xl font-bold">Ready to take the next step?</h3>
-                <p className="text-white/50 text-lg">
+                <h3 className="text-3xl sm:text-4xl font-bold">Ready to take the next step?</h3>
+                <p className="text-white/50 text-base sm:text-lg">
                   Whether you are a prospective student or an industry partner, 
                   we would love to hear from you.
                 </p>
@@ -347,20 +347,20 @@ const LandingPage = () => {
                   { icon: <Phone className="w-6 h-6" />, label: "Call", value: "+91 9487819149" },
                   { icon: <MapPin className="w-6 h-6" />, label: "Location", value: "ACE, Hosur, TN, India" }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/5 border-l-primary border-l-2">
+                  <div key={idx} className="flex flex-col sm:flex-row items-center lg:items-start text-center lg:text-left gap-4 p-4 rounded-xl bg-white/5 border border-white/10 border-l-primary border-l-2">
                     <div className="text-primary">{item.icon}</div>
                     <div>
-                      <p className="text-xs text-white/30 uppercase tracking-widest font-bold">{item.label}</p>
-                      <p className="font-medium">{item.value}</p>
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-black">{item.label}</p>
+                      <p className="font-bold text-sm sm:text-base">{item.value}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </motion.div>
 
-            <motion.div {...fadeInUp} className="glass-card p-8 rounded-3xl border-white/10">
+            <motion.div {...fadeInUp} className="glass-card p-6 sm:p-8 rounded-2xl sm:rounded-3xl border-white/10">
               <form className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm text-white/60">First Name</label>
                     <input type="text" className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 focus:border-primary outline-none transition-all" placeholder="John" />
