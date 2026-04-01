@@ -20,14 +20,14 @@ export const getFacultyClasses = async (req: Request | any, res: Response) => {
                 sec.name as sectionName,
                 b.name as batchName,
                 s.semester as subjectSemester,
-                b.current_semester as batchCurrentSemester
+                (SELECT sp.current_semester FROM student_profiles sp WHERE sp.batch_id = b.id LIMIT 1) as batchCurrentSemester
             FROM subject_allocations sa
             JOIN subjects s ON sa.subject_id = s.id
             JOIN sections sec ON (sa.section_id = sec.id OR sa.section_id IS NULL)
             JOIN batches b ON sec.batch_id = b.id
             WHERE sa.faculty_id = ? 
               AND sa.is_active = TRUE
-              AND s.semester = b.current_semester
+              AND s.semester = (SELECT sp.current_semester FROM student_profiles sp WHERE sp.batch_id = b.id LIMIT 1)
         `, [userId]);
 
         // Transform for frontend
@@ -743,10 +743,9 @@ export const getMarksStatusReport = async (req: Request, res: Response) => {
             query += ' AND s.semester = ?';
             params.push(semester);
         } else {
-            // Default: Match batch's current semester if specific not asked? 
+            // Default: Match students' current semester if specific not asked? 
             // Or just return all subjects relevant to the batch's stage.
-            // Let's restrict to s.semester <= b.current_semester to avoid future noise
-            query += ' AND s.semester <= b.current_semester';
+            query += ' AND s.semester <= (SELECT MAX(current_semester) FROM student_profiles WHERE batch_id = b.id)';
         }
 
         const [structures]: any = await connection.query(query, params);

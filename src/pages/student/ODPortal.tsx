@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,7 +17,9 @@ import {
   ChevronRight,
   MapPin,
   MoreVertical,
-  Undo2
+  Undo2,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -63,6 +65,54 @@ export default function ODPortal() {
 
   const [fileAttached, setFileAttached] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [holidays, setHolidays] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/calendar/events?category=Holiday`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHolidays(data.map((h: any) => {
+            const d = new Date(h.date);
+            return format(d, 'yyyy-MM-dd');
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch holidays", error);
+      }
+    };
+    fetchHolidays();
+  }, []);
+
+  const isHolidayOrSunday = (dateStr: string) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const isSunday = date.getDay() === 0;
+    const isHoliday = holidays.includes(dateStr);
+    return isSunday || isHoliday;
+  };
+
+  const calculateWorkingDaysCount = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 0;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    let workingDays = 0;
+    let current = new Date(start);
+    while (current <= end) {
+      const currentStr = format(current, 'yyyy-MM-dd');
+      const isSun = current.getDay() === 0;
+      const isHol = holidays.includes(currentStr);
+      if (!isSun && !isHol) {
+        workingDays++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return workingDays;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,6 +155,20 @@ export default function ODPortal() {
     if (new Date(formData.startDate) > new Date(formData.endDate)) {
         toast.error("End date cannot be before Start date");
         return;
+    }
+
+    // Holiday/Sunday Validation
+    const isSingleDay = formData.startDate === formData.endDate;
+    if (isSingleDay && isHolidayOrSunday(formData.startDate)) {
+        const dayStr = format(new Date(formData.startDate), 'EEEE');
+        toast.error(`Cannot apply for a single-day OD on a ${dayStr} (Holiday/Sunday)`);
+        return;
+    }
+
+    const workingDaysCount = calculateWorkingDaysCount(formData.startDate, formData.endDate);
+    if (workingDaysCount === 0) {
+      toast.error("Selected range contains no working days (all are holidays/Sundays)");
+      return;
     }
 
     // OD always requires document
@@ -171,6 +235,8 @@ export default function ODPortal() {
             placeToVisit: ''
         });
         setFileAttached(false);
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
         console.error('Error submitting OD:', error);
         toast.error('Failed to submit OD request');
@@ -382,6 +448,7 @@ export default function ODPortal() {
                   <div className="flex items-center gap-3">
                     <Input 
                       type="file" 
+                      ref={fileInputRef}
                       accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -394,22 +461,6 @@ export default function ODPortal() {
                             setSelectedFile(null);
                             return;
                           }
-                          
-                          // Validate type just in case
-                          const allowedTypes = [
-                              'image/png', 'image/jpeg', 'image/jpg', 
-                              'application/pdf', 
-                              'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                              'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                              'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-                          ];
-                          
-                          if (!allowedTypes.includes(file.type)) {
-                              // Optional: be lenient or strict. User asked for "and so on", so maybe just warning or letting backend handle strictness.
-                              // But let's stick to the list for safety.
-                              // Actually, to fully "support" them, we should allow them.
-                          }
-
                           toast.success("File attached successfully");
                           setFileAttached(true);
                           setSelectedFile(file);
@@ -418,8 +469,48 @@ export default function ODPortal() {
                             setSelectedFile(null);
                         }
                       }}
-                      className="bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-success/10 file:text-success hover:file:bg-success/20" 
+                      className={`bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-success/10 file:text-success hover:file:bg-success/20 ${fileAttached ? 'hidden' : 'block'}`} 
                     />
+                    {fileAttached && (
+                         <div className="flex items-center gap-3 w-full bg-success/5 p-2 rounded-xl border border-success/20 animate-in fade-in zoom-in duration-200">
+                             <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                                 <Briefcase className="w-4 h-4 text-success shrink-0" />
+                                 <span className="text-xs font-medium truncate">
+                                     {selectedFile?.name || "File attached"}
+                                 </span>
+                             </div>
+                             <div className="flex items-center gap-1">
+                                 <Button 
+                                   type="button"
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-8 w-8 text-success hover:bg-success/10 transition-colors"
+                                   onClick={() => {
+                                      if (selectedFile) {
+                                          const url = URL.createObjectURL(selectedFile);
+                                          window.open(url, '_blank');
+                                      }
+                                   }}
+                                 >
+                                   <Eye className="w-4 h-4" />
+                                 </Button>
+                                 <Button 
+                                   type="button"
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-8 w-8 text-destructive hover:bg-destructive/10 transition-colors"
+                                   onClick={() => {
+                                     if (fileInputRef.current) fileInputRef.current.value = '';
+                                     setFileAttached(false);
+                                     setSelectedFile(null);
+                                     toast.info("File removed");
+                                   }}
+                                 >
+                                   <Trash2 className="w-4 h-4" />
+                                 </Button>
+                             </div>
+                         </div>
+                    )}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
                     Max size: 5MB. Supported: Images, PDF, Word, Excel, PPT.

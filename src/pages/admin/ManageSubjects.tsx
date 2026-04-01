@@ -63,6 +63,8 @@ export default function ManageSubjects() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [allFaculties, setAllFaculties] = useState<Faculty[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('all');
+  const [facultySearchQuery, setFacultySearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
   // Dialog States
@@ -156,6 +158,7 @@ export default function ManageSubjects() {
     setIsFacultyOpen(false);
     setSelectedSubject(null);
     setTempSelectedFaculties([]);
+    setFacultySearchQuery('');
     setIsSaving(false);
   };
 
@@ -221,17 +224,18 @@ export default function ManageSubjects() {
      }
   };
   
-  const toggleFacultyInTemp = (facultyId: number) => {
-      setTempSelectedFaculties(prev => 
-        prev.includes(facultyId) 
-            ? prev.filter(id => id !== facultyId)
-            : [...prev, facultyId]
-      );
-  };
-
-  const handleSaveFaculties = async () => {
+  const toggleFacultyAssignment = async (facultyId: number) => {
       if (!selectedSubject) return;
-      setIsSaving(true);
+      
+      const isAssigned = tempSelectedFaculties.includes(facultyId);
+      const newFacultyIds = isAssigned 
+          ? tempSelectedFaculties.filter(id => id !== facultyId)
+          : [...tempSelectedFaculties, facultyId];
+      
+      // Optimistic update
+      const previousIds = [...tempSelectedFaculties];
+      setTempSelectedFaculties(newFacultyIds);
+      
       try {
           const res = await fetch(`${API_BASE_URL}/academic/subjects/${selectedSubject.id}/faculties`, {
               method: 'POST',
@@ -239,22 +243,23 @@ export default function ManageSubjects() {
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${token}`
               },
-              body: JSON.stringify({ facultyIds: tempSelectedFaculties })
+              body: JSON.stringify({ facultyIds: newFacultyIds })
           });
 
-          if (res.ok) {
-              toast.success("Faculties assigned successfully");
-              fetchData();
-              handleClose();
+          if (!res.ok) {
+              setTempSelectedFaculties(previousIds);
+              toast.error("Failed to update faculty assignment");
           } else {
-              toast.error("Failed to update faculties");
+              toast.success(isAssigned ? "Faculty removed" : "Faculty assigned", { duration: 1500 });
+              fetchData();
           }
       } catch (error) {
-           toast.error("Network error");
-      } finally {
-          setIsSaving(false);
+          setTempSelectedFaculties(previousIds);
+          toast.error("Network error");
       }
   };
+
+
 
   const handleDownloadTemplate = () => {
     const templateData = [
@@ -337,10 +342,12 @@ export default function ManageSubjects() {
     reader.readAsBinaryString(file);
   };
 
-  const filteredSubjects = subjects.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSubjects = subjects.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      s.code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSemester = selectedSemester === 'all' || s.semester.toString() === selectedSemester;
+    return matchesSearch && matchesSemester;
+  });
 
 
   return (
@@ -378,6 +385,17 @@ export default function ManageSubjects() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+          <SelectTrigger className="w-[180px] bg-card">
+            <SelectValue placeholder="All Semesters" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Semesters</SelectItem>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+              <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -388,6 +406,7 @@ export default function ManageSubjects() {
               <TableHead>Type</TableHead>
               <TableHead>Subject Code</TableHead>
               <TableHead>Subject Name</TableHead>
+              <TableHead>Semester</TableHead>
               <TableHead>Credits</TableHead>
               <TableHead>Faculties</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -396,7 +415,7 @@ export default function ManageSubjects() {
           <TableBody>
             {isLoading ? (
                <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Loading subjects...
                 </TableCell>
               </TableRow>
@@ -418,6 +437,11 @@ export default function ManageSubjects() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">{subject.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20">
+                      Sem {subject.semester}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{subject.credits}</TableCell>
                   <TableCell>
                     {subject.faculties.length > 0 ? (
@@ -430,7 +454,7 @@ export default function ManageSubjects() {
                            ))}
                            {subject.faculties.length > 3 && (
                              <div className="w-8 h-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium">
-                               +{subject.faculties.length - 3}
+                                +{subject.faculties.length - 3}
                              </div>
                            )}
                          </div>
@@ -471,7 +495,7 @@ export default function ManageSubjects() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                    <div className="flex flex-col items-center justify-center gap-2">
                      <BookOpen className="w-8 h-8 opacity-20" />
                      <p>No subjects found. Add a new subject to get started.</p>
@@ -603,11 +627,23 @@ export default function ManageSubjects() {
               Assign faculties to <span className="font-semibold">{selectedSubject?.name}</span> ({selectedSubject?.code})
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-2">
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search faculty name..."
+                className="pl-10"
+                value={facultySearchQuery}
+                onChange={(e) => setFacultySearchQuery(e.target.value)}
+              />
+            </div>
             <h4 className="mb-4 text-sm font-medium leading-none">Available Faculties</h4>
             <ScrollArea className="h-60 rounded-md border p-4">
               <div className="space-y-4">
-                {allFaculties.length > 0 ? ( allFaculties.map((faculty) => {
+                {allFaculties.filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase())).length > 0 ? ( 
+                  allFaculties
+                    .filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase()))
+                    .map((faculty) => {
                   const isAssigned = tempSelectedFaculties.includes(faculty.id);
                   return (
                     <div key={faculty.id} className="flex items-center justify-between space-x-4">
@@ -617,14 +653,13 @@ export default function ManageSubjects() {
                         </div>
                         <div>
                           <p className="text-sm font-medium leading-none">{faculty.name}</p>
-                          <p className="text-xs text-muted-foreground">{faculty.department || 'N/A'}</p>
                         </div>
                       </div>
                       <Button 
                         size="sm" 
                         variant={isAssigned ? "secondary" : "outline"}
                         className={isAssigned ? "bg-green-100 text-green-700 hover:bg-green-200" : ""}
-                        onClick={() => toggleFacultyInTemp(faculty.id)}
+                        onClick={() => toggleFacultyAssignment(faculty.id)}
                       >
                          {isAssigned ? <Check className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
                          {isAssigned ? "Assigned" : "Assign"}
@@ -637,12 +672,6 @@ export default function ManageSubjects() {
               </div>
             </ScrollArea>
           </div>
-          <DialogFooter>
-             <Button variant="outline" onClick={handleClose} disabled={isSaving}>Cancel</Button>
-             <Button onClick={handleSaveFaculties} disabled={isSaving}>
-                 {isSaving ? 'Saving...' : 'Save Changes'}
-             </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

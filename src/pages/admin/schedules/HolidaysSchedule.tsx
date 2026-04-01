@@ -176,16 +176,30 @@ export default function HolidaysSchedule() {
 
   return (
     <div className="space-y-6">
-      {/* Full Width Selection Header */}
       <div className="-mx-6 -mt-6 p-6 bg-background/50 backdrop-blur-xl border-b border-white/10 sticky top-0 z-30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-7xl mx-auto">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Holiday Schedule
-              </h1>
-              <p className="text-muted-foreground text-sm">Manage Holidays and non-working days</p>
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Holiday Schedule
+            </h1>
+            <p className="text-muted-foreground text-sm">Manage Holidays and non-working days</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold text-foreground">
+              {format(currentMonth, 'MMMM yyyy')}
+            </h2>
+            <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-0.5">
+              <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={goToToday} className="text-xs font-medium px-3 h-8">
+                Today
+              </Button>
+              <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
-            {/* No selection needed for Holidays generally, or could add Year selector */}
+          </div>
         </div>
       </div>
 
@@ -195,29 +209,7 @@ export default function HolidaysSchedule() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
         >
-            {/* Calendar Controls */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-3xl font-bold text-foreground">
-                        {format(currentMonth, 'MMMM yyyy')}
-                    </h2>
-                    <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1">
-                        <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
-                            <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={goToToday} className="text-xs font-medium px-3 h-8">
-                            Today
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
-                <Button className="bg-primary text-primary-foreground shadow-lg shadow-primary/20" onClick={() => handleDateClick(new Date())}>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Declare Holiday
-                </Button>
-            </div>
+
 
             {/* Calendar Grid */}
             <div className="glass-card rounded-2xl border border-white/10 overflow-hidden shadow-2xl">

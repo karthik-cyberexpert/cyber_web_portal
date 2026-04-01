@@ -129,15 +129,20 @@ export const updateBatch = async (req: Request, res: Response) => {
 
     try {
         await pool.execute(
+            `UPDATE student_profiles sp
+             SET sp.current_semester = ?
+             WHERE sp.batch_id = ?`,
+            [semester, id]
+        );
+        await pool.execute(
             `UPDATE batches 
-             SET current_semester = ?, 
-                 semester_start_date = ?, 
+             SET semester_start_date = ?, 
                  semester_end_date = ?,
                  semester_dates_pending = FALSE 
              WHERE id = ?`,
-            [semester, semester_start_date || null, semester_end_date || null, id]
+            [semester_start_date || null, semester_end_date || null, id]
         );
-        res.json({ message: 'Batch updated successfully' });
+        res.json({ message: 'Batch students promoted and dates updated successfully' });
     } catch (error: any) {
         console.error('Update Batch Error:', error);
         res.status(500).json({ message: 'Error updating batch' });
@@ -147,12 +152,19 @@ export const updateBatch = async (req: Request, res: Response) => {
 // Get Pending Semester Updates - Returns batches that need new semester dates
 export const getPendingSemesterUpdates = async (req: Request, res: Response) => {
     try {
-        const [allBatches]: any = await pool.query('SELECT id, name, current_semester, semester_end_date, semester_dates_pending FROM batches');
+        // We now check students within the batch.
+        // For simplicity, we find the 'most common' semester or just check if any student needs update.
+        // Better: We track the Batch's "Expected" semester based on start_year.
+        const [allBatches]: any = await pool.query('SELECT id, name, semester_end_date, semester_dates_pending FROM batches');
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth(); // 0-indexed
 
         for (const batch of allBatches) {
+            // Get current semester of the majority of students or first student
+            const [studentRows]: any = await pool.query('SELECT current_semester FROM student_profiles WHERE batch_id = ? LIMIT 1', [batch.id]);
+            const currentSem = studentRows.length > 0 ? studentRows[0].current_semester : 1;
+
             const startYear = parseInt(batch.name.split('-')[0]);
             if (isNaN(startYear)) continue;
 
@@ -163,9 +175,10 @@ export const getPendingSemesterUpdates = async (req: Request, res: Response) => 
             if (expectedSemester < 1) expectedSemester = 1;
             if (expectedSemester > 8) expectedSemester = 8;
 
-            // If DB is lagging behind calendar expected semester
-            if (batch.current_semester < expectedSemester) {
-                console.log(`Auto-incrementing batch ${batch.name} from Sem ${batch.current_semester} to Sem ${expectedSemester}`);
+            if (currentSem < expectedSemester) {
+                console.log(`Batch ${batch.name} expected to be at Sem ${expectedSemester} but students at ${currentSem}`);
+                // Flag for update but DON'T auto-overwrite students individually.
+                // Admin will use Promote Students UI for precise control.
                 
                 // Deactivate old allocations
                 await pool.execute(`
@@ -180,17 +193,18 @@ export const getPendingSemesterUpdates = async (req: Request, res: Response) => 
 
                 await pool.execute(`
                     UPDATE batches 
-                    SET current_semester = ?,
-                        semester_dates_pending = TRUE,
+                    SET semester_dates_pending = TRUE,
                         semester_start_date = NULL,
                         semester_end_date = NULL
                     WHERE id = ?
-                `, [expectedSemester, batch.id]);
+                `, [batch.id]);
             } 
             // Also handle the case where the current semester dates have passed
-            else if (batch.semester_end_date && new Date(batch.semester_end_date) < now && !batch.semester_dates_pending && batch.current_semester < 8) {
-                const nextSem = batch.current_semester + 1;
-                console.log(`Semester ended for batch ${batch.name} (Sem ${batch.current_semester}). Moving to Sem ${nextSem}`);
+            else if (batch.semester_end_date && new Date(batch.semester_end_date) < now && !batch.semester_dates_pending && currentSem < 8) {
+                const nextSem = currentSem + 1;
+                console.log(`Semester ended for students of batch ${batch.name} (Sem ${currentSem}). Moving to Sem ${nextSem}`);
+                
+                await pool.execute(`UPDATE student_profiles SET current_semester = ? WHERE batch_id = ?`, [nextSem, batch.id]);
                 
                 await pool.execute(`
                     UPDATE subject_allocations sa
@@ -200,22 +214,22 @@ export const getPendingSemesterUpdates = async (req: Request, res: Response) => 
                     WHERE sec.batch_id = ?
                       AND s.semester = ?
                       AND sa.is_active = TRUE
-                `, [batch.id, batch.current_semester]);
+                `, [batch.id, currentSem]);
 
                 await pool.execute(`
                     UPDATE batches 
-                    SET current_semester = ?,
-                        semester_dates_pending = TRUE,
+                    SET semester_dates_pending = TRUE,
                         semester_start_date = NULL,
                         semester_end_date = NULL
                     WHERE id = ?
-                `, [nextSem, batch.id]);
+                `, [batch.id]);
             }
         }
 
         // Now fetch all batches that need semester date configuration
         const [rows]: any = await pool.query(`
-            SELECT b.id, b.name, b.current_semester, b.semester_start_date, b.semester_end_date
+            SELECT b.id, b.name, b.semester_start_date, b.semester_end_date,
+            (SELECT sp.current_semester FROM student_profiles sp WHERE sp.batch_id = b.id LIMIT 1) as current_semester
             FROM batches b
             WHERE b.semester_dates_pending = TRUE OR b.semester_start_date IS NULL OR b.semester_end_date IS NULL
             ORDER BY b.name ASC

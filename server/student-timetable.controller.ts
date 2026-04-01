@@ -40,11 +40,10 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              LEFT JOIN subject_allocations sa ON ts.subject_allocation_id = sa.id
              LEFT JOIN subjects s ON sa.subject_id = s.id
              LEFT JOIN users u ON sa.faculty_id = u.id
-             JOIN student_profiles sp ON sp.section_id = ts.section_id -- Join profile via section to ensure safety, or pass studentID
-             JOIN batches b ON sp.batch_id = b.id
+             JOIN student_profiles sp ON sp.section_id = ts.section_id
              WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = sp.current_semester
              ORDER BY 
                 FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
                 ts.period_number`,
@@ -90,10 +89,9 @@ export const getStudentTimetable = async (req: Request | any, res: Response) => 
              JOIN subjects s ON sa.subject_id = s.id
              JOIN users u ON sa.faculty_id = u.id
              JOIN student_profiles sp ON sp.section_id = sa.section_id
-             JOIN batches b ON sp.batch_id = b.id
              WHERE sp.user_id = ?
                AND sa.is_active = TRUE
-               AND s.semester = b.current_semester
+               AND s.semester = sp.current_semester
              ORDER BY s.name`,
             [studentId]
         );

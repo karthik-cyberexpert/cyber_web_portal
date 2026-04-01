@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,7 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreVertical,
-  Undo2
+  Undo2,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -59,6 +61,55 @@ export default function LeavePortal() {
   });
 
   const [fileAttached, setFileAttached] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [holidays, setHolidays] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/calendar/events?category=Holiday`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHolidays(data.map((h: any) => {
+            const d = new Date(h.date);
+            return format(d, 'yyyy-MM-dd');
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch holidays", error);
+      }
+    };
+    fetchHolidays();
+  }, []);
+
+  const isHolidayOrSunday = (dateStr: string) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const isSunday = date.getDay() === 0;
+    const isHoliday = holidays.includes(dateStr);
+    return isSunday || isHoliday;
+  };
+
+  const calculateWorkingDaysCount = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 0;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    let workingDays = 0;
+    let current = new Date(start);
+    while (current <= end) {
+      const currentStr = format(current, 'yyyy-MM-dd');
+      const isSun = current.getDay() === 0;
+      const isHol = holidays.includes(currentStr);
+      if (!isSun && !isHol) {
+        workingDays++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return workingDays;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,6 +154,20 @@ export default function LeavePortal() {
         return;
     }
 
+    // Holiday/Sunday Validation
+    const isSingleDay = formData.startDate === formData.endDate;
+    if (isSingleDay && isHolidayOrSunday(formData.startDate)) {
+        const dayStr = format(new Date(formData.startDate), 'EEEE');
+        toast.error(`Cannot apply for a single-day leave on a ${dayStr} (Holiday/Sunday)`);
+        return;
+    }
+
+    const workingDaysCount = calculateWorkingDaysCount(formData.startDate, formData.endDate);
+    if (workingDaysCount === 0) {
+      toast.error("Selected range contains no working days (all are holidays/Sundays)");
+      return;
+    }
+
     // Conditional File Upload Validation
     if (['Sick', 'Medical'].includes(formData.type) && !fileAttached) {
         toast.error(`Document attachment is required for ${formData.type}`);
@@ -120,9 +185,8 @@ export default function LeavePortal() {
         formDataToSend.append('session', formData.durationType);
 
         // Append file if exists
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput?.files?.[0]) {
-            formDataToSend.append('file', fileInput.files[0]);
+        if (selectedFile) {
+            formDataToSend.append('file', selectedFile);
         }
 
         // Call backend API
@@ -154,13 +218,15 @@ export default function LeavePortal() {
         setLeaveHistory(history);
 
         setFormData({
-            type: 'Casual',
+            type: 'Casual Leave',
             startDate: '',
             endDate: '',
             reason: '',
             durationType: 'Full-Day'
         });
         setFileAttached(false);
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
         console.error('Error submitting leave:', error);
         toast.error('Failed to submit leave request');
@@ -364,6 +430,7 @@ export default function LeavePortal() {
                     <Input 
                       type="file" 
                       id="file-upload"
+                      ref={fileInputRef}
                       accept=".png,.jpg,.jpeg"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -372,22 +439,66 @@ export default function LeavePortal() {
                             toast.error("File size must be less than 1MB");
                             e.target.value = '';
                             setFileAttached(false);
+                            setSelectedFile(null);
                             return;
                           }
                           if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
                             toast.error("Only PNG, JPG, and JPEG files are allowed");
                             e.target.value = '';
                             setFileAttached(false);
+                            setSelectedFile(null);
                             return;
                           }
                           toast.success("File attached successfully");
                           setFileAttached(true);
+                          setSelectedFile(file);
                         } else {
                             setFileAttached(false);
+                            setSelectedFile(null);
                         }
                       }}
-                      className="bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs sm:text-sm" 
+                      className={`bg-muted/50 border-transparent rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs sm:text-sm ${fileAttached ? 'hidden' : 'block'}`} 
                     />
+                    {fileAttached && (
+                         <div className="flex items-center gap-3 w-full bg-primary/5 p-2 rounded-xl border border-primary/20 animate-in fade-in zoom-in duration-200">
+                             <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                                 <FileText className="w-4 h-4 text-primary shrink-0" />
+                                 <span className="text-xs font-medium truncate">
+                                     {selectedFile?.name || "File attached"}
+                                 </span>
+                             </div>
+                             <div className="flex items-center gap-1">
+                                 <Button 
+                                   type="button"
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-8 w-8 text-primary hover:bg-primary/10 transition-colors"
+                                   onClick={() => {
+                                      if (selectedFile) {
+                                          const url = URL.createObjectURL(selectedFile);
+                                          window.open(url, '_blank');
+                                      }
+                                   }}
+                                 >
+                                   <Eye className="w-4 h-4" />
+                                 </Button>
+                                 <Button 
+                                   type="button"
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-8 w-8 text-destructive hover:bg-destructive/10 transition-colors"
+                                   onClick={() => {
+                                     if (fileInputRef.current) fileInputRef.current.value = '';
+                                     setFileAttached(false);
+                                     setSelectedFile(null);
+                                     toast.info("File removed");
+                                   }}
+                                 >
+                                   <Trash2 className="w-4 h-4" />
+                                 </Button>
+                             </div>
+                         </div>
+                    )}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
                     Max size: 1MB. Supported formats: PNG, JPG, JPEG.

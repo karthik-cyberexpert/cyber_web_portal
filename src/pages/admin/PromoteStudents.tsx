@@ -48,6 +48,7 @@ export default function PromoteStudents() {
   const [targetSemester, setTargetSemester] = useState<string>('');
   const [promoting, setPromoting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch Batches
   useEffect(() => {
@@ -99,10 +100,16 @@ export default function PromoteStudents() {
     fetchStudents();
   }, [selectedBatch, token]);
 
+  // Filtered Students
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.register_number.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Handle Select All
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedStudents(students.map(s => s.id));
+      setSelectedStudents(filteredStudents.map(s => s.id));
     } else {
       setSelectedStudents([]);
     }
@@ -163,7 +170,7 @@ export default function PromoteStudents() {
     }
   };
 
-  const isAllSelected = students.length > 0 && selectedStudents.length === students.length;
+  const isAllSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents.includes(s.id));
 
   return (
     <div className="space-y-6">
@@ -176,10 +183,13 @@ export default function PromoteStudents() {
       </div>
 
       {/* Filter Section */}
-      <div className="glass-card p-6 rounded-xl flex items-center gap-4">
+      <div className="glass-card p-6 rounded-xl flex flex-wrap items-end gap-6">
         <div className="w-full sm:w-[300px]">
           <label className="text-sm font-medium mb-2 block">Select Batch</label>
-          <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+          <Select value={selectedBatch} onValueChange={(val) => {
+            setSelectedBatch(val);
+            setSearchQuery('');
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="Select Batch" />
             </SelectTrigger>
@@ -192,6 +202,29 @@ export default function PromoteStudents() {
             </SelectContent>
           </Select>
         </div>
+
+        {selectedBatch && (
+          <div className="flex-1 min-w-[300px]">
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">Search Records</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search by student name or register number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background/50 border-white/10 hover:border-primary/50 transition-all"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
         {/* Action Bar - Only Visible when students are selected */}
@@ -268,27 +301,30 @@ export default function PromoteStudents() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map((student, index) => (
-                            <TableRow key={student.id}>
+                        {filteredStudents.map((student, index) => (
+                            <TableRow key={student.id} className="hover:bg-muted/30 transition-colors">
                                 <TableCell>
                                     <Checkbox 
                                         checked={selectedStudents.includes(student.id)}
                                         onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
                                     />
                                 </TableCell>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell className="font-mono">{student.register_number}</TableCell>
+                                <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                                <TableCell className="font-mono font-medium">{student.register_number}</TableCell>
                                 <TableCell>
-                                    <div className="font-medium">{student.name}</div>
-                                    <div className="text-xs text-muted-foreground">{student.roll_number}</div>
+                                    <div className="font-semibold">{student.name}</div>
+                                    <div className="text-xs text-muted-foreground font-mono">{student.roll_number}</div>
                                 </TableCell>
                                 <TableCell>
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                                        Sem {student.current_semester || '?'}
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                                        Semester {student.current_semester || '?'}
                                     </span>
                                 </TableCell>
                                 <TableCell>
-                                    <span className="text-sm text-muted-foreground">Active</span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        Active
+                                    </span>
                                 </TableCell>
                             </TableRow>
                         ))}

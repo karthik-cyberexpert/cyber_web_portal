@@ -62,9 +62,25 @@ export async function createLeaveRequest(req: Request, res: Response) {
             });
         }
 
+        // Fetch holidays in range for validation
+        const allHolidays = await pool.query(`SELECT start_date FROM schedules WHERE category = 'Holiday'`);
+        const holidayDates = (allHolidays[0] as any[]).map(h => new Date(h.start_date).toISOString().split('T')[0]);
+        
+        const isSunday = (dateStr: string) => new Date(dateStr).getDay() === 0;
+        const isHoliday = (dateStr: string) => holidayDates.includes(dateStr);
+
+        // Allow start/end on holiday/Sunday as long as it's not a single day OR there are working days in between
+        if (start_date === end_date && (isSunday(start_date) || isHoliday(start_date))) {
+            return res.status(400).json({ error: 'Cannot apply for a single-day leave on a Holiday or Sunday' });
+        }
+
         // Calculate working days (excluding Sundays and holidays)
         const working_days = await calculateWorkingDaysWithHolidays(start_date, end_date);
         console.log('Working days calculated:', working_days);
+
+        if (working_days === 0) {
+            return res.status(400).json({ error: 'Selected date range contains no working days' });
+        }
 
         // Map duration_type to session for database
         let mappedSession = 'Full Day';
@@ -144,7 +160,7 @@ export async function getTutorLeaveRequests(req: Request, res: Response) {
                         lr.working_days as workingDays, lr.status, lr.tutor_id as tutorId,
                         lr.admin_id as adminId,
                         lr.rejection_reason as rejectionReason,
-                        u.name as user_name, sp.roll_number, b.current_semester, b.name as batch_name
+                        u.name as user_name, sp.roll_number, sp.current_semester, b.name as batch_name
                 FROM leave_requests lr
                 JOIN (
                     SELECT user_id, batch_id, section_id, roll_number, ROW_NUMBER() OVER (ORDER BY roll_number ASC) as row_num
@@ -183,7 +199,7 @@ export async function getAdminLeaveRequests(req: Request, res: Response) {
                     lr.working_days as workingDays, lr.status, lr.tutor_id as tutorId,
                     lr.admin_id as adminId,
                     lr.rejection_reason as rejectionReason,
-                    u.name as user_name, sp.roll_number, sp.batch_id, sp.section_id, b.current_semester,
+                    u.name as user_name, sp.roll_number, sp.batch_id, sp.section_id, sp.current_semester,
                     b.name as batch_name, t.name as tutor_name
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.id

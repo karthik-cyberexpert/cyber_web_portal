@@ -40,7 +40,7 @@ const getSlotColor = (type: string) => {
   switch (type) {
     case 'theory': return 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-500/30 hover:border-blue-400';
     case 'lab': return 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-purple-500/30 hover:border-purple-400';
-    case 'tutorial': return 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-amber-500/30 hover:border-amber-400';
+    case 'integrated': return 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-amber-500/30 hover:border-amber-400';
     case 'free': return 'bg-gradient-to-br from-gray-500/10 to-gray-600/10 border-gray-500/20';
     default: return 'bg-muted';
   }
@@ -239,8 +239,9 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
   const [formSections, setFormSections] = useState<any[]>([]);
 
   const handleModalBatchChange = async (batchId: string) => {
-      // Update slot
-      setEditingSlot(prev => ({ ...prev, classId: batchId, sectionId: '' }));
+      // Update slot local state
+      const updatedSlot = { ...editingSlot, classId: batchId, sectionId: '' };
+      setEditingSlot(updatedSlot);
       
       // Fetch sections for this batch
       try {
@@ -255,19 +256,22 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
       } catch (error) {
           console.error("Failed to fetch form sections", error);
       }
+      // Note: We don't auto-save here because sectionId is now empty and required for faculty view
   };
 
   const handleSubjectChange = (subjectCode: string) => {
       const subject = subjects.find(s => s.code === subjectCode);
       if (subject) {
-          setEditingSlot(prev => ({
-              ...prev,
+          const updatedSlot = {
+              ...editingSlot,
               subjectCode: subject.code,
               subject: subject.name,
               // If student view, reset faculty. If faculty view, keep faculty (it's me).
-              facultyId: view === 'faculty' ? prev?.facultyId : '', 
-              facultyName: view === 'faculty' ? prev?.facultyName : ''
-          }));
+              facultyId: view === 'faculty' ? editingSlot?.facultyId : '', 
+              facultyName: view === 'faculty' ? editingSlot?.facultyName : ''
+          };
+          setEditingSlot(updatedSlot);
+          saveSlot(updatedSlot);
       }
   };
 
@@ -280,30 +284,31 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
     return s1.subjectCode === s2.subjectCode && s1.type === s2.type && s1.classId === s2.classId && s1.sectionId === s2.sectionId;
   };
 
-  const saveSlot = async () => {
-    if (!editingSlot) return;
+  const saveSlot = async (slotOverride?: Partial<TimetableSlot>) => {
+    const slot = slotOverride || editingSlot;
+    if (!slot) return;
 
     // Validation
-    if (!editingSlot.subjectCode && editingSlot.type !== 'free') {
-        toast.error("Please select a subject");
+    if (!slot.subjectCode && slot.type !== 'free') {
+        // Only show error if explicitly trying to save a non-free slot without subject
+        // For auto-save, we might want to be quieter or just skip
         return;
     }
-    if (view === 'faculty' && (!editingSlot.classId || !editingSlot.sectionId)) {
-        toast.error("Please select a Batch and Section");
+    if (view === 'faculty' && (!slot.classId || !slot.sectionId)) {
         return;
     }
 
     try {
         const token = localStorage.getItem('token');
         const payload = {
-            batch_id: editingSlot.classId,
-            section_id: editingSlot.sectionId,
-            day: editingSlot.day,
-            period: editingSlot.period,
-            subject_code: editingSlot.subjectCode,
-            faculty_id: editingSlot.facultyId,
-            room: editingSlot.room,
-            type: editingSlot.type,
+            batch_id: slot.classId,
+            section_id: slot.sectionId,
+            day: slot.day,
+            period: slot.period,
+            subject_code: slot.subjectCode,
+            faculty_id: slot.facultyId,
+            room: slot.room,
+            type: slot.type,
             semester: parseInt(selectedYearSem)
         };
 
@@ -317,16 +322,14 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
         });
 
         if (res.ok) {
-            toast.success('Timetable saved successfully');
-            setIsEditOpen(false);
-            loadTimetableData(); // Refresh from DB
+            toast.success('Timetable updated');
+            loadTimetableData(); // Refresh from DB to show changes in grid
         } else {
             const err = await res.json();
-            toast.error(err.message || 'Failed to save slot');
+            toast.error(err.message || 'Failed to auto-save');
         }
     } catch (error) {
         console.error("Save Error", error);
-        toast.error("Error saving slot");
     }
   };
 
@@ -544,16 +547,20 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
                             </Select>
                          </div>
 
-                         {/* Section Select */}
-                         <div className="space-y-2">
-                             <Label>Section</Label>
-                             <Select value={editingSlot.sectionId} onValueChange={(v) => setEditingSlot({...editingSlot, sectionId: v})}>
-                                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select Section" /></SelectTrigger>
-                                <SelectContent>{formSections.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}</SelectContent>
-                             </Select>
-                         </div>
-                    </div>
-                )}
+                          {/* Section Select */}
+                          <div className="space-y-2">
+                              <Label>Section</Label>
+                              <Select value={editingSlot.sectionId} onValueChange={(v) => {
+                                  const updated = {...editingSlot, sectionId: v};
+                                  setEditingSlot(updated);
+                                  saveSlot(updated);
+                              }}>
+                                 <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select Section" /></SelectTrigger>
+                                 <SelectContent>{formSections.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}</SelectContent>
+                              </Select>
+                          </div>
+                     </div>
+                 )}
 
                 <div className="space-y-2">
                     <Label>Subject</Label>
@@ -564,22 +571,38 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
                 </div>
                 
                  {/* ... Remaining fields (Room, Type) ... */}
-                 <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-2"><Label>Subject Code</Label><Input value={editingSlot.subjectCode} disabled className="bg-white/5 border-white/10" /></div>
-                     <div className="space-y-2"><Label>Room</Label><Input value={editingSlot.room} onChange={(e) => setEditingSlot({...editingSlot, room: e.target.value})} className="bg-white/5 border-white/10" placeholder="e.g. LH-101" /></div>
-                 </div>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2"><Label>Subject Code</Label><Input value={editingSlot.subjectCode} disabled className="bg-white/5 border-white/10" /></div>
+                      <div className="space-y-2">
+                        <Label>Room</Label>
+                        <Input 
+                            value={editingSlot.room} 
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                const updated = {...editingSlot, room: val};
+                                setEditingSlot(updated);
+                                // Debouncing could be better here, but for now direct save
+                                saveSlot(updated);
+                            }} 
+                            className="bg-white/5 border-white/10" 
+                            placeholder="e.g. LH-101" 
+                        />
+                      </div>
+                  </div>
 
                  {/* Faculty Select: Hidden if in Faculty View (implicitly me) */}
                  {view === 'students' && (
                     <div className="space-y-2">
                         <Label>Faculty</Label>
-                        <Select 
-                            value={editingSlot.facultyId?.toString()} 
-                            onValueChange={(val) => {
-                                const f = facultyList.find(fac => fac.id.toString() === val);
-                                setEditingSlot({...editingSlot, facultyId: val, facultyName: f?.name || ''});
-                            }}
-                        >
+                         <Select 
+                             value={editingSlot.facultyId?.toString()} 
+                             onValueChange={(val) => {
+                                 const f = facultyList.find(fac => fac.id.toString() === val);
+                                 const updated = {...editingSlot, facultyId: val, facultyName: f?.name || ''};
+                                 setEditingSlot(updated);
+                                 saveSlot(updated);
+                             }}
+                         >
                             <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select Faculty" /></SelectTrigger>
                             <SelectContent>
                                 {modalFaculty.map(f => <SelectItem key={f.id} value={f.id.toString()}>{f.name}</SelectItem>)}
@@ -590,24 +613,24 @@ export default function Timetable({ view = 'students' }: { view?: 'students' | '
                  )}
 
                  <div className="space-y-2">
-                    <Label>Type</Label>
-                    <Select value={editingSlot.type} onValueChange={(val: any) => setEditingSlot({...editingSlot, type: val})}>
-                        <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select Type" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="theory">Theory</SelectItem>
-                            <SelectItem value="lab">Lab</SelectItem>
-                            <SelectItem value="tutorial">Tutorial</SelectItem>
-                            <SelectItem value="free">Free/Break</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
+                                      <div className="space-y-2">
+                     <Label>Type</Label>
+                     <Select value={editingSlot.type} onValueChange={(val: any) => {
+                         const updated = {...editingSlot, type: val};
+                         setEditingSlot(updated);
+                         saveSlot(updated);
+                     }}>
+                         <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select Type" /></SelectTrigger>
+                         <SelectContent>
+                             <SelectItem value="theory">Theory</SelectItem>
+                             <SelectItem value="lab">Lab</SelectItem>
+                             <SelectItem value="integrated">Integrated</SelectItem>
+                             <SelectItem value="free">Free/Break</SelectItem>
+                         </SelectContent>
+                     </Select>
+                  </div></div>
             </div>
           )}
-          <DialogFooter>
-             {/* ... */}
-            <Button variant="ghost" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-            <Button onClick={saveSlot} className="bg-primary text-primary-foreground">Save Changes</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
