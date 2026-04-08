@@ -12,7 +12,19 @@ import { sanitizeInput, apiLimiter, authLimiter } from './security.middleware.js
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables from root .env
+// We try root first, then one level up, then two levels up to find the .env
+const envPaths = [
+  path.join(process.cwd(), '.env'),
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '../.env'),
+  path.join(__dirname, '../../.env')
+];
+
+for (const envPath of envPaths) {
+  dotenv.config({ path: envPath });
+}
+
 
 const app = express();
 const PORT = process.env.VITE_BACKEND_PORT || process.env.PORT || 3007;
@@ -55,10 +67,19 @@ app.use((req, res, next) => {
 });
 
 
-// Serve uploaded files statically (Corrected path)
-const uploadsPath = path.join(__dirname, '../uploads');
+// Determine absolute paths for uploads and dist
+// process.cwd() is usually the project root in production
+const rootDir = process.env.NODE_ENV === 'production' ? process.cwd() : path.join(__dirname, '..');
+const uploadsPath = path.join(rootDir, 'uploads');
+const distPath = path.join(rootDir, 'dist');
+
+console.log(`[INIT] Resolved Root: ${rootDir}`);
+console.log(`[INIT] Uploads Path: ${uploadsPath}`);
+console.log(`[INIT] Dist Path: ${distPath}`);
+
 app.use('/uploads', express.static(uploadsPath));
 app.use('/api/uploads', express.static(uploadsPath));
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -172,8 +193,6 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Catchall 404 handler
-// Serve React Frontend (Static Files)
-const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
 
 // Catchall handler for SPA (Must be last before error handler)

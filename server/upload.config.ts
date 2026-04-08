@@ -7,7 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Base uploads directory
-const UPLOADS_BASE = path.join(__dirname, '../uploads');
+const rootDir = process.env.NODE_ENV === 'production' ? process.cwd() : path.join(__dirname, '..');
+const UPLOADS_BASE = path.join(rootDir, 'uploads');
+
 
 // Create directory structure if it doesn't exist
 const createUploadDirs = () => {

@@ -5,7 +5,18 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables from various possible locations
+const envPaths = [
+  path.join(process.cwd(), '.env'),
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '../.env'),
+  path.join(__dirname, '../../.env')
+];
+
+for (const envPath of envPaths) {
+  dotenv.config({ path: envPath });
+}
+
 
 /**
  * Enhanced Database Connection Pool
